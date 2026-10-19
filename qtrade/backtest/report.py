@@ -203,3 +203,47 @@ The deflated Sharpe corrects the chosen model for having tried all of these.</p>
     path = out_dir / "report.html"
     path.write_text(html)
     return path
+
+
+def write_markdown(summary: dict, comparison_tbl: pd.DataFrame, ic_table: pd.DataFrame,
+                   imgs: dict[str, str], out_dir: str | Path, notes: list[str], cfg) -> Path:
+    """GitHub-renderable summary: README.md + charts/*.png (used by the results branch)."""
+    out_dir = Path(out_dir)
+    charts_dir = out_dir / "charts"
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    for k, b64 in imgs.items():
+        (charts_dir / f"{k}.png").write_bytes(base64.b64decode(b64))
+    s = summary
+    rows = [
+        ("Period", f"{s['start']} to {s['end']} ({s['years']:.1f} years)"),
+        ("Stocks / signals", f"{s.get('n_stocks')} / {s.get('n_signals')}"),
+        ("Traded model", s.get("model")),
+        ("Sharpe ratio", _fmt(s["sharpe"], "num")),
+        ("Annual return", _fmt(s["ann_return"])),
+        ("Annual volatility", _fmt(s["ann_vol"])),
+        ("Max drawdown", _fmt(s["max_drawdown"])),
+        ("Deflated Sharpe probability", _fmt(s.get("deflated_sharpe_prob"))),
+        ("Beta / correlation to market", f"{_fmt(s.get('beta_to_market'), 'num')} / {_fmt(s.get('corr_to_market'), 'num')}"),
+        ("Avg gross exposure", f"{s.get('avg_gross', 0):.2f}x"),
+        ("Annual turnover", f"{s.get('ann_turnover', 0):.0f}x"),
+        ("Cost + borrow drag / yr", _fmt((s.get("ann_cost_drag") or 0) + (s.get("ann_borrow_drag") or 0))),
+    ]
+    import re
+    clean = lambda t: re.sub(r"<[^>]+>", "**", t).replace("****", "")
+    md = ["# Backtest results", "", "| | |", "|---|---|"] + [f"| {k} | {v} |" for k, v in rows]
+    md += ["", *[f"> {clean(n)}" + "\n>" for n in notes], ""]
+    for k, title in [("equity", "Growth of $1"), ("drawdown", "Drawdown"), ("rolling_sharpe", "Rolling Sharpe"),
+                     ("annual", "Annual returns"), ("exposure", "Exposure"), ("regimes", "HMM regimes"),
+                     ("models", "Model comparison")]:
+        if k in imgs:
+            md += [f"![{title}](charts/{k}.png)", ""]
+    md += ["## Models (same portfolio rules)", "", comparison_tbl.round(3).to_markdown(), ""]
+    md += ["## Signals (descriptive, full-sample rank IC)", "",
+           ic_table.round(4).head(44).to_markdown(index=False), ""]
+    for k in ("signals", "weights"):
+        if k in imgs:
+            md += [f"![{k}](charts/{k}.png)", ""]
+    md += ["Full interactive-free report with monthly table and config: `report.html` (download and open)."]
+    path = out_dir / "README.md"
+    path.write_text("\n".join(md))
+    return path

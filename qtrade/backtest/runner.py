@@ -14,7 +14,7 @@ from ..pipeline import build_research
 from ..utils import LOG
 from .engine import run_backtest
 from .metrics import deflated_sharpe, summarize
-from .report import charts, write_report
+from .report import charts, write_markdown, write_report
 
 BIAS_NOTES = [
     "<b>Read these results with care.</b> The universe is today's largest companies that have "
@@ -63,6 +63,7 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
         notes = ["<b>Synthetic data.</b> This run used a simulated market with planted "
                  "patterns, to check that the machinery works. It says nothing about real markets."]
     path = write_report(main, summary, cmp_tbl, ic_table, imgs, cfg, out_dir, notes)
+    write_markdown(summary, cmp_tbl, ic_table, imgs, out_dir, notes, cfg)
 
     main.daily.to_csv(out_dir / "daily.csv")
     cmp_tbl.to_csv(out_dir / "model_comparison.csv")

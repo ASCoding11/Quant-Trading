@@ -20,6 +20,9 @@ on:
         description: "Models (comma list) - blank means all six"
         default: ""
 
+permissions:
+  contents: write   # to publish results to the "results" branch
+
 jobs:
   backtest:
     runs-on: ubuntu-latest
@@ -44,9 +47,37 @@ jobs:
           fi
       - name: Backtest
         run: |
+          set -o pipefail
+          mkdir -p reports/backtest
           MODELS="${{ inputs.models }}"
           python -m qtrade backtest --size "${{ inputs.size }}" --start "${{ inputs.start }}" \
-            ${MODELS:+--models "$MODELS"} --out reports/backtest
+            ${MODELS:+--models "$MODELS"} --out reports/backtest 2>&1 | tee reports/backtest/run.log
+      - name: Publish results (job summary + "results" branch)
+        if: success()
+        run: |
+          sed 's#](charts/#](https://github.com/${{ github.repository }}/raw/results/latest/charts/#g' \
+            reports/backtest/README.md >> "$GITHUB_STEP_SUMMARY"
+          cp data/universe.csv reports/backtest/universe.csv
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RES=$(mktemp -d)
+          if git fetch --depth 1 origin results 2>/dev/null; then
+            git worktree add "$RES" FETCH_HEAD
+            git -C "$RES" checkout -B results
+          else
+            git worktree add --detach "$RES"
+            git -C "$RES" checkout --orphan results
+            git -C "$RES" rm -rf . >/dev/null
+          fi
+          STAMP=$(date -u +%Y-%m-%d_%H%M)
+          rm -rf "$RES/latest"
+          mkdir -p "$RES/latest" "$RES/history/$STAMP"
+          cp -r reports/backtest/. "$RES/latest/"
+          cp reports/backtest/README.md reports/backtest/summary.json reports/backtest/model_comparison.csv "$RES/history/$STAMP/"
+          printf '# Backtest results\n\nLatest run: [latest/](latest/README.md)\n' > "$RES/README.md"
+          git -C "$RES" add -A
+          git -C "$RES" commit -q -m "Backtest results $STAMP (run ${{ github.run_id }})"
+          git -C "$RES" push origin results
       - uses: actions/upload-artifact@v4
         if: always()
         with:

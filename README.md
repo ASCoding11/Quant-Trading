@@ -217,6 +217,19 @@ a $10,000 account. A 1,000-name book would mean about $20 per stock, so instead:
   price, so there is no bid-ask spread to cross, just 1.5 bp of slippage.
   Market impact at $10k is negligible.
 
+**Backtest, 2003–2026, 60 names, $10k, auction costs:**
+
+| | Net Sharpe | Return / yr | Volatility | Max drawdown |
+|---|---|---|---|---|
+| Full period | 0.41 | 3.3% | 8.0% | −24% |
+| 2004–2014 | 0.79 | | | |
+| 2015–2026 | 0.01 | | | |
+
+The full-period deflated Sharpe probability is 91%, short of the usual 95% bar.
+The result depends on the no-spread assumption: charging quoted spreads
+instead takes the full-period Sharpe to −0.09. And all of the profit came
+before 2015.
+
 ```bash
 python -m qtrade --config config/small_account.yaml backtest
 python -m qtrade --config config/small_account.yaml paper

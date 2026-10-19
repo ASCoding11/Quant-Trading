@@ -140,6 +140,24 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
     out_dir = Path(out_dir or cfg.live.log_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # talk to Alpaca first, so a bad key fails in seconds rather than after the model run
+    client = _client()
+    if client is None:
+        if not dry_run:
+            raise SystemExit("Set ALPACA_API_KEY and ALPACA_SECRET_KEY to place paper orders.")
+        LOG.info("no Alpaca keys: simulating an empty $100,000 account")
+        equity, pos_qty, pos_val, shortable, tradable, peak = 100_000.0, {}, {}, None, None, 100_000.0
+    else:
+        try:
+            equity, pos_qty, pos_val, shortable, tradable, peak = _account_state(client)
+        except Exception as exc:
+            raise SystemExit(
+                f"Alpaca rejected the request ({exc}). Check that ALPACA_API_KEY / ALPACA_SECRET_KEY "
+                "are the PAPER account's keys, copied without spaces, and not regenerated since."
+            ) from exc
+        LOG.info("Alpaca paper account OK: equity $%.0f, %d open positions, %d shortable names",
+                 equity, len(pos_qty), len(shortable))
+
     uni = load_universe(cfg.data.cache_dir)
     if uni is None:
         raise SystemExit("No universe found. Run `python -m qtrade universe` first.")
@@ -160,14 +178,6 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
     pred = research.prediction(trade_model)
     dec = Decider(research.ctx, pred, research.fwd_ret, cfg)
 
-    client = _client()
-    if client is None:
-        if not dry_run:
-            raise SystemExit("Set ALPACA_API_KEY and ALPACA_SECRET_KEY to place paper orders.")
-        LOG.info("no Alpaca keys: simulating an empty $100,000 account")
-        equity, pos_qty, pos_val, shortable, tradable, peak = 100_000.0, {}, {}, None, None, 100_000.0
-    else:
-        equity, pos_qty, pos_val, shortable, tradable, peak = _account_state(client)
     deploy = equity * cfg.live.capital_fraction
     if cfg.live.max_capital:
         deploy = min(deploy, cfg.live.max_capital)

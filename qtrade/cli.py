@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import warnings
 
@@ -151,7 +152,16 @@ def main(argv=None):
     args = ap.parse_args(argv)
     setup_logging(args.log)
     LOG.debug("args: %s", args)
-    args.fn(args)
+    try:
+        args.fn(args)
+    except (Exception, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code in (0, None):
+            raise
+        if os.environ.get("GITHUB_ACTIONS"):
+            # surfaces as an annotation on the run page, readable without opening logs
+            msg = str(exc).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            print(f"::error title=qtrade {args.cmd} failed::{type(exc).__name__}: {msg}", flush=True)
+        raise
     return 0
 
 

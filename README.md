@@ -47,7 +47,7 @@ python -m qtrade universe             # pick the 1000-company universe (~5 min)
 python -m qtrade backtest             # full backtest -> reports/report.html
 python -m qtrade paper                # paper-trading dry run (prints orders)
 python -m qtrade signals              # list the signal library
-python -m pytest                      # 60 tests
+python -m pytest                      # the test suite
 ```
 
 Useful flags: `--size 300` (smaller universe, much faster), `--start 2010-01-01`,
@@ -121,10 +121,11 @@ daily z-scores.
   every PCA factor.** This has a closed-form solution.
 - **Leverage** = the smallest of half-Kelly, a 10% volatility target, and 2×
   gross (the Reg T limit). The per-name cap is 2% of equity.
+- **Forecast smoothing** (3-day half-life) filters day-to-day flips in the
+  forecast before it is traded.
 - **Cost-aware no-trade band.** A position is only traded when the expected
   gain beats spread plus market impact, with costs amortized over how long
-  forecasts actually persist. On synthetic data, the theoretically prescribed
-  setting beat every alternative without any tuning.
+  forecasts actually persist.
 - **Drawdown brake**: after a 15% drawdown, exposure is halved until half
   the loss is recovered.
 
@@ -138,6 +139,53 @@ daily z-scores.
 - **Deflated Sharpe ratio** (Bailey & López de Prado). It reports the
   probability that the edge is real after correcting for having tried six
   models plus the ensemble.
+
+## Results on real data
+
+Full backtest: 1,000 stocks, December 2003 to October 2026, all six models,
+run in GitHub Actions. Every run is published to the
+[`results` branch](../../tree/results), with charts, tables and a
+dated history.
+
+**The forecasts are real.** Every model has a positive out-of-sample rank IC
+(about 0.01 to 0.014). The strongest signals are residual reversal,
+peer-gap, and weekly reversal, with t-stats of 10 to 13. With *zero*
+trading costs, the ensemble earns:
+
+| Forecast horizon | Frictionless Sharpe, 2004–2026 | 2004–2014 | 2015–2026 |
+|---|---|---|---|
+| 1 day | 1.88 | 2.93 | 1.06 |
+| 5 days | 1.51 | 2.61 | 0.73 |
+| 20 days | 0.75 | 1.09 | 0.60 |
+
+**After realistic costs, no setting has a tradable edge.** The alpha lives in
+1–2 day reversals, so capturing it means turning the book over 250–500× a
+year. Spread, impact, and borrow costs then exceed the profit. The no-trade
+band and forecast smoothing cut turnover to 10–30×, but they remove the
+alpha almost as fast as the costs.
+
+Settings were chosen honestly: the best combination of horizon × smoothing ×
+cost aversion was picked **on 2004–2014 only**, then judged on 2015–2026.
+
+| | 2004–2014 (selection) | 2015–2026 (unseen) |
+|---|---|---|
+| Chosen: 5-day horizon, 3-day smoothing, cost aversion 1.0 | Sharpe **+0.29** | Sharpe **−0.58** |
+
+That configuration is the default, and it is what paper trading runs. It
+loses money out of sample. That matches what is publicly known: short-term
+reversal profits in large US stocks have shrunk sharply since the 2000s, and
+the firms that still harvest them do so with intraday data and execution far
+cheaper than a daily-bar model can assume.
+
+**What would most plausibly change the answer:**
+1. **Cheaper execution.** The edge per unit of turnover is about 2–3 bp. Trading
+   only the most liquid names, or using a cost model calibrated to real fills
+   (opening-auction orders often pay less than half the quoted spread), could
+   flip the sign. Paper-trade fills give a first read on true costs.
+2. **Intraday data.** Reversal alpha that decays within a day needs intraday
+   bars to capture before it's gone.
+3. **Slower, orthogonal signals.** Fundamentals, earnings revisions, and
+   analyst data feed alphas that live for months and survive costs.
 
 ## Read the results honestly
 

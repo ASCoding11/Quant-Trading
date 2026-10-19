@@ -236,8 +236,9 @@ python -m qtrade --config config/small_account.yaml paper
 ```
 
 The config also caps paper trading at $10k (`live.max_capital`), even though
-Alpaca paper accounts start at $100k. To use it for the scheduled paper
-trades, set a repository variable `QTRADE_CONFIG` = `config/small_account.yaml`
+Alpaca paper accounts start at $100k. The scheduled paper trades use this
+config by default. To trade the full 1,000-name book instead, set a
+repository variable `QTRADE_CONFIG` = `config/default.yaml`
 (Settings → Secrets and variables → Actions → Variables).
 
 ## Paper trading

@@ -48,6 +48,18 @@
 | gbm          |   -0.467 |       -0.009 |     0.018 |         -0.268 |         16.934 |           0.014 |     0.012 |
 | elastic_net  |   -0.526 |       -0.01  |     0.02  |         -0.308 |         12.963 |           0.01  |     0.012 |
 
+## Portfolio-construction diagnostics (same ensemble forecast)
+
+| variant             |   sharpe |   ann_return |   pre_cost_return |   ann_vol |   pre_cost_sharpe |   avg_gross |   ann_turnover |   cost_drag |
+|:--------------------|---------:|-------------:|------------------:|----------:|------------------:|------------:|---------------:|------------:|
+| default             |   -0.291 |       -0.006 |             0.007 |     0.02  |             0.359 |       0.661 |         14.867 |       0.013 |
+| frictionless        |    1.514 |        0.08  |             0.08  |     0.053 |             1.514 |       1.914 |        329.966 |       0     |
+| no_band (pay costs) |   -3.723 |       -0.106 |             0.043 |     0.028 |             1.527 |       0.986 |        167.008 |       0.149 |
+| half_band           |   -0.381 |       -0.009 |             0.022 |     0.025 |             0.889 |       0.836 |         35.579 |       0.031 |
+| rank_weights        |   -0.282 |       -0.007 |             0.01  |     0.025 |             0.386 |       0.757 |         20.095 |       0.017 |
+| dollar_neutral_only |   -0.17  |       -0.01  |             0.003 |     0.057 |             0.047 |       0.668 |         15.571 |       0.012 |
+| max_gross_4x        |   -0.376 |       -0.014 |             0.016 |     0.036 |             0.439 |       1.26  |         31.789 |       0.029 |
+
 ## Signals (descriptive, full-sample rank IC)
 
 | signal              | family         |   mean_ic |   ic_ir |   t_stat |   hit_rate |   ic_regime_0 |   ic_regime_1 |   ic_regime_2 |

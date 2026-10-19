@@ -13,7 +13,7 @@ from ..data.market import MarketData
 from ..pipeline import build_research
 from ..utils import LOG
 from .engine import run_backtest
-from .metrics import deflated_sharpe, summarize
+from .metrics import deflated_sharpe, sharpe, summarize
 from .report import charts, write_markdown, write_report
 
 BIAS_NOTES = [
@@ -87,34 +87,49 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
 
 
 DIAGNOSTIC_VARIANTS = {
-    "default": {},
     "frictionless": {"costs": {"slippage_bps": 0.0, "spread_tiers": [[0.0, 0.0]], "impact_coef": 0.0,
                                "borrow_bps_annual": 0.0}, "portfolio": {"cost_aversion": 0.0}},
-    "no_band (pay costs)": {"portfolio": {"cost_aversion": 0.0}},
-    "half_band": {"portfolio": {"cost_aversion": 0.5}},
     "rank_weights": {"portfolio": {"weighting": "rank"}},
     "dollar_neutral_only": {"portfolio": {"factor_neutral": False}},
-    "max_gross_4x": {"portfolio": {"max_gross": 4.0}},
 }
+SWEEP_HALFLIFE = [0, 3, 7, 15, 30]
+SWEEP_COST_AVERSION = [0.0, 0.25, 0.5, 1.0]
 
 
 def run_diagnostics(research, cfg: Config) -> pd.DataFrame:
-    """Same forecasts, different portfolio rules: shows where the edge is lost."""
+    """Same forecasts, different portfolio rules: shows where the edge is lost.
+
+    Also sweeps forecast smoothing x cost aversion. Sharpe is reported for the
+    first and second half of the sample separately: choose settings on the
+    first half only and judge them on the second, so the choice is not fitted
+    to the period it is evaluated on.
+    """
     import copy
 
     from ..config import _merge
 
+    variants = {"current config": {}}
+    variants.update(DIAGNOSTIC_VARIANTS)
+    for hl in SWEEP_HALFLIFE:
+        for ca in SWEEP_COST_AVERSION:
+            variants[f"halflife={hl} cost_aversion={ca}"] = {
+                "portfolio": {"forecast_halflife": float(hl), "cost_aversion": ca}}
     rows = []
     pred = research.prediction(cfg.model.trade_model)
-    for name, ov in DIAGNOSTIC_VARIANTS.items():
+    for name, ov in variants.items():
         c = copy.deepcopy(cfg)
         _merge(c, ov)
         bt = run_backtest(research.ctx, pred, research.fwd_ret, c, name=name, record_weights=False)
-        s = summarize(bt.returns, bt.daily)
+        r = bt.returns
+        mid = r.index[len(r) // 2]
+        s = summarize(r, bt.daily)
         gross_ret = s["ann_return"] + s["ann_cost_drag"] + s["ann_borrow_drag"]
-        rows.append({"variant": name, "sharpe": s["sharpe"], "ann_return": s["ann_return"],
-                     "pre_cost_return": gross_ret, "ann_vol": s["ann_vol"],
+        rows.append({"variant": name, "sharpe": s["sharpe"],
+                     "sharpe_1st_half": sharpe(r[r.index < mid]), "sharpe_2nd_half": sharpe(r[r.index >= mid]),
+                     "ann_return": s["ann_return"], "ann_vol": s["ann_vol"],
                      "pre_cost_sharpe": gross_ret / s["ann_vol"] if s["ann_vol"] > 0 else np.nan,
                      "avg_gross": s["avg_gross"], "ann_turnover": s["ann_turnover"],
                      "cost_drag": s["ann_cost_drag"] + s["ann_borrow_drag"]})
-    return pd.DataFrame(rows).set_index("variant")
+    out = pd.DataFrame(rows).set_index("variant")
+    out.attrs["split_date"] = str(mid.date())
+    return out

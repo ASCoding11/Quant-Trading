@@ -20,10 +20,37 @@ class Decision:
     n_candidates: int
 
 
+def smooth_forecast(pred: np.ndarray, halflife: float) -> np.ndarray:
+    """Exponentially smooth each stock's daily cross-sectional z-score over time.
+
+    A raw short-horizon forecast flips quickly, so trading it fully costs more
+    than it earns. Smoothing keeps the persistent part of the signal and
+    filters the noisy day-to-day flips (Garleanu-Pedersen: "aim" toward a
+    weighted average of current and expected future forecasts). Uses only
+    past forecasts, so it adds no look-ahead.
+    """
+    lam = 1.0 - 0.5 ** (1.0 / halflife)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mu = np.nanmean(pred, axis=1, keepdims=True)
+        sd = np.nanstd(pred, axis=1, keepdims=True)
+        z = (pred - mu) / np.where(sd > 0, sd, np.nan)
+    out = np.full(pred.shape, np.nan, dtype=np.float32)
+    ema = np.zeros(pred.shape[1])
+    seen = np.zeros(pred.shape[1], dtype=bool)
+    for t in range(len(pred)):
+        ok = np.isfinite(z[t])
+        ema = np.where(ok, np.where(seen, (1 - lam) * ema + lam * z[t], z[t]), ema)
+        seen |= ok
+        out[t] = np.where(ok, ema, np.nan)
+    return out
+
+
 class Decider:
     """Turns the forecast for day t into target weights using only data <= t."""
 
     def __init__(self, ctx: FeatureContext, pred: np.ndarray, fwd_ret: np.ndarray, cfg):
+        hl = cfg.portfolio.forecast_halflife
+        pred = smooth_forecast(pred, hl) if hl and hl > 0 else pred
         self.ctx, self.pred, self.cfg = ctx, pred, cfg
         self.h = cfg.model.horizon
         sigma_idio = ctx.resid.rolling(63, min_periods=40).std().to_numpy()

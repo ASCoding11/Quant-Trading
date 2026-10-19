@@ -1,0 +1,85 @@
+# qtrade configuration - every number the system uses.
+# Copy this file, change what you want, and pass it with:
+#     python -m qtrade --config my.yaml backtest
+# Only the keys you include override the defaults; qtrade/config.py explains each one.
+universe:
+  size: 1000
+  min_history_years: 15.0
+  candidate_source: ishares_r3000
+  universe_file: null
+  min_price: 5.0
+  min_dollar_volume: 5000000.0
+data:
+  start: '2000-01-01'
+  end: null
+  cache_dir: data
+  batch_size: 100
+factors:
+  n_factors: 15
+  window: 252
+  refit_every: 21
+  n_clusters: 20
+regime:
+  n_states: 3
+  refit_every: 252
+  min_history: 756
+  n_init: 5
+  max_iter: 200
+model:
+  horizon: 5
+  train_window: 1260
+  min_train: 756
+  retrain_every: 63
+  models:
+  - ridge
+  - elastic_net
+  - regime_ridge
+  - kernel_ridge
+  - gbm
+  - ic_weighted
+  ensemble:
+  - ridge
+  - regime_ridge
+  - kernel_ridge
+  - gbm
+  - ic_weighted
+  trade_model: ensemble
+  gbm_max_rows: 400000
+  rff_features: 256
+  seed: 7
+  signals: null
+portfolio:
+  target_vol: 0.1
+  max_gross: 2.0
+  max_weight: 0.02
+  kelly_fraction: 0.5
+  ic_prior: 0.01
+  ic_prior_days: 252
+  ic_lookback: 252
+  cost_aversion: 1.0
+  trade_rate: 1.0
+  no_trade_band: 0.0002
+  drawdown_limit: 0.15
+  drawdown_scale: 0.5
+costs:
+  aum: 10000000
+  commission_bps: 0.0
+  slippage_bps: 1.0
+  spread_tiers:
+  - - 500000000.0
+    - 1.5
+  - - 100000000.0
+    - 3.0
+  - - 20000000.0
+    - 6.0
+  - - 0.0
+    - 12.0
+  impact_coef: 0.5
+  borrow_bps_annual: 50.0
+live:
+  dry_run: true
+  order_type: auto
+  min_order_value: 50.0
+  capital_fraction: 1.0
+  log_dir: logs
+report_dir: reports

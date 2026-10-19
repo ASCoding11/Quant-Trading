@@ -1,0 +1,207 @@
+# Quant-Trading
+
+A statistical-arbitrage research and trading system built on the principles
+Renaissance Technologies is publicly known for: **many weak signals, hidden
+Markov regimes, market-neutral portfolios, short holding periods, and
+ruthless out-of-sample testing.** It backtests on the 1,000 largest US
+companies with 15+ years of trading history, and paper-trades the same logic
+on Alpaca.
+
+> Renaissance has never published its methods. This project is built from
+> what is public (interviews, former employees, Zuckerman's *The Man Who
+> Solved the Market*, and the academic literature on each technique). It is a
+> serious research framework, not a copy of the Medallion Fund.
+
+```mermaid
+flowchart LR
+    A[Universe<br/>top 1000 by market cap<br/>15+ yrs history] --> B[Daily OHLCV<br/>Yahoo Finance]
+    B --> C[PCA factor model<br/>eigenportfolios + residuals]
+    B --> D[44 signals<br/>7 families]
+    C --> D
+    B --> E[Gaussian HMM<br/>3 market regimes]
+    D --> F[Walk-forward models<br/>ridge · elastic net · regime ridge<br/>kernel ridge · boosting · IC-weighted]
+    E --> F
+    F --> G[Ensemble forecast]
+    G --> H[Kelly-sized, dollar- and<br/>factor-neutral portfolio<br/>with cost-aware no-trade band]
+    H --> I[Backtest<br/>next-open fills, costs, borrow]
+    H --> J[Alpaca paper trading<br/>market-on-open orders]
+```
+
+## Quick start
+
+**No install (GitHub Actions).** Everything runs in the cloud:
+
+1. **Actions → backtest → Run workflow.** It downloads the data, selects
+   the universe, runs the full walk-forward backtest, and attaches an HTML
+   report to the run as `backtest-report`. A full run takes about an hour.
+2. **Actions → tests** runs automatically on every push. It runs the unit
+   tests and a demo on a synthetic market.
+3. Paper trading: see [Paper trading](#paper-trading) below.
+
+**On your own computer** (Python 3.10+):
+
+```bash
+pip install -r requirements.txt
+python -m qtrade demo                 # synthetic market, no internet needed (~1 min)
+python -m qtrade universe             # pick the 1000-company universe (~5 min)
+python -m qtrade backtest             # full backtest -> reports/report.html
+python -m qtrade paper                # paper-trading dry run (prints orders)
+python -m qtrade signals              # list the signal library
+python -m pytest                      # 60 tests
+```
+
+Useful flags: `--size 300` (smaller universe, much faster), `--start 2010-01-01`,
+`--models ridge,ic_weighted`, `--horizon 1`, `--config my.yaml`.
+Every tunable number lives in [`config/default.yaml`](config/default.yaml).
+
+## How it works
+
+The math is written out in detail in [`docs/MATH.md`](docs/MATH.md).
+
+### 1. Universe
+The universe is taken from the iShares Russell 3000 ETF holdings, ranked by
+market value. The system walks down that list and keeps each company whose
+first trading day is at least 15 years ago, stopping at 1,000 companies.
+On any given day, a stock is tradable only if it is above $5, has at least
+$5M of daily dollar volume, and has a year of price history.
+
+### 2. Statistical factor model
+Every month, PCA on the last 252 days of returns gives 15 *eigenportfolios*
+(Avellaneda & Lee, 2010). Each stock's return splits into a factor part and a
+**residual**: the idiosyncratic move a stat-arb book tries to predict.
+K-means on the factor loadings groups stocks into data-driven peer clusters.
+
+### 3. Signals: 44 weak predictors in 7 families
+
+| Family | Signals |
+|---|---|
+| **mean reversion** | `rev_1d`, `rev_5d`, `rev_21d`, `resid_rev_1d`, `resid_rev_5d`, `ou_sscore`, `bollinger_z`, `rsi_14`, `overnight_rev`, `intraday_rev`, `low_volume_rev` |
+| **momentum** | `mom_12_1`, `mom_6_1`, `resid_mom`, `high_52w`, `trend_quality`, `mom_accel`, `overnight_mom`, `intraday_rev_21`, `cluster_mom` |
+| **volume** | `abn_volume`, `amihud`, `turnover_trend`, `vol_price_corr`, `size_proxy` |
+| **volatility** | `low_vol`, `idio_vol`, `max_effect`, `neg_skew`, `bab`, `downside_beta`, `vol_of_vol` |
+| **microstructure** | `range_vol_ratio`, `close_location`, `cs_spread`, `gk_ratio` |
+| **seasonality** | `same_month`, `weekday_seasonality`, `turn_of_month` |
+| **structure** | `peer_gap`, `peer_lead`, `kalman_trend`, `autocorr_signal`, `market_corr` |
+
+Each signal is winsorized and z-scored across stocks every day. The models
+learn their weights, so a signal that has stopped working is simply
+down-weighted. Adding a signal is one decorated function in
+[`qtrade/signals/library.py`](qtrade/signals/library.py).
+
+### 4. Hidden Markov regimes
+A Gaussian HMM, written from scratch with Baum–Welch and forward filtering,
+reads four market symptoms: 5-day market return, realized volatility,
+cross-sectional dispersion, and correlation. From these it infers the
+probability of being in a *calm*, *normal* or *stressed* regime. Only
+**filtered** probabilities are used, meaning ones that look backward only.
+On the synthetic market with planted regimes, it recovers the true regime
+about 86% of the time.
+
+### 5. Walk-forward models
+Six models are refit every quarter on a rolling 5-year window. The target is
+next week's return, ranked across stocks:
+
+| Model | Idea |
+|---|---|
+| `ridge` | linear, penalty chosen on a time-ordered holdout |
+| `elastic_net` | linear with L1, which drops useless signals |
+| `regime_ridge` | separate signal weights for each HMM regime |
+| `kernel_ridge` | random Fourier features approximating Gaussian-kernel regression |
+| `gbm` | gradient-boosted trees (nonlinear, with interactions) |
+| `ic_weighted` | weights by each signal's information ratio (Grinold) |
+
+The traded forecast is the **ensemble**: the average of the members'
+daily z-scores.
+
+### 6. Portfolio construction
+- **Expected return** = IC × volatility × score (Grinold). The IC is the
+  model's *realized* out-of-sample IC, shrunk toward a prior, so a model that
+  stops working is automatically sized down to zero.
+- **Kelly-optimal weights subject to zero net dollars and zero exposure to
+  every PCA factor.** This has a closed-form solution.
+- **Leverage** = the smallest of half-Kelly, a 10% volatility target, and 2×
+  gross (the Reg T limit). The per-name cap is 2% of equity.
+- **Cost-aware no-trade band.** A position is only traded when the expected
+  gain beats spread plus market impact, with costs amortized over how long
+  forecasts actually persist. On synthetic data, the theoretically prescribed
+  setting beat every alternative without any tuning.
+- **Drawdown brake**: after a 15% drawdown, exposure is halved until half
+  the loss is recovered.
+
+### 7. Backtest realism
+- Decisions are made at the close, and trades fill at the **next day's open**.
+- Costs: a half-spread by liquidity tier, 1 bp slippage, square-root market
+  impact, and a 50 bp/yr borrow fee on shorts.
+- **No look-ahead, enforced by tests.** Every signal, the regime
+  probabilities, and every model forecast are recomputed on history cut off
+  at day *D*, and must exactly match the full-history values at *D*.
+- **Deflated Sharpe ratio** (Bailey & López de Prado). It reports the
+  probability that the edge is real after correcting for having tried six
+  models plus the ensemble.
+
+## Read the results honestly
+
+- **Survivorship bias.** Picking *today's* large, long-lived companies and
+  testing them over the past means the backtest never holds a company that
+  went bankrupt or shrank. This flatters results. A bias-free test would need
+  historical index membership, which isn't freely available.
+- **Free data.** Yahoo prices are good but not institutional grade, and opening
+  prices in particular can be noisy.
+- **Leverage sets the return.** Sharpe ratio measures skill, while leverage
+  sets the size of returns. A diversified 1,000-stock market-neutral book at
+  2× gross has low volatility (a few percent a year). Medallion reportedly ran
+  far higher leverage than a retail account is allowed.
+- A good backtest is a reason to paper trade, not to trade real money.
+
+## Paper trading
+
+1. Create a free account at [alpaca.markets](https://alpaca.markets), switch
+   to the **Paper** account, and generate API keys.
+2. In this repo: **Settings → Secrets and variables → Actions → New repository
+   secret**. Add `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`.
+3. **Actions → paper-trade → Run workflow** with `send` unticked does a dry run
+   (the orders are in the run's log and artifact). Tick `send` to place them.
+4. From then on, the workflow runs automatically every weekday at about 8:15am
+   New York time and submits market-on-open orders.
+
+Locally: `export ALPACA_API_KEY=... ALPACA_SECRET_KEY=...`, then
+`python -m qtrade paper` (dry run) or `python -m qtrade paper --send`.
+
+The client is hard-wired to Alpaca's **paper** endpoint. Shorts are only
+placed in names Alpaca marks easy to borrow. A position that would flip from
+long to short is closed one day and reopened the next. Every run writes
+`targets_*.csv` and `orders_*.csv` to `logs/`.
+
+## Project layout
+
+```
+qtrade/
+  data/         universe selection, Yahoo download + cache, synthetic market
+  features/     shared panels, PCA eigenportfolio factor model
+  signals/      the 44-signal library and registry
+  models/       Gaussian HMM, walk-forward regimes, six combiners
+  portfolio/    Kelly/neutral optimizer, no-trade band, shared daily decision
+  backtest/     engine, cost model, metrics (PSR/DSR), HTML report
+  live/         Alpaca paper trader
+  pipeline.py   data -> signals -> regimes -> forecasts
+  cli.py        python -m qtrade ...
+tests/          no-look-ahead, HMM recovery, neutrality, accounting, orders
+config/         default.yaml with every parameter
+docs/MATH.md    the mathematics, step by step
+```
+
+## References
+
+- Avellaneda & Lee (2010), *Statistical arbitrage in the US equities market*
+- Baum, Petrie, Soules & Weiss (1970), the Baum–Welch algorithm; Rabiner (1989), *A tutorial on HMMs*
+- Grinold & Kahn, *Active Portfolio Management*: the fundamental law, alpha = IC·σ·z
+- Gârleanu & Pedersen (2013), *Dynamic trading with predictable returns and transaction costs*
+- Rahimi & Recht (2007), *Random features for large-scale kernel machines*
+- Bailey & López de Prado (2012, 2014), probabilistic and deflated Sharpe ratios
+- Almgren et al. (2005); Tóth et al. (2011): square-root market impact
+- Signal sources: Jegadeesh & Titman (1993), Lehmann (1990), Blitz et al. (2011), George & Hwang (2004), Ang et al. (2006),
+  Bali et al. (2011), Frazzini & Pedersen (2014), Heston & Sadka (2008), Lou, Polk & Skouras (2019), Amihud (2002),
+  Corwin & Schultz (2012), Campbell, Grossman & Wang (1993)
+- Zuckerman (2019), *The Man Who Solved the Market*
+
+*Educational research software. Not investment advice.*

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+# downloaded data, generated reports and trading logs stay local
+data/prices/
+data/live/
+reports/
+logs/
+.DS_Store

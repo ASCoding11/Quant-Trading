@@ -1,0 +1,91 @@
+"""The daily trading decision, shared verbatim by the backtest and live trading."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+from ..backtest.costs import unit_cost
+from ..features.context import FeatureContext
+from ..utils import rank_ic
+from .optimizer import SizingInfo, construct, realized_ic
+
+
+@dataclass
+class Decision:
+    weights: np.ndarray       # target weights for every ticker (0 for untraded)
+    info: SizingInfo
+    ic_hat: float
+    holding_periods: float
+    n_candidates: int
+
+
+class Decider:
+    """Turns the forecast for day t into target weights using only data <= t."""
+
+    def __init__(self, ctx: FeatureContext, pred: np.ndarray, fwd_ret: np.ndarray, cfg):
+        self.ctx, self.pred, self.cfg = ctx, pred, cfg
+        self.h = cfg.model.horizon
+        sigma_idio = ctx.resid.rolling(63, min_periods=40).std().to_numpy()
+        sigma_tot = ctx.vol_63.to_numpy()
+        self.sigma = np.where(np.isfinite(sigma_idio), sigma_idio, sigma_tot)
+        self.adv = ctx.adv.to_numpy()
+        self.tradable = ctx.tradable.to_numpy()
+        self.fm = ctx.factor_model
+        self.tickers = ctx.md.tickers
+        self.dates = ctx.md.dates
+        # realised IC of the forecast (known h+1 days later)
+        self.ic = rank_ic(pred, fwd_ret)
+        # forecast persistence: rank autocorrelation with the forecast h days earlier
+        self.persist = np.full(len(pred), np.nan)
+        if len(pred) > self.h:
+            self.persist[self.h:] = rank_ic(pred[self.h:], pred[: -self.h])
+        self._load_cache: dict = {}
+
+    def _loadings(self, t: int, idx: np.ndarray):
+        snap = self.fm.snapshot_at(self.dates[t])
+        if snap is None or not len(idx):
+            return None
+        if snap.date not in self._load_cache:
+            self._load_cache.clear()
+            pos = {tk: j for j, tk in enumerate(snap.tickers)}
+            col_to_row = np.array([pos.get(tk, -1) for tk in self.tickers])
+            L = np.vstack([snap.loadings, np.zeros((1, snap.loadings.shape[1]))])  # row -1 = zeros
+            self._load_cache[snap.date] = (col_to_row, L)
+        col_to_row, L = self._load_cache[snap.date]
+        return L[col_to_row[idx]]
+
+    def ic_estimate(self, t: int) -> float:
+        p = self.cfg.portfolio
+        hist_end = t - self.h - 1          # last day whose label is complete at t
+        if hist_end <= 0:
+            return p.ic_prior
+        return realized_ic(self.ic[max(0, hist_end - p.ic_lookback + 1) : hist_end + 1],
+                           p.ic_prior, p.ic_prior_days)
+
+    def holding_periods(self, t: int) -> float:
+        win = self.persist[max(0, t - 62) : t + 1]
+        rho = float(np.nanmean(win)) if np.isfinite(win).any() else 0.0
+        return float(np.clip(1.0 / (1.0 - np.clip(rho, 0.0, 0.95)), 1.0, 20.0))
+
+    def decide(self, t: int, w_cur: np.ndarray, equity: float, risk_scale: float = 1.0,
+               allowed: np.ndarray | None = None) -> Decision:
+        """``allowed``: optional mask of names that may be held (e.g. shortable)."""
+        z = self.pred[t]
+        ok = np.isfinite(z) & self.tradable[t] & np.isfinite(self.sigma[t])
+        if allowed is not None:
+            ok &= allowed
+        idx = np.nonzero(ok)[0]
+        N = len(z)
+        ic_hat = self.ic_estimate(t)
+        hold_L = self.holding_periods(t)
+        if len(idx) < 10:
+            return Decision(np.zeros(N), SizingInfo(0.0, "no_edge", 0.0, 0.0, 0.0), ic_hat, hold_L, len(idx))
+        zz = z[idx]
+        zz = (zz - zz.mean()) / (zz.std() + 1e-12)
+        tc = unit_cost(self.adv[t, idx], self.sigma[t, idx], equity, self.cfg)
+        w_sel, info = construct(zz, self.sigma[t, idx], self._loadings(t, idx), ic_hat, self.cfg,
+                                risk_scale, w_cur=w_cur[idx], tcost=tc, holding_periods=hold_L)
+        w = np.zeros(N)
+        w[idx] = w_sel
+        return Decision(w, info, ic_hat, hold_L, len(idx))

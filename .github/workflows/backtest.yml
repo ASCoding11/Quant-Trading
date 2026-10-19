@@ -1,0 +1,56 @@
+name: backtest
+
+# Run the full real-data backtest in the cloud - no local install needed.
+# Actions tab -> "backtest" -> "Run workflow". The HTML report is attached to
+# the run as an artifact called "backtest-report".
+
+on:
+  workflow_dispatch:
+    inputs:
+      size:
+        description: "Number of companies"
+        default: "1000"
+      years:
+        description: "Minimum years of trading history"
+        default: "15"
+      start:
+        description: "First date of price history"
+        default: "2000-01-01"
+      models:
+        description: "Models (comma list) - blank means all six"
+        default: ""
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore price cache
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: prices-${{ inputs.size }}-${{ inputs.years }}-${{ inputs.start }}-${{ github.run_id }}
+          restore-keys: prices-${{ inputs.size }}-${{ inputs.years }}-${{ inputs.start }}-
+      - name: Select universe
+        run: |
+          if [ ! -f data/universe.csv ]; then
+            python -m qtrade universe --size "${{ inputs.size }}" --years "${{ inputs.years }}" --start "${{ inputs.start }}"
+          fi
+      - name: Backtest
+        run: |
+          MODELS="${{ inputs.models }}"
+          python -m qtrade backtest --size "${{ inputs.size }}" --start "${{ inputs.start }}" \
+            ${MODELS:+--models "$MODELS"} --out reports/backtest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backtest-report
+          path: |
+            reports/backtest
+            data/universe.csv

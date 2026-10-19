@@ -1,0 +1,112 @@
+import numpy as np
+
+from qtrade.backtest.costs import half_spread, trade_cost
+from qtrade.backtest.engine import run_backtest
+from qtrade.backtest.metrics import deflated_sharpe, probabilistic_sharpe
+from qtrade.config import Config
+from qtrade.data.universe import parse_ishares_holdings, share_class_variants
+from qtrade.features.context import FeatureContext
+from qtrade.live.alpaca_trader import plan_orders
+from qtrade.pipeline import forward_returns
+from qtrade.portfolio.optimizer import construct
+
+
+def _inputs(n=300, k=5, seed=0):
+    rng = np.random.default_rng(seed)
+    return rng.standard_normal(n), rng.uniform(0.01, 0.03, n), rng.standard_normal((n, k))
+
+
+def test_portfolio_is_dollar_and_factor_neutral():
+    cfg = Config()
+    z, sig, B = _inputs()
+    w, info = construct(z, sig, B, 0.02, cfg)
+    assert abs(w.sum()) < 1e-3
+    assert np.abs(B.T @ w).max() < 1e-2
+    assert np.abs(w).max() <= cfg.portfolio.max_weight + 1e-9
+    assert np.abs(w).sum() <= cfg.portfolio.max_gross + 1e-9
+    assert np.corrcoef(w, z)[0, 1] > 0.3
+
+
+def test_no_edge_means_no_positions():
+    z, sig, B = _inputs()
+    w, info = construct(z, sig, B, 0.0, Config())
+    assert np.all(w == 0) and info.binding == "no_edge"
+
+
+def test_no_trade_band_keeps_book_when_costs_dominate():
+    cfg = Config()
+    z, sig, B = _inputs()
+    w_tgt, _ = construct(z, sig, B, 0.02, cfg)
+    huge_cost = np.full(len(z), 1.0)
+    w, _ = construct(z, sig, B, 0.02, cfg, w_cur=np.zeros(len(z)), tcost=huge_cost)
+    assert np.abs(w).sum() < 1e-6          # never worth trading
+    w2, _ = construct(z, sig, B, 0.02, cfg, w_cur=w_tgt, tcost=np.zeros(len(z)))
+    np.testing.assert_allclose(w2, w_tgt, atol=1e-5)  # free trading -> target
+
+
+def test_costs_scale_with_liquidity_and_size():
+    cfg = Config()
+    hs = half_spread(np.array([1e9, 50e6, 1e6]), cfg)
+    assert hs[0] < hs[1] < hs[2]
+    small = trade_cost(np.array([1e4]), np.array([1e8]), np.array([0.02]), cfg)[0] / 1e4
+    big = trade_cost(np.array([1e7]), np.array([1e8]), np.array([0.02]), cfg)[0] / 1e7
+    assert big > small
+
+
+def test_backtest_flat_forecast_is_flat(market, cfg):
+    md, _ = market
+    ctx = FeatureContext(md, cfg)
+    pred = np.where(ctx.tradable.to_numpy(), 0.0, np.nan)
+    fwd = forward_returns(md, cfg.model.horizon).to_numpy()
+    bt = run_backtest(ctx, pred, fwd, cfg, start=md.dates[400])
+    assert np.abs(bt.returns).max() < 1e-12
+
+
+def test_backtest_oracle_makes_money(market, cfg):
+    """Sanity check of the accounting: knowing tomorrow's returns must pay."""
+    md, _ = market
+    ctx = FeatureContext(md, cfg)
+    fwd = forward_returns(md, cfg.model.horizon).where(ctx.tradable).to_numpy()
+    bt = run_backtest(ctx, fwd, fwd, cfg, start=md.dates[400])
+    assert bt.returns.mean() > 0 and bt.daily["gross"].mean() > 0.1
+
+
+def test_sharpe_statistics():
+    rng = np.random.default_rng(0)
+    import pandas as pd
+
+    r = pd.Series(rng.normal(0.001, 0.01, 2000), index=pd.bdate_range("2010-01-01", periods=2000))
+    assert probabilistic_sharpe(r) > 0.95
+    assert deflated_sharpe(r, [0.1, 0.5, 1.0, 1.5, 2.0]) < probabilistic_sharpe(r)
+
+
+def test_plan_orders_rules():
+    prices = {"AAA": 100.0, "BBB": 50.0, "CCC": 10.0, "DDD": 20.0}
+    targets = {"AAA": 0.10, "BBB": -0.05, "CCC": -0.02, "DDD": 0.0001}
+    positions = {"AAA": 50, "CCC": 100, "EEE": 7}
+    orders, tgt = plan_orders(targets, prices, 100_000, positions, shortable={"BBB"}, min_order_value=50)
+    by = {o.symbol: o for o in orders}
+    assert by["AAA"].side == "buy" and by["AAA"].qty == 50          # 50 -> 100 shares
+    assert by["BBB"].side == "sell" and by["BBB"].qty == 100        # open short
+    assert by["CCC"].side == "sell" and by["CCC"].qty == 100        # not shortable -> just close the long
+    assert "DDD" not in by                                          # rounds to zero shares
+    assert by["EEE"].reason.startswith("exit")                      # not in targets -> exit
+
+
+def test_flip_is_split_across_days():
+    orders, _ = plan_orders({"AAA": -0.1}, {"AAA": 100.0}, 100_000, {"AAA": 30})
+    assert len(orders) == 1 and orders[0].qty == 30 and orders[0].reason == "close before flip"
+
+
+def test_ishares_parser_and_share_classes():
+    text = (
+        'iShares Russell 3000 ETF\nFund Holdings as of,"Oct 17, 2026"\n\n'
+        'Ticker,Name,Sector,Asset Class,Market Value,Weight (%)\n'
+        'AAPL,APPLE INC,Information Technology,Equity,"4,000,000",6.1\n'
+        'BRKB,BERKSHIRE HATHAWAY INC CLASS B,Financials,Equity,"1,500,000",1.6\n'
+        'MSFT,MICROSOFT CORP,Information Technology,Equity,"5,000,000",6.5\n'
+        'XTSLA,BLK CSH FND TREASURY SL AGENCY,Cash and/or Derivatives,Money Market,"10,000",0.1\n'
+    )
+    df = parse_ishares_holdings(text)
+    assert df["ticker"].tolist() == ["MSFT", "AAPL", "BRKB"]
+    assert "BRK-B" in share_class_variants("BRKB")

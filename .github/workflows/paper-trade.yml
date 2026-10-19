@@ -1,0 +1,73 @@
+name: paper-trade
+
+# Runs every weekday before the US open and sends market-on-open orders to
+# your Alpaca *paper* account. Nothing happens until you add two repository
+# secrets (Settings -> Secrets and variables -> Actions):
+#   ALPACA_API_KEY      ALPACA_SECRET_KEY
+# from https://app.alpaca.markets (switch to the Paper account first).
+# Run it by hand from the Actions tab with "send = false" to see the orders
+# it would place without sending them.
+
+on:
+  schedule:
+    - cron: "15 12 * * 1-5"   # 12:15 UTC = 8:15am New York (7:15am in winter)
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "Send orders to the paper account (false = dry run)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: paper-trade
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+    steps:
+      - name: Check for Alpaca keys
+        id: keys
+        run: |
+          if [ -z "$ALPACA_API_KEY" ] || [ -z "$ALPACA_SECRET_KEY" ]; then
+            echo "No Alpaca secrets set - skipping. Add ALPACA_API_KEY and ALPACA_SECRET_KEY to enable paper trading."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.ok == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+        if: steps.keys.outputs.ok == 'true'
+      - name: Restore data cache
+        if: steps.keys.outputs.ok == 'true'
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: live-${{ github.run_id }}
+          restore-keys: live-
+      - name: Select universe (first run only)
+        if: steps.keys.outputs.ok == 'true'
+        run: '[ -f data/universe.csv ] || python -m qtrade universe'
+      - name: Trade
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then
+            python -m qtrade paper --send
+          else
+            python -m qtrade paper
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.keys.outputs.ok == 'true' && always()
+        with:
+          name: paper-trade-logs-${{ github.run_id }}
+          path: logs

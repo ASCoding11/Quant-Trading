@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qtrade"
+version = "0.1.0"
+description = "Renaissance-inspired statistical arbitrage: 44 signals, HMM regimes, walk-forward ML, cost-aware market-neutral portfolios, Alpaca paper trading."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26", "pandas>=2.1", "scipy>=1.11", "scikit-learn>=1.3", "matplotlib>=3.7",
+  "pyyaml>=6", "pyarrow>=14", "yfinance>=0.2.40", "lxml>=4.9", "alpaca-py>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+qtrade = "qtrade.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["qtrade*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::RuntimeWarning", "ignore::DeprecationWarning", "ignore::FutureWarning"]

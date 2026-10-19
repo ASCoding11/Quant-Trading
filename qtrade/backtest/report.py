@@ -206,7 +206,8 @@ The deflated Sharpe corrects the chosen model for having tried all of these.</p>
 
 
 def write_markdown(summary: dict, comparison_tbl: pd.DataFrame, ic_table: pd.DataFrame,
-                   imgs: dict[str, str], out_dir: str | Path, notes: list[str], cfg) -> Path:
+                   imgs: dict[str, str], out_dir: str | Path, notes: list[str], cfg,
+                   diagnostics: pd.DataFrame | None = None) -> Path:
     """GitHub-renderable summary: README.md + charts/*.png (used by the results branch)."""
     out_dir = Path(out_dir)
     charts_dir = out_dir / "charts"
@@ -238,6 +239,9 @@ def write_markdown(summary: dict, comparison_tbl: pd.DataFrame, ic_table: pd.Dat
         if k in imgs:
             md += [f"![{title}](charts/{k}.png)", ""]
     md += ["## Models (same portfolio rules)", "", comparison_tbl.round(3).to_markdown(), ""]
+    if diagnostics is not None:
+        md += ["## Portfolio-construction diagnostics (same ensemble forecast)", "",
+               diagnostics.round(3).to_markdown(), ""]
     md += ["## Signals (descriptive, full-sample rank IC)", "",
            ic_table.round(4).head(44).to_markdown(index=False), ""]
     for k in ("signals", "weights"):

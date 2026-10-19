@@ -75,6 +75,8 @@ class PortfolioConfig:
     ic_prior: float = 0.01           # prior daily IC for Bayesian shrinkage
     ic_prior_days: int = 252         # weight of that prior, in days
     ic_lookback: int = 252           # trailing window for realized IC
+    weighting: str = "kelly"         # kelly (alpha / variance) | rank (proportional to score)
+    factor_neutral: bool = True      # hedge PCA factors as well as net dollars
     cost_aversion: float = 1.0       # scales costs in the no-trade band (>1 trades less)
     trade_rate: float = 1.0          # extra partial adjustment toward target (1 = off)
     no_trade_band: float = 0.0002    # ignore trades smaller than 2 bp of equity
@@ -115,6 +117,7 @@ class Config:
     costs: CostConfig = field(default_factory=CostConfig)
     live: LiveConfig = field(default_factory=LiveConfig)
     report_dir: str = "reports"
+    diagnostics: bool = True         # also backtest portfolio-construction variants
 
     # -- helpers ---------------------------------------------------------
     def to_dict(self) -> dict:

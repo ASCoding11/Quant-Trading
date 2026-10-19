@@ -55,6 +55,11 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
     summary["n_stocks"] = len(md.tickers)
     summary["model"] = main.name
 
+    diag = run_diagnostics(research, cfg) if cfg.diagnostics else None
+    if diag is not None:
+        diag.to_csv(out_dir / "diagnostics.csv")
+        LOG.info("portfolio diagnostics:\n%s", diag.round(3).to_string())
+
     ic_table = research.signal_ic_table()
     imgs = charts(main, bench, research.regimes, comparison, ic_table,
                   research.wf.weights.get("ridge", []), research.signal_names)
@@ -63,7 +68,7 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
         notes = ["<b>Synthetic data.</b> This run used a simulated market with planted "
                  "patterns, to check that the machinery works. It says nothing about real markets."]
     path = write_report(main, summary, cmp_tbl, ic_table, imgs, cfg, out_dir, notes)
-    write_markdown(summary, cmp_tbl, ic_table, imgs, out_dir, notes, cfg)
+    write_markdown(summary, cmp_tbl, ic_table, imgs, out_dir, notes, cfg, diag)
 
     main.daily.to_csv(out_dir / "daily.csv")
     cmp_tbl.to_csv(out_dir / "model_comparison.csv")
@@ -79,3 +84,37 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
              summary["deflated_sharpe_prob"] * 100)
     return {"summary": summary, "comparison": cmp_tbl, "report": str(path), "research": research,
             "results": results}
+
+
+DIAGNOSTIC_VARIANTS = {
+    "default": {},
+    "frictionless": {"costs": {"slippage_bps": 0.0, "spread_tiers": [[0.0, 0.0]], "impact_coef": 0.0,
+                               "borrow_bps_annual": 0.0}, "portfolio": {"cost_aversion": 0.0}},
+    "no_band (pay costs)": {"portfolio": {"cost_aversion": 0.0}},
+    "half_band": {"portfolio": {"cost_aversion": 0.5}},
+    "rank_weights": {"portfolio": {"weighting": "rank"}},
+    "dollar_neutral_only": {"portfolio": {"factor_neutral": False}},
+    "max_gross_4x": {"portfolio": {"max_gross": 4.0}},
+}
+
+
+def run_diagnostics(research, cfg: Config) -> pd.DataFrame:
+    """Same forecasts, different portfolio rules: shows where the edge is lost."""
+    import copy
+
+    from ..config import _merge
+
+    rows = []
+    pred = research.prediction(cfg.model.trade_model)
+    for name, ov in DIAGNOSTIC_VARIANTS.items():
+        c = copy.deepcopy(cfg)
+        _merge(c, ov)
+        bt = run_backtest(research.ctx, pred, research.fwd_ret, c, name=name, record_weights=False)
+        s = summarize(bt.returns, bt.daily)
+        gross_ret = s["ann_return"] + s["ann_cost_drag"] + s["ann_borrow_drag"]
+        rows.append({"variant": name, "sharpe": s["sharpe"], "ann_return": s["ann_return"],
+                     "pre_cost_return": gross_ret, "ann_vol": s["ann_vol"],
+                     "pre_cost_sharpe": gross_ret / s["ann_vol"] if s["ann_vol"] > 0 else np.nan,
+                     "avg_gross": s["avg_gross"], "ann_turnover": s["ann_turnover"],
+                     "cost_drag": s["ann_cost_drag"] + s["ann_borrow_drag"]})
+    return pd.DataFrame(rows).set_index("variant")

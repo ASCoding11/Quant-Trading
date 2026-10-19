@@ -88,8 +88,14 @@ def construct(
     sigma = np.clip(sigma, 0.003, 0.15)
     var_d = sigma ** 2
     var = var_d * h                      # variance over the forecast horizon
-    C = np.ones((n, 1)) if loadings is None else np.column_stack([np.ones(n), loadings])
-    alpha = ic_hat * sigma * np.sqrt(h) * z
+    use_factors = loadings is not None and p.factor_neutral
+    C = np.column_stack([np.ones(n), loadings]) if use_factors else np.ones((n, 1))
+    if p.weighting == "rank":
+        # diagnostic alternative: weights proportional to the score itself
+        var = np.full(n, var.mean())
+        alpha = ic_hat * np.sqrt(var) * z
+    else:
+        alpha = ic_hat * sigma * np.sqrt(h) * z
     w_full = neutral_kelly(alpha, var, C)
 
     pred_vol = np.sqrt((w_full ** 2 * var_d).sum() * TRADING_DAYS)

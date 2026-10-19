@@ -1,3 +1,6 @@
 # Backtest results
 
-Latest run: [latest/](latest/README.md)
+Latest: [latest/](latest/README.md)
+
+## All runs
+- [2026-10-19_2145_horizon-1](runs/2026-10-19_2145_horizon-1/README.md)

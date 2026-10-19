@@ -110,3 +110,21 @@ def test_ishares_parser_and_share_classes():
     df = parse_ishares_holdings(text)
     assert df["ticker"].tolist() == ["MSFT", "AAPL", "BRKB"]
     assert "BRK-B" in share_class_variants("BRKB")
+
+
+def test_small_account_mode_holds_whole_shares_in_few_names(market, cfg):
+    import copy
+
+    md, _ = market
+    c = copy.deepcopy(cfg)
+    c.portfolio.max_names, c.portfolio.whole_shares, c.costs.aum = 20, True, 10_000
+    ctx = FeatureContext(md, c)
+    fwd = forward_returns(md, c.model.horizon).where(ctx.tradable).to_numpy()
+    bt = run_backtest(ctx, fwd, fwd, c, start=md.dates[400])
+    day = bt.weights.index[len(bt.weights) // 2]
+    w = bt.weights.loc[day]
+    shares = w * bt.daily["equity"].loc[day] / md.close.loc[day]
+    held = w != 0
+    assert held.sum() > 5
+    assert np.abs(shares[held] - np.round(shares[held])).max() < 1e-2  # weights are stored as float32
+    assert bt.daily["long_names"].median() + bt.daily["short_names"].median() <= 2 * c.portfolio.max_names

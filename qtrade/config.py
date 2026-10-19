@@ -76,6 +76,9 @@ class PortfolioConfig:
     ic_prior_days: int = 252         # weight of that prior, in days
     ic_lookback: int = 252           # trailing window for realized IC
     forecast_halflife: float = 3.0   # days of exponential smoothing of the forecast (0 = off)
+    max_names: int | None = None     # small accounts: hold only the N strongest names
+    n_neutral_factors: int | None = None  # hedge only the first N PCA factors (None = all)
+    whole_shares: bool = False       # round positions to whole shares (needs costs.aum = account size)
     weighting: str = "kelly"         # kelly (alpha / variance) | rank (proportional to score)
     factor_neutral: bool = True      # hedge PCA factors as well as net dollars
     cost_aversion: float = 1.0       # scales costs in the no-trade band (>1 trades less)
@@ -104,6 +107,7 @@ class LiveConfig:
     order_type: str = "auto"         # auto | opg (market-on-open) | market
     min_order_value: float = 50.0    # skip orders smaller than this ($)
     capital_fraction: float = 1.0    # fraction of paper equity to deploy
+    max_capital: float | None = None # never deploy more than this many dollars
     log_dir: str = "logs"
 
 

@@ -29,6 +29,8 @@ jobs:
     env:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      # optional repository variable, e.g. config/small_account.yaml
+      QTRADE_CONFIG: ${{ vars.QTRADE_CONFIG }}
     steps:
       - name: Check for Alpaca keys
         id: keys
@@ -62,9 +64,9 @@ jobs:
         if: steps.keys.outputs.ok == 'true'
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then
-            python -m qtrade paper --send
+            python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} paper --send
           else
-            python -m qtrade paper
+            python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} paper
           fi
       - uses: actions/upload-artifact@v4
         if: steps.keys.outputs.ok == 'true' && always()

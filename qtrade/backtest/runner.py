@@ -89,6 +89,8 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
 DIAGNOSTIC_VARIANTS = {
     "frictionless": {"costs": {"slippage_bps": 0.0, "spread_tiers": [[0.0, 0.0]], "impact_coef": 0.0,
                                "borrow_bps_annual": 0.0}, "portfolio": {"cost_aversion": 0.0}},
+    "auction_costs (no spread)": {"costs": {"spread_tiers": [[0.0, 0.0]]}},
+    "quoted_spread_costs": {"costs": {"spread_tiers": [[500e6, 1.5], [100e6, 3.0], [20e6, 6.0], [0.0, 12.0]]}},
     "rank_weights": {"portfolio": {"weighting": "rank"}},
     "dollar_neutral_only": {"portfolio": {"factor_neutral": False}},
 }

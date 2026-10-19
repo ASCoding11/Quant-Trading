@@ -87,6 +87,10 @@ def run_backtest(
         # names with no price cannot trade; long-missing names are written off
         w_new = trade_toward(w_open, w_tgt, p.trade_rate, p.no_trade_band)
         w_new[~priced] = w_open[~priced]
+        if p.whole_shares and eq_open > 0:
+            px = np.where(priced, o1, np.nan)
+            shares = np.trunc(np.nan_to_num(w_new * eq_open / px))
+            w_new = np.where(priced, shares * np.nan_to_num(px) / eq_open, w_new)
         dead = missing >= 5
         w_new[dead] = 0.0
 

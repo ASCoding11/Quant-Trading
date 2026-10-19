@@ -169,6 +169,8 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
     else:
         equity, pos_qty, pos_val, shortable, tradable, peak = _account_state(client)
     deploy = equity * cfg.live.capital_fraction
+    if cfg.live.max_capital:
+        deploy = min(deploy, cfg.live.max_capital)
 
     cols = md.tickers
     w_cur = np.array([pos_val.get(t, 0.0) / deploy for t in cols]) if deploy > 0 else np.zeros(len(cols))

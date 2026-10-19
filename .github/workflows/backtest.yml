@@ -25,6 +25,9 @@ on:
       label:
         description: "Name for this run in the results branch"
         default: "default"
+      config:
+        description: "Config file, e.g. config/small_account.yaml (blank = defaults)"
+        default: ""
 
 permissions:
   contents: write   # to publish results to the "results" branch
@@ -56,7 +59,8 @@ jobs:
           set -o pipefail
           mkdir -p reports/backtest
           MODELS="${{ inputs.models }}"
-          python -m qtrade backtest --size "${{ inputs.size }}" --start "${{ inputs.start }}" \
+          CONFIG="${{ inputs.config }}"
+          python -m qtrade ${CONFIG:+--config "$CONFIG"} backtest --size "${{ inputs.size }}" --start "${{ inputs.start }}" \
             --horizon "${{ inputs.horizon }}" ${MODELS:+--models "$MODELS"} --out reports/backtest \
             2>&1 | tee reports/backtest/run.log
       - name: Publish results (job summary + "results" branch)

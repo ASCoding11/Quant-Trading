@@ -83,6 +83,7 @@ def construct(
     p = cfg.portfolio
     h = cfg.model.horizon
     n = len(z)
+    cap = p.max_weight if not p.max_names else max(p.max_weight, 1.5 * p.max_gross / p.max_names)
     if n < 10 or ic_hat <= 0:
         return np.zeros(n), SizingInfo(0.0, "no_edge", 0.0, 0.0, 0.0)
     sigma = np.clip(sigma, 0.003, 0.15)
@@ -113,14 +114,14 @@ def construct(
     vol_cap = p.target_vol * risk_scale
     w = w_full * s
     for _ in range(12):
-        w = project_neutral(np.clip(w, -p.max_weight, p.max_weight), C)
+        w = project_neutral(np.clip(w, -cap, cap), C)
         g = np.abs(w).sum()
         v = np.sqrt((w ** 2 * var_d).sum() * TRADING_DAYS)
         up = min(intended_gross / g if g > 0 else 1.0, vol_cap / v if v > 0 else 1.0)
         if up < 1.01:
             break
         w = w * up
-    w = np.clip(w, -p.max_weight, p.max_weight)
+    w = np.clip(w, -cap, cap)
 
     if w_cur is not None and tcost is not None and s > 0:
         # no-trade band of half-width s_eff*c/var around the target, where
@@ -129,9 +130,9 @@ def construct(
         c = np.nan_to_num(tcost, nan=0.0) * p.cost_aversion / max(holding_periods, 1.0)
         half = s_eff * c / var
         w = np.clip(w_cur, w - half, w + half)
-        w = project_neutral(np.clip(w, -p.max_weight, p.max_weight), C)
+        w = project_neutral(np.clip(w, -cap, cap), C)
 
-    w = np.clip(w, -p.max_weight, p.max_weight)
+    w = np.clip(w, -cap, cap)
     g = np.abs(w).sum()
     if g > p.max_gross:
         w *= p.max_gross / g

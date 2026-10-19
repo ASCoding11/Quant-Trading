@@ -80,7 +80,8 @@ class Decider:
             L = np.vstack([snap.loadings, np.zeros((1, snap.loadings.shape[1]))])  # row -1 = zeros
             self._load_cache[snap.date] = (col_to_row, L)
         col_to_row, L = self._load_cache[snap.date]
-        return L[col_to_row[idx]]
+        nf = self.cfg.portfolio.n_neutral_factors
+        return L[col_to_row[idx]][:, :nf] if nf is not None else L[col_to_row[idx]]
 
     def ic_estimate(self, t: int) -> float:
         p = self.cfg.portfolio
@@ -110,6 +111,18 @@ class Decider:
             return Decision(np.zeros(N), SizingInfo(0.0, "no_edge", 0.0, 0.0, 0.0), ic_hat, hold_L, len(idx))
         zz = z[idx]
         zz = (zz - zz.mean()) / (zz.std() + 1e-12)
+        k = self.cfg.portfolio.max_names
+        if k and len(idx) > k:
+            # small accounts: open positions only in the k/2 strongest longs and
+            # shorts; keep an existing position while it stays within the top or
+            # bottom k (a rank buffer that avoids churning names in and out)
+            rank = np.argsort(np.argsort(zz))           # 0 = most negative
+            n = len(idx)
+            new_ok = (rank < k // 2) | (rank >= n - k // 2)
+            buffer_ok = (rank < k) | (rank >= n - k)
+            held = w_cur[idx] != 0
+            keep = new_ok | (held & buffer_ok)
+            idx, zz = idx[keep], zz[keep]
         tc = unit_cost(self.adv[t, idx], self.sigma[t, idx], equity, self.cfg)
         w_sel, info = construct(zz, self.sigma[t, idx], self._loadings(t, idx), ic_hat, self.cfg,
                                 risk_scale, w_cur=w_cur[idx], tcost=tc, holding_periods=hold_L)

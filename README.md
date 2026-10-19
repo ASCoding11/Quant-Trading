@@ -201,6 +201,32 @@ cheaper than a daily-bar model can assume.
   far higher leverage than a retail account is allowed.
 - A good backtest is a reason to paper trade, not to trade real money.
 
+## Small accounts ($10k)
+
+[`config/small_account.yaml`](config/small_account.yaml) adapts the system to
+a $10,000 account. A 1,000-name book would mean about $20 per stock, so instead:
+
+- it holds about 60 names (30 long, 30 short), opening positions only in the
+  strongest signals and keeping a position while it stays in the top or bottom
+  60;
+- every position is a **whole number of shares**: Alpaca doesn't allow
+  fractional shares in short sales or opening-auction orders;
+- it hedges only the market and the two strongest PCA factors, since 15
+  hedges are too many for 60 names;
+- costs assume **market-on-open orders**. These trade at the single auction
+  price, so there is no bid-ask spread to cross, just 1.5 bp of slippage.
+  Market impact at $10k is negligible.
+
+```bash
+python -m qtrade --config config/small_account.yaml backtest
+python -m qtrade --config config/small_account.yaml paper
+```
+
+The config also caps paper trading at $10k (`live.max_capital`), even though
+Alpaca paper accounts start at $100k. To use it for the scheduled paper
+trades, set a repository variable `QTRADE_CONFIG` = `config/small_account.yaml`
+(Settings → Secrets and variables → Actions → Variables).
+
 ## Paper trading
 
 1. Create a free account at [alpaca.markets](https://alpaca.markets), switch

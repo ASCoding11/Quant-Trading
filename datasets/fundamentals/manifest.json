@@ -1,0 +1,13 @@
+{
+  "dataset": "fundamentals",
+  "source": "SEC EDGAR XBRL company facts",
+  "companies_requested": 1000,
+  "companies_with_data": 999,
+  "total_facts": 4252198,
+  "tags": 37,
+  "first_filed": "2009-04-15",
+  "last_filed": "2026-10-19",
+  "complete": true,
+  "api_calls": 1001,
+  "updated": "2026-10-20T04:53:41.215510+00:00"
+}

@@ -1,12 +1,12 @@
 {
   "timeframe": "5Min",
-  "symbols": 823,
+  "symbols": 1000,
   "symbols_requested": 1000,
-  "total_rows": 168840316,
+  "total_rows": 202224214,
   "first": "2016-01-04 09:30:00-05:00",
   "last": "2026-10-19 15:55:00-04:00",
-  "updated": "2026-10-20T08:18:05.874646+00:00",
-  "complete": false,
-  "api_calls": 55611,
+  "updated": "2026-10-20T09:29:46.963050+00:00",
+  "complete": true,
+  "api_calls": 12575,
   "start_requested": "2016-01-01"
 }

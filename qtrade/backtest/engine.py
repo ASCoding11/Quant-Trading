@@ -49,6 +49,9 @@ def run_backtest(
     T, N = pred.shape
     O = md.open.to_numpy()
     Cl = md.close.to_numpy()
+    # as-traded / adjusted price: whole shares are counted at the price that printed
+    px_scale = (md.traded_close / md.close).to_numpy()
+    px_scale = np.where(np.isfinite(px_scale) & (px_scale > 0), px_scale, 1.0)
     p = cfg.portfolio
     dec = Decider(ctx, pred, fwd_ret, cfg)
     sigma, adv = dec.sigma, dec.adv
@@ -88,7 +91,7 @@ def run_backtest(
         w_new = trade_toward(w_open, w_tgt, p.trade_rate, p.no_trade_band)
         w_new[~priced] = w_open[~priced]
         if p.whole_shares and eq_open > 0:
-            px = np.where(priced, o1, np.nan)
+            px = np.where(priced, o1 * px_scale[t + 1], np.nan)
             shares = np.trunc(np.nan_to_num(w_new * eq_open / px))
             w_new = np.where(priced, shares * np.nan_to_num(px) / eq_open, w_new)
         dead = missing >= 5

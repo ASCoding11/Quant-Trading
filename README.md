@@ -133,6 +133,15 @@ daily z-scores.
 - Decisions are made at the close, and trades fill at the **next day's open**.
 - Costs: a half-spread by liquidity tier, 1 bp slippage, square-root market
   impact, and a 50 bp/yr borrow fee on shorts.
+- **Price levels as they traded.** Yahoo back-adjusts every price for later
+  splits and dividends, so NVDA's adjusted 2005 price is a few cents. Returns
+  use adjusted prices, but the $5 floor, dollar volume (liquidity filter,
+  spread tiers, impact, the `size_proxy` and `amihud` signals) and whole-share
+  rounding use the close and volume that actually printed that day. Otherwise
+  stocks that later split a lot (the big winners) would be dropped from the
+  early years, which is a look-ahead. `tests/test_invariants.py` checks that
+  re-adjusting a stock's history for a later split or dividend changes no
+  signal, filter or trade.
 - **No look-ahead, enforced by tests.** Every signal, the regime
   probabilities, and every model forecast are recomputed on history cut off
   at day *D*, and must exactly match the full-history values at *D*.

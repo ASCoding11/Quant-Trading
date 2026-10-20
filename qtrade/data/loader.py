@@ -1,19 +1,23 @@
 """Daily OHLCV download from Yahoo Finance (via ``yfinance``) with a local cache.
 
-Prices are split- and dividend-adjusted (``auto_adjust=True``) so that
-close-to-close returns are total returns. Because adjustments change the whole
-history whenever a dividend is paid, the cache is refreshed by re-downloading
-rather than appending.
+Prices are split- and dividend-adjusted so that close-to-close returns are
+total returns. The close and volume as they actually printed are kept too
+(``raw_close``, ``raw_volume``), rebuilt from Yahoo's split-only-adjusted
+close and its split history: price floors, liquidity and costs must not
+depend on splits and dividends that happen later. Because adjustments change
+the whole history whenever a dividend is paid, the cache is refreshed by
+re-downloading rather than appending.
 """
 from __future__ import annotations
 
 import time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from ..utils import LOG, load_frame, save_frame
-from .market import FIELDS, MarketData
+from .market import FIELDS, RAW_FIELDS, MarketData
 
 _YF_FIELDS = {"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}
 
@@ -32,19 +36,52 @@ def _download_batch(tickers: list[str], start: str, end: str | None) -> dict[str
     import yfinance as yf
 
     raw = yf.download(
-        tickers, start=start, end=end, auto_adjust=True, actions=False,
+        tickers, start=start, end=end, auto_adjust=False, actions=True,
         group_by="column", threads=True, progress=False,
     )
-    out: dict[str, pd.DataFrame] = {}
     if raw is None or raw.empty:
-        return out
+        return {}
     if not isinstance(raw.columns, pd.MultiIndex):  # single ticker
         raw.columns = pd.MultiIndex.from_product([raw.columns, tickers])
+    return split_yahoo_frame(raw)
+
+
+def split_yahoo_frame(raw: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """Turn an unadjusted ``yf.download(..., actions=True)`` frame into adjusted
+    OHLCV panels plus the as-traded close and volume.
+
+    Yahoo's ``Close``/``Volume`` are adjusted for splits only and ``Adj Close``
+    for splits and dividends. Undoing the splits needs the split history: the
+    as-traded price on day t is the split-adjusted price times every split
+    ratio with an ex-date after t.
+    """
+    fields = raw.columns.get_level_values(0)
+    get = lambda name: raw[name].copy() if name in fields else None  # noqa: E731
+    out: dict[str, pd.DataFrame] = {}
+    close, adj = get("Close"), get("Adj Close")
+    if close is None:
+        return out
+    factor = (adj / close) if adj is not None else close * 0 + 1.0   # dividend adjustment
+    factor = factor.where(np.isfinite(factor) & (factor > 0))
     for f, yf_name in _YF_FIELDS.items():
-        if yf_name in raw.columns.get_level_values(0):
-            df = raw[yf_name].copy()
-            df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
-            out[f] = df
+        df = get(yf_name)
+        if df is None:
+            continue
+        if f == "close" and adj is not None:
+            df = adj
+        elif f != "volume":            # volume is already split-adjusted, and dividends don't touch it
+            df = df * factor
+        out[f] = df
+    splits = get("Stock Splits")   # absent only when the batch had none
+    ratio = (splits.where(splits > 0).fillna(1.0).reindex_like(close)
+             if splits is not None else close * 0 + 1.0).fillna(1.0)
+    # product of the ratios of all splits strictly after each day
+    later = ratio.iloc[::-1].cumprod().iloc[::-1].shift(-1).fillna(1.0)
+    out["raw_close"] = close * later
+    if "volume" in out:
+        out["raw_volume"] = out["volume"] / later
+    for f in out:
+        out[f].index = pd.to_datetime(out[f].index).tz_localize(None).normalize()
     return out
 
 
@@ -57,7 +94,7 @@ def download_prices(
 ) -> MarketData:
     """Download OHLCV for many tickers in batches. Tickers that fail are dropped."""
     tickers = list(dict.fromkeys(to_yahoo(t) for t in tickers))
-    frames: dict[str, list[pd.DataFrame]] = {f: [] for f in FIELDS}
+    frames: dict[str, list[pd.DataFrame]] = {f: [] for f in FIELDS + RAW_FIELDS}
     for i in range(0, len(tickers), batch_size):
         batch = tickers[i : i + batch_size]
         for attempt in range(retries + 1):
@@ -68,18 +105,20 @@ def download_prices(
                 LOG.warning("batch %d failed (%s); retry %d", i // batch_size, exc, attempt + 1)
                 time.sleep(5 * (attempt + 1))
                 got = {}
-        for f in FIELDS:
+        for f in FIELDS + RAW_FIELDS:
             if f in got:
                 frames[f].append(got[f])
         LOG.info("downloaded %d / %d tickers", min(i + batch_size, len(tickers)), len(tickers))
 
     if not frames["close"]:
         raise RuntimeError("No price data downloaded - check your internet connection.")
-    panels = {f: pd.concat(frames[f], axis=1).sort_index() for f in FIELDS}
+    # raw panels only when every batch had them, so they cover every ticker
+    fields = FIELDS + tuple(f for f in RAW_FIELDS if len(frames[f]) == len(frames["close"]))
+    panels = {f: pd.concat(frames[f], axis=1).sort_index() for f in fields}
     close = panels["close"]
     close = close.loc[:, ~close.columns.duplicated()]
     keep = close.columns[close.notna().sum() > 0]
-    panels = {f: panels[f].loc[:, ~panels[f].columns.duplicated()].reindex(columns=keep) for f in FIELDS}
+    panels = {f: panels[f].loc[:, ~panels[f].columns.duplicated()].reindex(columns=keep) for f in fields}
     # drop dates where (almost) nothing traded: holidays that sneak in
     active = panels["close"].notna().mean(axis=1) > 0.05
     panels = {f: df.loc[active] for f, df in panels.items()}
@@ -88,12 +127,13 @@ def download_prices(
 
 def cache_paths(cache_dir: str | Path) -> dict[str, Path]:
     cache_dir = Path(cache_dir)
-    return {f: cache_dir / "prices" / f for f in FIELDS}
+    return {f: cache_dir / "prices" / f for f in FIELDS + RAW_FIELDS}
 
 
 def save_market(md: MarketData, cache_dir: str | Path) -> None:
     for f, p in cache_paths(cache_dir).items():
-        save_frame(getattr(md, f).astype("float32"), p)
+        if getattr(md, f) is not None:
+            save_frame(getattr(md, f).astype("float32"), p)
 
 
 def load_market(cache_dir: str | Path) -> MarketData | None:
@@ -101,6 +141,8 @@ def load_market(cache_dir: str | Path) -> MarketData | None:
     for f, p in cache_paths(cache_dir).items():
         df = load_frame(p)
         if df is None:
+            if f in RAW_FIELDS:
+                continue
             return None
         panels[f] = df
     return MarketData(**panels)
@@ -131,7 +173,9 @@ def get_market_data(
         fresh = cached.dates[-1] >= target_end - pd.Timedelta(days=4)
         covered = len(want - have) <= max(5, 0.01 * len(want))
         starts_ok = cached.dates[0] <= pd.Timestamp(start) + pd.Timedelta(days=10)
-        if fresh and covered and starts_ok:
+        if not cached.has_raw:
+            LOG.info("cached prices have no as-traded close/volume; downloading again")
+        elif fresh and covered and starts_ok:
             LOG.info("using cached prices (%d tickers, through %s)", len(have), cached.dates[-1].date())
             return cached.subset(tickers=[t for t in cached.tickers if t in want])
     md = download_prices(sorted(want), start=start, end=end, batch_size=batch_size)

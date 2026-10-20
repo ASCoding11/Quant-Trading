@@ -284,8 +284,10 @@ News articles likewise carry their publication time.
    secret**. Add `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`.
 3. **Actions → paper-trade → Run workflow** with `send` unticked does a dry run
    (the orders are in the run's log and artifact). Tick `send` to place them.
-4. From then on, the workflow runs automatically every weekday at about 8:15am
-   New York time and submits market-on-open orders.
+4. From then on, the workflow runs automatically every weekday before the open
+   and submits market-on-open orders. It is scheduled at about 6:47am New York
+   time with a back-up at 8:17am, because GitHub's scheduler sometimes delays
+   or drops runs. The back-up skips itself if orders were already sent that day.
 
 Locally: `export ALPACA_API_KEY=... ALPACA_SECRET_KEY=...`, then
 `python -m qtrade paper` (dry run) or `python -m qtrade paper --send`.

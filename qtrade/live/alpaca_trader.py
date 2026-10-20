@@ -137,7 +137,15 @@ def _account_state(client):
     return equity, pos_qty, pos_val, shortable, tradable, peak
 
 
-def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | None = None) -> dict:
+def traded_today(client) -> bool:
+    """True if the account already has orders submitted since midnight New York time."""
+    midnight = pd.Timestamp.now(tz="America/New_York").normalize()
+    orders = client.get("/orders", {"status": "all", "after": midnight.isoformat(), "limit": 5})
+    return bool(orders)
+
+
+def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | None = None,
+              once_per_day: bool = False) -> dict:
     dry_run = cfg.live.dry_run if dry_run is None else dry_run
     out_dir = Path(out_dir or cfg.live.log_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -160,6 +168,9 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
             raise SystemExit(f"Alpaca request failed: {exc}.{hint}") from exc
         LOG.info("Alpaca paper account OK: equity $%.0f, %d open positions, %d shortable names",
                  equity, len(pos_qty), len(shortable))
+        if once_per_day and not dry_run and traded_today(client):
+            LOG.info("orders were already sent today (earlier scheduled run) - nothing to do")
+            return {"skipped": True}
 
     uni = load_universe(cfg.data.cache_dir)
     if uni is None:

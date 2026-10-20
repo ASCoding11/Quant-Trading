@@ -49,6 +49,10 @@ jobs:
           if [ -z "$ALPACA_API_KEY" ] || [ -z "$ALPACA_SECRET_KEY" ]; then
             echo "::error::Add ALPACA_API_KEY and ALPACA_SECRET_KEY repository secrets first."; exit 1
           fi
+      - name: Free disk space (datasets are several GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h / | tail -1
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -107,4 +111,5 @@ jobs:
             publish_manifest "$NAME" "$DIR"
             echo "::endgroup::"
             if ! dataset_complete "$DIR"; then requeue "$REFRESH$JOB $*"; break; fi
+            rm -rf "data/$DIR"   # free disk before the next dataset
           done

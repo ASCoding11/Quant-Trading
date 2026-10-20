@@ -97,7 +97,7 @@ def cmd_paper(args):
     from .live.alpaca_trader import run_paper
 
     cfg = _cfg(args)
-    run_paper(cfg, dry_run=not args.send)
+    run_paper(cfg, dry_run=not args.send, once_per_day=args.once_per_day)
 
 
 def cmd_intraday(args):
@@ -209,6 +209,8 @@ def main(argv=None):
     p.set_defaults(fn=cmd_demo)
     p = common(sub.add_parser("paper", help="paper trade on Alpaca"))
     p.add_argument("--send", action="store_true", help="really submit orders (paper account)")
+    p.add_argument("--once-per-day", action="store_true",
+                   help="skip if orders were already sent today (for back-up scheduled runs)")
     p.set_defaults(fn=cmd_paper)
     p = sub.add_parser("intraday", help="download intraday bars from Alpaca")
     p.add_argument("--symbols", type=int, default=200, help="how many of the most liquid stocks")

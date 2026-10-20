@@ -1,7 +1,9 @@
 name: paper-trade
 
 # Runs every weekday before the US open and sends market-on-open orders to
-# your Alpaca *paper* account. Nothing happens until you add two repository
+# your Alpaca *paper* account. GitHub's scheduler is best-effort (runs can be
+# late or dropped), so it is scheduled twice; the second run skips itself if
+# the first already traded. Nothing happens until you add two repository
 # secrets (Settings -> Secrets and variables -> Actions):
 #   ALPACA_API_KEY      ALPACA_SECRET_KEY
 # from https://app.alpaca.markets (switch to the Paper account first).
@@ -10,7 +12,8 @@ name: paper-trade
 
 on:
   schedule:
-    - cron: "15 12 * * 1-5"   # 12:15 UTC = 8:15am New York (7:15am in winter)
+    - cron: "47 10 * * 1-5"   # 10:47 UTC = 6:47am New York (5:47am in winter)
+    - cron: "17 12 * * 1-5"   # back-up: 8:17am New York (7:17am in winter)
   workflow_dispatch:
     inputs:
       send:
@@ -65,7 +68,8 @@ jobs:
         if: steps.keys.outputs.ok == 'true'
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then
-            python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} paper --send
+            ONCE=""; [ "${{ github.event_name }}" = "schedule" ] && ONCE="--once-per-day"
+            python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} paper --send $ONCE
           else
             python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} paper
           fi

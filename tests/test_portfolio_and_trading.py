@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 
 from qtrade.backtest.costs import half_spread, trade_cost
@@ -128,3 +129,40 @@ def test_small_account_mode_holds_whole_shares_in_few_names(market, cfg):
     assert held.sum() > 5
     assert np.abs(shares[held] - np.round(shares[held])).max() < 1e-2  # weights are stored as float32
     assert bt.daily["long_names"].median() + bt.daily["short_names"].median() <= 2 * c.portfolio.max_names
+
+
+def test_backup_scheduled_run_skips_when_already_traded(monkeypatch, tmp_path):
+    import qtrade.live.alpaca_trader as lt
+    from qtrade.config import Config
+
+    class A:
+        pass
+
+    class Fake:
+        def __init__(self, orders):
+            self.orders = orders
+
+        def get_account(self):
+            a = A()
+            a.equity = "100000"
+            return a
+
+        def get(self, path, data=None):
+            if path == "/orders":
+                assert data["status"] == "all" and "after" in data
+                return self.orders
+            return []
+
+        def get_portfolio_history(self, req):
+            h = A()
+            h.equity = [100000.0]
+            return h
+
+    cfg = Config()
+    cfg.live.log_dir = str(tmp_path)
+    monkeypatch.setattr(lt, "_client", lambda: Fake([{"id": "x"}]))
+    assert lt.run_paper(cfg, dry_run=False, once_per_day=True) == {"skipped": True}
+    monkeypatch.setattr(lt, "_client", lambda: Fake([]))
+    monkeypatch.setattr(lt, "load_universe", lambda d: (_ for _ in ()).throw(RuntimeError("reached model")))
+    with pytest.raises(RuntimeError, match="reached model"):
+        lt.run_paper(cfg, dry_run=False, once_per_day=True)

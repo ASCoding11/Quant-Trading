@@ -111,19 +111,21 @@ def _client():
 
 def _account_state(client):
     """(equity, {yahoo_symbol: qty}, {yahoo_symbol: market_value}, shortable set, peak equity)."""
-    from alpaca.trading.enums import AssetClass, AssetStatus
-    from alpaca.trading.requests import GetAssetsRequest, GetPortfolioHistoryRequest
+    from alpaca.trading.requests import GetPortfolioHistoryRequest
 
     acct = client.get_account()
     equity = float(acct.equity)
     pos_qty, pos_val = {}, {}
-    for p in client.get_all_positions():
-        sym = to_yahoo(p.symbol)
-        pos_qty[sym] = int(float(p.qty))
-        pos_val[sym] = float(p.market_value)
-    assets = client.get_all_assets(GetAssetsRequest(status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY))
-    shortable = {to_yahoo(a.symbol) for a in assets if a.tradable and a.shortable and a.easy_to_borrow}
-    tradable = {to_yahoo(a.symbol) for a in assets if a.tradable}
+    # raw JSON for positions and assets: alpaca-py's typed models reject exchange
+    # codes it doesn't know yet (e.g. the Texas Stock Exchange, "TXSE")
+    for p in client.get("/positions"):
+        sym = to_yahoo(p["symbol"])
+        pos_qty[sym] = int(float(p["qty"]))
+        pos_val[sym] = float(p["market_value"])
+    assets = client.get("/assets", {"status": "active", "asset_class": "us_equity"})
+    shortable = {to_yahoo(a["symbol"]) for a in assets
+                 if a.get("tradable") and a.get("shortable") and a.get("easy_to_borrow")}
+    tradable = {to_yahoo(a["symbol"]) for a in assets if a.get("tradable")}
     peak = equity
     try:
         hist = client.get_portfolio_history(GetPortfolioHistoryRequest(period="1A", timeframe="1D"))
@@ -151,10 +153,11 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
         try:
             equity, pos_qty, pos_val, shortable, tradable, peak = _account_state(client)
         except Exception as exc:
-            raise SystemExit(
-                f"Alpaca rejected the request ({exc}). Check that ALPACA_API_KEY / ALPACA_SECRET_KEY "
-                "are the PAPER account's keys, copied without spaces, and not regenerated since."
-            ) from exc
+            hint = ""
+            if any(code in str(exc) for code in ("401", "403", "unauthorized", "forbidden")):
+                hint = (" Check that ALPACA_API_KEY / ALPACA_SECRET_KEY are the PAPER account's keys,"
+                        " copied without spaces, and not regenerated since.")
+            raise SystemExit(f"Alpaca request failed: {exc}.{hint}") from exc
         LOG.info("Alpaca paper account OK: equity $%.0f, %d open positions, %d shortable names",
                  equity, len(pos_qty), len(shortable))
 

@@ -241,6 +241,29 @@ config by default. To trade the full 1,000-name book instead, set a
 repository variable `QTRADE_CONFIG` = `config/default.yaml`
 (Settings → Secrets and variables → Actions → Variables).
 
+## Intraday data (Alpaca)
+
+The backtest showed the edge is strongest at the shortest horizons and fades
+within a day, so the next step is intraday research. The **intraday-data**
+workflow downloads **5-minute bars** for the 200 most liquid stocks in the
+universe from Alpaca's free market-data plan. That plan covers all US
+exchanges back to 2016, holds back only the most recent 15 minutes, and allows
+200 requests per minute. It uses the same Alpaca secrets as paper trading.
+
+- **Run it:** Actions → intraday-data → Run workflow. The first run takes
+  about an hour. After that, it refreshes every Saturday, fetching only new
+  bars.
+- **Where the data lives:** the release **intraday-data**, as
+  `intraday_5min.tar`: one parquet file per stock, regular hours (09:30–16:00
+  New York time), split- and dividend-adjusted. A manifest of symbols, row
+  counts and date ranges is published to `intraday/` on the `results` branch.
+- **Locally:** `python -m qtrade intraday` (needs the two Alpaca environment
+  variables). Load the bars with
+  `qtrade.data.intraday.load_panel("data/intraday/5min")`.
+
+The downloader stays under the rate limit, retries on errors, and saves
+progress per stock, so an interrupted run resumes where it stopped.
+
 ## Paper trading
 
 1. Create a free account at [alpaca.markets](https://alpaca.markets), switch

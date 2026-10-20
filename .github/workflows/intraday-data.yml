@@ -1,0 +1,109 @@
+name: intraday-data
+
+# Downloads 5-minute bars from Alpaca (free plan: all US exchanges, back to
+# 2016) for the most liquid stocks in the universe, and keeps them in the
+# GitHub release "intraday-data" as intraday_5min.tar. Re-runs only fetch new
+# bars. A summary of what is stored goes to the "results" branch under
+# intraday/. Uses the same ALPACA_API_KEY / ALPACA_SECRET_KEY secrets as
+# paper trading.
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: "How many of the most liquid stocks"
+        default: "200"
+      start:
+        description: "First date (Alpaca history begins 2016)"
+        default: "2016-01-01"
+      reselect:
+        description: "Re-pick the most liquid stocks (otherwise keep the stored list)"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 10 * * 6"   # Saturdays: append the past week's bars
+
+permissions:
+  contents: write   # to update the release and the results branch
+
+concurrency:
+  group: intraday-data
+  cancel-in-progress: false
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      GH_TOKEN: ${{ github.token }}
+      STORE: data/intraday/5min
+      ASSET: intraday_5min.tar
+    steps:
+      - name: Check for Alpaca keys
+        run: |
+          if [ -z "$ALPACA_API_KEY" ] || [ -z "$ALPACA_SECRET_KEY" ]; then
+            echo "::error::Add ALPACA_API_KEY and ALPACA_SECRET_KEY repository secrets first."; exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore the stock universe from earlier runs
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: intraday-universe-${{ github.run_id }}
+          restore-keys: |
+            live-
+            prices-
+      - name: Select universe (if no earlier run left one)
+        run: '[ -f data/universe.csv ] || python -m qtrade universe'
+      - name: Fetch stored bars from the release
+        run: |
+          if gh release download intraday-data --pattern "$ASSET" --dir /tmp 2>/dev/null; then
+            mkdir -p data/intraday && tar -xf "/tmp/$ASSET" -C data/intraday
+            echo "Resuming from $(ls $STORE/*.parquet | wc -l) stored symbols"
+          else
+            echo "No stored bars yet - starting fresh"
+          fi
+      - name: Download / update bars from Alpaca
+        run: |
+          SYMBOLS="${{ inputs.symbols || '200' }}"
+          START="${{ inputs.start || '2016-01-01' }}"
+          RESELECT="${{ inputs.reselect && '--reselect' || '' }}"
+          python -m qtrade intraday --symbols "$SYMBOLS" --start "$START" --store "$STORE" \
+            --budget 300 $RESELECT
+      - name: Save bars to the release
+        if: always()
+        run: |
+          [ -d "$STORE" ] || exit 0
+          tar -cf "/tmp/$ASSET" -C data/intraday 5min
+          ls -lh "/tmp/$ASSET"
+          gh release view intraday-data >/dev/null 2>&1 || gh release create intraday-data \
+            --title "Intraday data (5-minute bars)" --latest=false \
+            --notes "5-minute regular-hours bars from Alpaca, refreshed by the intraday-data workflow. See intraday/ on the results branch for what is inside."
+          gh release upload intraday-data "/tmp/$ASSET" --clobber
+      - name: Publish the manifest to the results branch
+        if: always()
+        run: |
+          [ -f "$STORE/manifest.json" ] || exit 0
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RES=$(mktemp -d)
+          for attempt in 1 2 3 4 5; do
+            rm -rf "$RES"; mkdir -p "$RES"; cd "$RES"; git init -q
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+            if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
+            mkdir -p intraday
+            cp "$GITHUB_WORKSPACE/$STORE/manifest.json" "$GITHUB_WORKSPACE/$STORE/manifest.csv" \
+               "$GITHUB_WORKSPACE/$STORE/symbols.csv" intraday/
+            git add -A && git commit -q -m "Intraday data manifest (run ${{ github.run_id }})" || break
+            if git push -q origin results; then echo "published manifest"; break; fi
+            sleep $((attempt * 15))
+          done
+          cd "$GITHUB_WORKSPACE"
+          python -c "import json; d=json.load(open('$STORE/manifest.json')); print(json.dumps(d, indent=1))" >> "$GITHUB_STEP_SUMMARY"

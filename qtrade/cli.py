@@ -6,6 +6,7 @@
     python -m qtrade demo                # same pipeline on a synthetic market (offline)
     python -m qtrade paper               # paper-trading dry run (prints orders)
     python -m qtrade paper --send        # actually place orders on Alpaca paper
+    python -m qtrade intraday            # download 5-minute bars from Alpaca
     python -m qtrade signals             # list every signal in the library
 """
 from __future__ import annotations
@@ -97,6 +98,35 @@ def cmd_paper(args):
     run_paper(cfg, dry_run=not args.send)
 
 
+def cmd_intraday(args):
+    """Download / refresh intraday bars from Alpaca for the most liquid stocks."""
+    from pathlib import Path
+
+    from .data import load_universe
+    from .data.intraday import AlpacaBars, download, most_liquid, write_manifest
+
+    cfg = _cfg(args)
+    store = Path(args.store)
+    store.mkdir(parents=True, exist_ok=True)
+    sym_file = store / "symbols.csv"
+    client = AlpacaBars()
+    if sym_file.exists() and not args.reselect:
+        symbols = pd.read_csv(sym_file)["ticker"].tolist()
+        print(f"Using the {len(symbols)} symbols already in the store")
+    else:
+        uni = load_universe(cfg.data.cache_dir)
+        if uni is None:
+            raise SystemExit("No universe found. Run `python -m qtrade universe` first.")
+        ranked = most_liquid(client, uni["ticker"].tolist(), args.symbols)
+        ranked.to_csv(sym_file, index=False)
+        symbols = ranked["ticker"].tolist()
+        print(f"Selected the {len(symbols)} most liquid stocks (median daily $ volume)")
+    m = download(symbols, store, args.timeframe, args.start, client, args.budget)
+    path = write_manifest(m, store, {"api_calls": client.calls, "start_requested": args.start})
+    done = int((m["rows"] > 0).sum())
+    print(f"{done}/{len(symbols)} symbols stored, {int(m['rows'].sum()):,} bars. Manifest: {path}")
+
+
 def cmd_signals(args):
     from .signals import list_signals
 
@@ -147,6 +177,14 @@ def main(argv=None):
     p = common(sub.add_parser("paper", help="paper trade on Alpaca"))
     p.add_argument("--send", action="store_true", help="really submit orders (paper account)")
     p.set_defaults(fn=cmd_paper)
+    p = sub.add_parser("intraday", help="download intraday bars from Alpaca")
+    p.add_argument("--symbols", type=int, default=200, help="how many of the most liquid stocks")
+    p.add_argument("--timeframe", default="5Min", help="bar size, e.g. 1Min, 5Min, 15Min")
+    p.add_argument("--start", default="2016-01-01", help="first date (Alpaca history begins 2016)")
+    p.add_argument("--store", default="data/intraday/5min", help="where per-symbol files are kept")
+    p.add_argument("--budget", type=float, help="stop after this many minutes (resume later)")
+    p.add_argument("--reselect", action="store_true", help="re-pick the most liquid stocks")
+    p.set_defaults(fn=cmd_intraday)
     sub.add_parser("signals", help="list the signal library").set_defaults(fn=cmd_signals)
 
     args = ap.parse_args(argv)

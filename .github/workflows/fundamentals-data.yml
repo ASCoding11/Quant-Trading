@@ -3,10 +3,12 @@ name: fundamentals-data
 # Downloads company fundamentals (income statement, balance sheet, cash flow,
 # share counts) for the universe from SEC EDGAR's free XBRL API, with the date
 # each number was filed so backtests never see it early. Stored in the release
-# "data" as fundamentals.tar.part00. Refreshed monthly.
+# "data" (encrypted, see scripts/datastore.sh). Refreshed monthly.
 #
-# The SEC asks automated users to identify themselves. If a run fails with a
-# 403, add a repository variable SEC_USER_AGENT such as "Your Name you@example.com".
+# The SEC asks automated users to identify themselves: add a repository
+# SECRET (not a variable - variables are printed in public logs) named
+# SEC_USER_AGENT, such as "Your Name you@example.com". DATA_KEY encrypts the
+# stored copy.
 
 on:
   workflow_dispatch:
@@ -22,7 +24,8 @@ jobs:
     timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
-      SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+      DATA_KEY: ${{ secrets.DATA_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

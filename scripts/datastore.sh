@@ -1,16 +1,30 @@
 # Helpers for keeping research datasets in the GitHub release "data".
-# Source this file in a workflow step; needs GH_TOKEN and GITHUB_REPOSITORY.
+# Source this file in a workflow step; needs GH_TOKEN, GITHUB_REPOSITORY and
+# DATA_KEY (a repository secret).
 #
 # A dataset is a directory under data/ (e.g. data/intraday/5min). It is stored
-# as <name>.tar.partNN assets, split at 1.9 GB because GitHub limits each
-# release file to 2 GB.
+# ENCRYPTED (AES-256, key = DATA_KEY) as <name>.tar.enc.partNN assets, split at
+# 1.9 GB because GitHub limits each release file to 2 GB. The repository is
+# public, and market data and news are licensed for personal use only, so they
+# are never uploaded unencrypted.
+#
+# To unpack a dataset on your own computer:
+#   cat NAME.tar.enc.part* | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:DATA_KEY | tar -x -C data
 
 RELEASE=data
+ENC_ARGS="-aes-256-cbc -pbkdf2 -iter 200000 -pass env:DATA_KEY"
+
+require_key() {
+  if [ -z "${DATA_KEY:-}" ]; then
+    echo "::error::Add a DATA_KEY repository secret (any long random password) - datasets are stored encrypted."
+    exit 1
+  fi
+}
 
 ensure_release() {
   gh release view "$RELEASE" >/dev/null 2>&1 || gh release create "$RELEASE" \
-    --title "Research data" --latest=false \
-    --notes "Datasets maintained by the alpaca-data and fundamentals-data workflows. Each dataset is a tar archive split into .partNN files: cat NAME.tar.part* | tar -x -C data. Manifests: datasets/ on the results branch."
+    --title "Research data (encrypted)" --latest=false \
+    --notes "Encrypted datasets maintained by this repository's workflows (licensed for the owner's personal research use only). Manifests describing them: datasets/ on the results branch."
 }
 
 # fetch_dataset NAME DIR -> 0 if found and extracted into data/DIR, 1 otherwise
@@ -18,38 +32,41 @@ fetch_dataset() {
   local name=$1 dir=$2 tmp=/tmp/fetch_$1
   [ -d "data/$dir" ] && ls "data/$dir"/* >/dev/null 2>&1 && return 0   # already here
   rm -rf "$tmp"; mkdir -p "$tmp" data
+  if gh release download "$RELEASE" --pattern "$name.tar.enc.part*" --dir "$tmp" 2>/dev/null \
+     && ls "$tmp"/"$name".tar.enc.part* >/dev/null 2>&1; then
+    require_key
+    if ! (set -o pipefail; cat $(ls "$tmp"/"$name".tar.enc.part* | sort) | openssl enc -d $ENC_ARGS | tar -x -C data); then
+      echo "::error::Could not decrypt $name - DATA_KEY does not match the key it was saved with."
+      exit 1
+    fi
+    echo "fetched $name ($(du -sh "data/$dir" | cut -f1))"; rm -rf "$tmp"; return 0
+  fi
+  # older unencrypted copies (before the repository became public)
   if gh release download "$RELEASE" --pattern "$name.tar.part*" --dir "$tmp" 2>/dev/null \
      && ls "$tmp"/"$name".tar.part* >/dev/null 2>&1; then
     cat $(ls "$tmp"/"$name".tar.part* | sort) | tar -x -C data
-    echo "fetched $name ($(du -sh "data/$dir" | cut -f1))"; rm -rf "$tmp"; return 0
-  fi
-  # one-time migration of the first 5-minute download (old release "intraday-data")
-  if [ "$name" = intraday_5min ] && gh release download intraday-data --pattern intraday_5min.tar --dir "$tmp" 2>/dev/null; then
-    mkdir -p data/intraday && tar -xf "$tmp/intraday_5min.tar" -C data/intraday
-    echo "fetched $name from the old intraday-data release"; rm -rf "$tmp"; return 0
+    echo "fetched unencrypted $name ($(du -sh "data/$dir" | cut -f1))"; rm -rf "$tmp"; return 0
   fi
   rm -rf "$tmp"; return 1
 }
 
-# save_dataset NAME DIR: archive data/DIR and replace the release assets
+# save_dataset NAME DIR: encrypt data/DIR and replace the release assets
 save_dataset() {
   local name=$1 dir=$2 out=/tmp/save_$1
   [ -d "data/$dir" ] || return 0
+  require_key
   ensure_release
   rm -rf "$out"; mkdir -p "$out"
-  tar -C data -cf - "$dir" | split -b 1900m -d -a 2 - "$out/$name.tar.part"
+  (set -o pipefail; tar -C data -cf - "$dir" | openssl enc -e $ENC_ARGS | split -b 1900m -d -a 2 - "$out/$name.tar.enc.part") \
+    || { echo "::error::Could not archive $name"; exit 1; }
   ls -lh "$out"
   gh release upload "$RELEASE" "$out"/* --clobber
-  # delete parts left over from a bigger previous archive
+  # remove leftover encrypted parts and every unencrypted part of this dataset
   local keep; keep=$(cd "$out" && ls)
-  for asset in $(gh release view "$RELEASE" --json assets -q '.assets[].name' | grep "^$name\.tar\.part"); do
+  for asset in $(gh release view "$RELEASE" --json assets -q '.assets[].name' | grep -E "^$name\.tar\.(enc\.)?part"); do
     echo "$keep" | grep -qx "$asset" || gh release delete-asset "$RELEASE" "$asset" --yes
   done
   rm -rf "$out"
-  # the old single-file release is no longer needed once the 5-minute data is saved here
-  if [ "$name" = intraday_5min ] && gh release view intraday-data >/dev/null 2>&1; then
-    gh release delete intraday-data --yes --cleanup-tag || true
-  fi
 }
 
 # publish_manifest NAME DIR: copy manifest files to datasets/NAME on the results branch

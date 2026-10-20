@@ -11,7 +11,9 @@ name: alpaca-data
 # Alpaca allows ~200 requests per minute, so big downloads take hours. A run
 # stops before GitHub's 6-hour limit, saves its progress, and re-launches
 # itself with the rest of the queue (up to 8 times). Weekly runs append the
-# latest bars and news. Needs the ALPACA_API_KEY / ALPACA_SECRET_KEY secrets.
+# latest bars and news. Needs the ALPACA_API_KEY / ALPACA_SECRET_KEY secrets,
+# and DATA_KEY: the data is licensed for personal use, so it is encrypted
+# before being stored in this public repository.
 
 on:
   workflow_dispatch:
@@ -40,6 +42,7 @@ jobs:
     env:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      DATA_KEY: ${{ secrets.DATA_KEY }}   # datasets are stored encrypted (public repo)
       GH_TOKEN: ${{ github.token }}
       QUEUE: ${{ inputs.queue || 'refresh:bars:5Min refresh:bars:1Min refresh:news' }}
       CHAIN: ${{ inputs.chain || '0' }}

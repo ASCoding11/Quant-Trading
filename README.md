@@ -248,6 +248,16 @@ Each is a tar archive split into 1.9 GB parts, because GitHub caps release
 files at 2 GB. A manifest of what each contains (symbols, row counts, date
 ranges) is published to `datasets/` on the `results` branch.
 
+**The archives are encrypted.** This repository is public, but exchange market
+data and Benzinga news are licensed for personal use only, so they must not be
+redistributed. Every archive is encrypted with AES-256 using the `DATA_KEY`
+repository secret before upload. To unpack one on your own computer:
+
+```bash
+export DATA_KEY='...your key...'
+cat intraday_5min.tar.enc.part* | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:DATA_KEY | tar -x -C data
+```
+
 | Dataset | Source | Coverage | Refreshed |
 |---|---|---|---|
 | `intraday_5min` | Alpaca (free plan, all US exchanges) | 5-minute bars, 1000 stocks, 2016→ | weekly |
@@ -267,9 +277,12 @@ News articles likewise carry their publication time.
   downloads take many hours. Each run stops before GitHub's 6-hour limit,
   saves its progress, and re-launches itself with the rest of the queue. On
   Saturdays it appends the latest week to every dataset that exists.
-- **fundamentals-data** downloads from the SEC, monthly. If the SEC refuses
-  the request (HTTP 403), add a repository variable `SEC_USER_AGENT` such as
+- **fundamentals-data** downloads from the SEC, monthly. The SEC requires a
+  name and email: add them as a repository **secret** (not a variable, which
+  would be printed in the public logs) named `SEC_USER_AGENT`, e.g.
   `Your Name you@example.com`.
+- **encrypt-data** re-packs all stored datasets with the current `DATA_KEY`.
+  Run it after changing the key.
 
 **Locally:** `python -m qtrade intraday --timeframe 5Min --symbols 1000`,
 `python -m qtrade news`, `python -m qtrade fundamentals`. Then load with

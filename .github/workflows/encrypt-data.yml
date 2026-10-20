@@ -1,0 +1,50 @@
+name: encrypt-data
+
+# One-time maintenance: re-packs every dataset in the "data" release as an
+# encrypted archive (key: the DATA_KEY secret) and deletes the unencrypted
+# copies. Safe to re-run: datasets that are already encrypted are re-saved
+# with the current key.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alpaca-data   # never runs alongside a download
+  cancel-in-progress: false
+
+jobs:
+  encrypt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DATA_KEY: ${{ secrets.DATA_KEY }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h / | tail -1
+      - uses: actions/checkout@v4
+      - name: Encrypt each dataset
+        run: |
+          source scripts/datastore.sh
+          require_key
+          for pair in intraday_5min:intraday/5min intraday_1min:intraday/1min news:news fundamentals:fundamentals; do
+            NAME=${pair%%:*}; DIR=${pair#*:}
+            echo "::group::$NAME"
+            if fetch_dataset "$NAME" "$DIR"; then
+              save_dataset "$NAME" "$DIR"
+              rm -rf "data/$DIR"
+            else
+              echo "$NAME not stored yet - skipping"
+            fi
+            echo "::endgroup::"
+          done
+          echo "Release assets now:"
+          gh release view data --json assets -q '.assets[] | "\(.name)  \(.size)"'
+          if gh release view data --json assets -q '.assets[].name' | grep -E '\.tar\.part[0-9]+$'; then
+            echo "::error::Unencrypted parts are still present"; exit 1
+          fi

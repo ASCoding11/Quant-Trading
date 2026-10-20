@@ -1,74 +1,74 @@
 {
   "date": "2026-10-20",
-  "time": "2026-10-20 14:22 EDT",
-  "equity": 100073.04,
+  "time": "2026-10-20 19:58 EDT",
+  "equity": 100128.29,
   "last_equity": 100000.0,
-  "day_pnl": 73.04,
+  "day_pnl": 128.29,
   "strategy_capital": 10000.0,
-  "day_return_on_capital": 0.007304,
-  "day_return_on_account": 0.00073,
-  "spy_day_return": 0.003652,
+  "day_return_on_capital": 0.012829,
+  "day_return_on_account": 0.001283,
+  "spy_day_return": 0.003248,
   "long_names": 19,
   "short_names": 17,
-  "long_value": 5698.54,
-  "short_value": 3592.16,
-  "gross_on_capital": 0.929,
-  "net_on_capital": 0.211,
+  "long_value": 5778.74,
+  "short_value": 3617.1,
+  "gross_on_capital": 0.94,
+  "net_on_capital": 0.216,
   "orders_today": 36,
   "filled_today": 36,
-  "unrealized_pnl_total": 73.04,
+  "unrealized_pnl_total": 128.29,
   "best_today": [
     {
       "symbol": "VICR",
       "side": "long",
-      "pnl_today": 18.5
-    },
-    {
-      "symbol": "VIAV",
-      "side": "long",
-      "pnl_today": 16.94
-    },
-    {
-      "symbol": "COHU",
-      "side": "long",
-      "pnl_today": 10.625
+      "pnl_today": 33.38
     },
     {
       "symbol": "UCTT",
       "side": "long",
-      "pnl_today": 10.0
+      "pnl_today": 31.36
     },
     {
-      "symbol": "TREX",
+      "symbol": "VIAV",
       "side": "long",
-      "pnl_today": 9.87
+      "pnl_today": 27.3
+    },
+    {
+      "symbol": "COHU",
+      "side": "long",
+      "pnl_today": 20.55
+    },
+    {
+      "symbol": "AKAM",
+      "side": "long",
+      "pnl_today": 19.575
     }
   ],
   "worst_today": [
     {
-      "symbol": "CLF",
-      "side": "short",
-      "pnl_today": -16.999997
-    },
-    {
       "symbol": "MKSI",
       "side": "short",
-      "pnl_today": -11.4
+      "pnl_today": -21.24
+    },
+    {
+      "symbol": "CLF",
+      "side": "short",
+      "pnl_today": -16.379997
     },
     {
       "symbol": "GLW",
       "side": "short",
-      "pnl_today": -8.88
+      "pnl_today": -15.06
+    },
+    {
+      "symbol": "TTMI",
+      "side": "short",
+      "pnl_today": -10.22
     },
     {
       "symbol": "ITRI",
       "side": "short",
-      "pnl_today": -6.76
-    },
-    {
-      "symbol": "BBWI",
-      "side": "short",
-      "pnl_today": -3.115
+      "pnl_today": -6.6
     }
   ]
 }

@@ -1,0 +1,2 @@
+date,time,equity,last_equity,day_pnl,strategy_capital,day_return_on_capital,day_return_on_account,spy_day_return,long_names,short_names,long_value,short_value,gross_on_capital,net_on_capital,orders_today,filled_today,unrealized_pnl_total
+2026-10-20,2026-10-20 19:58 EDT,100128.29,100000.0,128.29,10000.0,0.012829,0.001283,0.003248,19,17,5778.74,3617.1,0.94,0.216,36,36,128.29

@@ -1,0 +1,11 @@
+{
+  "dataset": "news",
+  "months": 142,
+  "total_articles": 780821,
+  "first_month": "2015-01",
+  "last_month": "2026-10",
+  "complete": true,
+  "updated": "2026-10-20T11:12:50.441196+00:00",
+  "symbols_requested": 1000,
+  "api_calls": 19176
+}

@@ -65,7 +65,12 @@ class FakeSec:
 
     def get(self, url, timeout=None):
         if url == fund.TICKERS_URL:
-            return Resp(200, {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple"}})
+            return Resp(200, {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple"},
+                              "1": {"cik_str": 789019, "ticker": "MSFT", "title": "Microsoft"}})
+        if "CIK0000789019" in url:   # SEC sometimes sends numbers as text
+            e = [{"end": "2023-09-30", "val": "5", "fy": "2023", "fp": "FY", "form": "10-K", "filed": "2023-10-30",
+                  "accn": "b1"}]
+            return Resp(200, {"cik": "789019", "facts": {"us-gaap": {"Assets": {"units": {"USD": e}}}}})
         if "CIK0000320193" in url:
             q = [{"start": "2023-07-02", "end": "2023-09-30", "val": 100, "fy": 2023, "fp": "FY", "form": "10-K",
                   "filed": "2023-11-03", "accn": "a1"},
@@ -80,7 +85,7 @@ class FakeSec:
 
 def test_fundamentals_point_in_time(tmp_path):
     client = fund.SecClient(session=FakeSec())
-    man = fund.download_fundamentals(["AAPL", "ZZZZ"], tmp_path, client)
+    man = fund.download_fundamentals(["AAPL", "MSFT", "ZZZZ"], tmp_path, client)
     assert man.set_index("ticker").loc["AAPL", "facts"] == 3 and man.set_index("ticker").loc["ZZZZ", "facts"] == 0
     facts = fund.load_fundamentals(tmp_path)
     dates = pd.to_datetime(["2023-11-01", "2023-11-03", "2024-01-15", "2024-02-02"])

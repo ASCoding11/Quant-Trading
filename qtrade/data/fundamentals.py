@@ -96,9 +96,9 @@ def ticker_to_cik(client: SecClient) -> dict[str, int]:
     return {to_yahoo(v["ticker"]): int(v["cik_str"]) for v in data.values()}
 
 
-def parse_facts(facts: dict, ticker: str, tags: list[str] = TAGS) -> pd.DataFrame:
+def parse_facts(facts: dict, ticker: str, tags: list[str] = TAGS, cik: int | None = None) -> pd.DataFrame:
     rows = []
-    cik = facts.get("cik")
+    cik = int(cik if cik is not None else facts.get("cik") or 0)
     for full in tags:
         tax, tag = full.split(":") if ":" in full else ("us-gaap", full)
         node = facts.get("facts", {}).get(tax, {}).get(tag)
@@ -112,9 +112,15 @@ def parse_facts(facts: dict, ticker: str, tags: list[str] = TAGS) -> pd.DataFram
                              "accn": e.get("accn"), "frame": e.get("frame")})
     df = pd.DataFrame(rows)
     if len(df):
+        # SEC files are not perfectly consistent (numbers sometimes arrive as
+        # text), so fix every column's type before saving to parquet
         for c in ("start", "end", "filed"):
             df[c] = pd.to_datetime(df[c], errors="coerce")
         df["value"] = pd.to_numeric(df["value"], errors="coerce")
+        df["cik"] = df["cik"].astype("int64")
+        df["fy"] = pd.to_numeric(df["fy"], errors="coerce").astype("Int64")
+        for c in ("ticker", "tag", "unit", "fp", "form", "accn", "frame"):
+            df[c] = df[c].astype("string")
     return df
 
 
@@ -131,7 +137,7 @@ def download_fundamentals(tickers: list[str], store_dir: str | Path,
             rows.append({"ticker": t, "cik": None, "facts": 0, "first_filed": None, "last_filed": None})
             continue
         facts = client.get_json(FACTS_URL.format(cik=cik))
-        df = parse_facts(facts, t) if facts else pd.DataFrame()
+        df = parse_facts(facts, t, cik=cik) if facts else pd.DataFrame()
         if len(df):
             frames.append(df)
         rows.append({"ticker": t, "cik": cik, "facts": len(df),

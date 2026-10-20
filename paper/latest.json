@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-20",
+  "time": "2026-10-20 14:22 EDT",
+  "equity": 100073.04,
+  "last_equity": 100000.0,
+  "day_pnl": 73.04,
+  "strategy_capital": 10000.0,
+  "day_return_on_capital": 0.007304,
+  "day_return_on_account": 0.00073,
+  "spy_day_return": 0.003652,
+  "long_names": 19,
+  "short_names": 17,
+  "long_value": 5698.54,
+  "short_value": 3592.16,
+  "gross_on_capital": 0.929,
+  "net_on_capital": 0.211,
+  "orders_today": 36,
+  "filled_today": 36,
+  "unrealized_pnl_total": 73.04,
+  "best_today": [
+    {
+      "symbol": "VICR",
+      "side": "long",
+      "pnl_today": 18.5
+    },
+    {
+      "symbol": "VIAV",
+      "side": "long",
+      "pnl_today": 16.94
+    },
+    {
+      "symbol": "COHU",
+      "side": "long",
+      "pnl_today": 10.625
+    },
+    {
+      "symbol": "UCTT",
+      "side": "long",
+      "pnl_today": 10.0
+    },
+    {
+      "symbol": "TREX",
+      "side": "long",
+      "pnl_today": 9.87
+    }
+  ],
+  "worst_today": [
+    {
+      "symbol": "CLF",
+      "side": "short",
+      "pnl_today": -16.999997
+    },
+    {
+      "symbol": "MKSI",
+      "side": "short",
+      "pnl_today": -11.4
+    },
+    {
+      "symbol": "GLW",
+      "side": "short",
+      "pnl_today": -8.88
+    },
+    {
+      "symbol": "ITRI",
+      "side": "short",
+      "pnl_today": -6.76
+    },
+    {
+      "symbol": "BBWI",
+      "side": "short",
+      "pnl_today": -3.115
+    }
+  ]
+}

@@ -100,6 +100,21 @@ def cmd_paper(args):
     run_paper(cfg, dry_run=not args.send, once_per_day=args.once_per_day)
 
 
+def cmd_status(args):
+    """Report the paper account's P&L and positions."""
+    import json
+
+    from .live.status import run_status, summary_line
+
+    cfg = _cfg(args)
+    st = run_status(cfg, args.out)
+    line = summary_line(st)
+    print(line)
+    print(json.dumps({k: st[k] for k in ("best_today", "worst_today")}, indent=1))
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::notice title=Paper account::{line}")
+
+
 def cmd_intraday(args):
     """Download / refresh intraday bars from Alpaca for the most liquid stocks."""
     from pathlib import Path
@@ -212,6 +227,9 @@ def main(argv=None):
     p.add_argument("--once-per-day", action="store_true",
                    help="skip if orders were already sent today (for back-up scheduled runs)")
     p.set_defaults(fn=cmd_paper)
+    p = sub.add_parser("status", help="paper account P&L and positions")
+    p.add_argument("--out", default="logs/status")
+    p.set_defaults(fn=cmd_status)
     p = sub.add_parser("intraday", help="download intraday bars from Alpaca")
     p.add_argument("--symbols", type=int, default=200, help="how many of the most liquid stocks")
     p.add_argument("--timeframe", default="5Min", help="bar size, e.g. 1Min, 5Min, 15Min")

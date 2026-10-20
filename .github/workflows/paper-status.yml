@@ -1,0 +1,70 @@
+name: paper-status
+
+# Reads the Alpaca paper account after the close and records the day's P&L,
+# exposure and positions on the "results" branch under paper/:
+#   paper/history.csv   one row per day
+#   paper/latest.json   today's details (best/worst positions)
+#   paper/positions.csv current positions
+# Also runs on demand (Actions -> paper-status -> Run workflow) for an intraday
+# snapshot; on-demand runs update latest.json but not history.csv.
+
+on:
+  schedule:
+    - cron: "23 21 * * 1-5"   # 5:23pm New York (4:23pm in winter), after the close
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper-status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      QTRADE_CONFIG: ${{ vars.QTRADE_CONFIG || 'config/small_account.yaml' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Read the paper account
+        run: python -m qtrade --config "$QTRADE_CONFIG" status --out logs/status
+      - name: Record on the results branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RES=$(mktemp -d)
+          for attempt in 1 2 3 4 5; do
+            rm -rf "$RES"; mkdir -p "$RES"
+            (
+              cd "$RES" && git init -q
+              git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+              if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
+              mkdir -p paper
+              cp "$GITHUB_WORKSPACE/logs/status/latest.json" "$GITHUB_WORKSPACE/logs/status/positions.csv" paper/
+              if [ "${{ github.event_name }}" = "schedule" ]; then
+                python - <<'PY'
+          import json, pandas as pd, pathlib
+          s = json.load(open("paper/latest.json"))
+          row = {k: v for k, v in s.items() if not isinstance(v, list)}
+          p = pathlib.Path("paper/history.csv")
+          h = pd.read_csv(p) if p.exists() else pd.DataFrame()
+          h = pd.concat([h[h.get("date", pd.Series(dtype=str)) != row["date"]] if len(h) else h, pd.DataFrame([row])])
+          h.sort_values("date").to_csv(p, index=False)
+          PY
+              fi
+              git add -A
+              git commit -q -m "Paper account status ${{ github.event_name }} (run ${GITHUB_RUN_ID})" || exit 0
+              git push -q origin results
+            ) && break
+            sleep $((attempt * 10))
+          done

@@ -302,6 +302,12 @@ News articles likewise carry their publication time.
    time with a back-up at 8:17am, because GitHub's scheduler sometimes delays
    or drops runs. The back-up skips itself if orders were already sent that day.
 
+**Tracking performance:** the **paper-status** workflow reads the account
+after each close and records the day's P&L (on the $10k traded and on the
+whole account), exposure and positions in `paper/` on the `results` branch,
+with one row per day in `paper/history.csv`. Run it from the Actions tab for
+an intraday snapshot.
+
 Locally: `export ALPACA_API_KEY=... ALPACA_SECRET_KEY=...`, then
 `python -m qtrade paper` (dry run) or `python -m qtrade paper --send`.
 

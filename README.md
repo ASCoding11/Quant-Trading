@@ -241,28 +241,40 @@ config by default. To trade the full 1,000-name book instead, set a
 repository variable `QTRADE_CONFIG` = `config/default.yaml`
 (Settings → Secrets and variables → Actions → Variables).
 
-## Intraday data (Alpaca)
+## Research data
 
-The backtest showed the edge is strongest at the shortest horizons and fades
-within a day, so the next step is intraday research. The **intraday-data**
-workflow downloads **5-minute bars** for the 200 most liquid stocks in the
-universe from Alpaca's free market-data plan. That plan covers all US
-exchanges back to 2016, holds back only the most recent 15 minutes, and allows
-200 requests per minute. It uses the same Alpaca secrets as paper trading.
+Four datasets beyond daily prices are kept in the GitHub release **data**.
+Each is a tar archive split into 1.9 GB parts, because GitHub caps release
+files at 2 GB. A manifest of what each contains (symbols, row counts, date
+ranges) is published to `datasets/` on the `results` branch.
 
-- **Run it:** Actions → intraday-data → Run workflow. The first run takes
-  about an hour. After that, it refreshes every Saturday, fetching only new
-  bars.
-- **Where the data lives:** the release **intraday-data**, as
-  `intraday_5min.tar`: one parquet file per stock, regular hours (09:30–16:00
-  New York time), split- and dividend-adjusted. A manifest of symbols, row
-  counts and date ranges is published to `intraday/` on the `results` branch.
-- **Locally:** `python -m qtrade intraday` (needs the two Alpaca environment
-  variables). Load the bars with
-  `qtrade.data.intraday.load_panel("data/intraday/5min")`.
+| Dataset | Source | Coverage | Refreshed |
+|---|---|---|---|
+| `intraday_5min` | Alpaca (free plan, all US exchanges) | 5-minute bars, 1000 stocks, 2016→ | weekly |
+| `intraday_1min` | Alpaca | 1-minute bars, 200 most liquid stocks, 2016→ | weekly |
+| `news` | Alpaca news API (Benzinga) | headlines and summaries tagging the universe, 2015→ | weekly |
+| `fundamentals` | SEC EDGAR XBRL company facts | ~40 income-statement, balance-sheet and cash-flow items, ~2009→ | monthly |
 
-The downloader stays under the rate limit, retries on errors, and saves
-progress per stock, so an interrupted run resumes where it stopped.
+Bars are regular hours only (09:30–16:00 New York time), split- and
+dividend-adjusted. Every fundamentals row carries its SEC **filing date**, and
+`qtrade.data.fundamentals.point_in_time` only returns numbers that had been
+filed by each date, so signals never see earnings before they were announced.
+News articles likewise carry their publication time.
+
+**Workflows:**
+- **alpaca-data** downloads from a job queue, e.g. `bars:5Min:1000 news:1000`
+  or `bars:1Min:200`. Alpaca allows about 200 requests a minute, so the big
+  downloads take many hours. Each run stops before GitHub's 6-hour limit,
+  saves its progress, and re-launches itself with the rest of the queue. On
+  Saturdays it appends the latest week to every dataset that exists.
+- **fundamentals-data** downloads from the SEC, monthly. If the SEC refuses
+  the request (HTTP 403), add a repository variable `SEC_USER_AGENT` such as
+  `Your Name you@example.com`.
+
+**Locally:** `python -m qtrade intraday --timeframe 5Min --symbols 1000`,
+`python -m qtrade news`, `python -m qtrade fundamentals`. Then load with
+`qtrade.data.intraday.load_panel`, `qtrade.data.news.load_news` and
+`qtrade.data.fundamentals.load_fundamentals`.
 
 ## Paper trading
 

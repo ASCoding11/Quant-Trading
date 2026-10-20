@@ -1,0 +1,110 @@
+name: alpaca-data
+
+# Downloads market data from Alpaca's free market-data plan and keeps it in the
+# GitHub release "data". Jobs run in order from a queue:
+#
+#   bars:5Min:1000   5-minute bars for the 1000 most liquid universe stocks
+#   bars:1Min:200    1-minute bars for the 200 most liquid
+#   news:1000        news headlines for the 1000 universe stocks (2015+)
+#   refresh:<job>    update a dataset only if it already exists
+#
+# Alpaca allows ~200 requests per minute, so big downloads take hours. A run
+# stops before GitHub's 6-hour limit, saves its progress, and re-launches
+# itself with the rest of the queue (up to 8 times). Weekly runs append the
+# latest bars and news. Needs the ALPACA_API_KEY / ALPACA_SECRET_KEY secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      queue:
+        description: "Space-separated jobs, e.g. 'bars:5Min:1000 news:1000'"
+        default: "bars:5Min:1000 news:1000"
+      chain:
+        description: "Internal: how many times this run has re-launched itself"
+        default: "0"
+  schedule:
+    - cron: "0 10 * * 6"   # Saturdays: add the past week's bars and news
+
+permissions:
+  contents: write   # release assets and the results branch
+  actions: write    # re-launch itself to continue long downloads
+
+concurrency:
+  group: alpaca-data
+  cancel-in-progress: false
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      GH_TOKEN: ${{ github.token }}
+      QUEUE: ${{ inputs.queue || 'refresh:bars:5Min refresh:bars:1Min refresh:news' }}
+      CHAIN: ${{ inputs.chain || '0' }}
+    steps:
+      - name: Check for Alpaca keys
+        run: |
+          if [ -z "$ALPACA_API_KEY" ] || [ -z "$ALPACA_SECRET_KEY" ]; then
+            echo "::error::Add ALPACA_API_KEY and ALPACA_SECRET_KEY repository secrets first."; exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore the stock universe from earlier runs
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: alpaca-data-universe-${{ github.run_id }}
+          restore-keys: |
+            live-
+            prices-
+      - name: Select universe (if no earlier run left one)
+        run: '[ -f data/universe.csv ] || python -m qtrade universe'
+      - name: Run the queue
+        run: |
+          source scripts/datastore.sh
+          DEADLINE=$(( $(date +%s) + 320 * 60 ))
+          requeue() {
+            if [ "$CHAIN" -lt 8 ]; then
+              echo "Continuing in a new run: $1"
+              gh workflow run alpaca-data.yml -f queue="$1" -f chain=$((CHAIN + 1))
+            else
+              echo "::warning::Stopped after 8 runs; start the workflow again to continue: $1"
+            fi
+          }
+          set -- $QUEUE
+          while [ $# -gt 0 ]; do
+            JOB=$1; shift
+            REFRESH=""; case "$JOB" in refresh:*) REFRESH="refresh:"; JOB=${JOB#refresh:};; esac
+            IFS=: read -r KIND A B <<< "$JOB"
+            if [ "$KIND" = bars ]; then
+              TF=$(echo "$A" | tr 'A-Z' 'a-z'); NAME="intraday_$TF"; DIR="intraday/$TF"; N=${B:-200}
+            else
+              NAME=news; DIR=news; N=${A:-1000}
+            fi
+            echo "::group::$REFRESH$JOB"
+            if ! fetch_dataset "$NAME" "$DIR" && [ -n "$REFRESH" ]; then
+              echo "$NAME has not been downloaded yet - skipping refresh"; echo "::endgroup::"; continue
+            fi
+            LEFT=$(( (DEADLINE - $(date +%s)) / 60 - 15 ))
+            if [ "$LEFT" -lt 20 ]; then requeue "$REFRESH$JOB $*"; echo "::endgroup::"; break; fi
+            if [ "$KIND" = bars ]; then
+              RESEL=""
+              if [ -z "$REFRESH" ]; then
+                HAVE=$( [ -f "data/$DIR/symbols.csv" ] && echo $(( $(wc -l < "data/$DIR/symbols.csv") - 1 )) || echo 0 )
+                [ "$HAVE" -lt "$N" ] && RESEL="--reselect"
+              fi
+              python -m qtrade intraday --timeframe "$A" --symbols "$N" --store "data/$DIR" --budget "$LEFT" $RESEL || true
+            else
+              python -m qtrade news --symbols "$N" --store "data/$DIR" --budget "$LEFT" || true
+            fi
+            save_dataset "$NAME" "$DIR"
+            publish_manifest "$NAME" "$DIR"
+            echo "::endgroup::"
+            if ! dataset_complete "$DIR"; then requeue "$REFRESH$JOB $*"; break; fi
+          done

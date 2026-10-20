@@ -7,6 +7,8 @@
     python -m qtrade paper               # paper-trading dry run (prints orders)
     python -m qtrade paper --send        # actually place orders on Alpaca paper
     python -m qtrade intraday            # download 5-minute bars from Alpaca
+    python -m qtrade news                # download news headlines from Alpaca
+    python -m qtrade fundamentals        # download SEC fundamentals
     python -m qtrade signals             # list every signal in the library
 """
 from __future__ import annotations
@@ -106,7 +108,7 @@ def cmd_intraday(args):
     from .data.intraday import AlpacaBars, download, most_liquid, write_manifest
 
     cfg = _cfg(args)
-    store = Path(args.store)
+    store = Path(args.store or f"data/intraday/{args.timeframe.lower()}")
     store.mkdir(parents=True, exist_ok=True)
     sym_file = store / "symbols.csv"
     client = AlpacaBars()
@@ -125,6 +127,37 @@ def cmd_intraday(args):
     path = write_manifest(m, store, {"api_calls": client.calls, "start_requested": args.start})
     done = int((m["rows"] > 0).sum())
     print(f"{done}/{len(symbols)} symbols stored, {int(m['rows'].sum()):,} bars. Manifest: {path}")
+
+
+def _universe_tickers(cfg) -> list[str]:
+    from .data import load_universe
+
+    uni = load_universe(cfg.data.cache_dir)
+    if uni is None:
+        raise SystemExit("No universe found. Run `python -m qtrade universe` first.")
+    return uni["ticker"].head(cfg.universe.size).tolist()
+
+
+def cmd_news(args):
+    """Download / refresh news headlines from Alpaca for the universe."""
+    from .data.intraday import AlpacaBars
+    from .data.news import download_news, write_news_manifest
+
+    cfg = _cfg(args)
+    tickers = _universe_tickers(cfg)[: args.symbols]
+    client = AlpacaBars()
+    m = download_news(tickers, args.store, args.start, client, args.budget)
+    path = write_news_manifest(m, args.store, {"symbols_requested": len(tickers), "api_calls": client.calls})
+    print(f"{len(m)} months, {int(m['articles'].sum()) if len(m) else 0:,} articles. Manifest: {path}")
+
+
+def cmd_fundamentals(args):
+    """Download fundamentals for the universe from SEC EDGAR."""
+    from .data.fundamentals import download_fundamentals
+
+    cfg = _cfg(args)
+    man = download_fundamentals(_universe_tickers(cfg), args.store)
+    print(f"{int((man['facts'] > 0).sum())} companies, {int(man['facts'].sum()):,} facts in {args.store}")
 
 
 def cmd_signals(args):
@@ -181,10 +214,19 @@ def main(argv=None):
     p.add_argument("--symbols", type=int, default=200, help="how many of the most liquid stocks")
     p.add_argument("--timeframe", default="5Min", help="bar size, e.g. 1Min, 5Min, 15Min")
     p.add_argument("--start", default="2016-01-01", help="first date (Alpaca history begins 2016)")
-    p.add_argument("--store", default="data/intraday/5min", help="where per-symbol files are kept")
+    p.add_argument("--store", help="where per-symbol files are kept (default data/intraday/<timeframe>)")
     p.add_argument("--budget", type=float, help="stop after this many minutes (resume later)")
     p.add_argument("--reselect", action="store_true", help="re-pick the most liquid stocks")
     p.set_defaults(fn=cmd_intraday)
+    p = sub.add_parser("news", help="download news headlines from Alpaca")
+    p.add_argument("--symbols", type=int, default=1000, help="first N stocks of the universe")
+    p.add_argument("--start", default="2015-01-01")
+    p.add_argument("--store", default="data/news")
+    p.add_argument("--budget", type=float, help="stop after this many minutes (resume later)")
+    p.set_defaults(fn=cmd_news)
+    p = sub.add_parser("fundamentals", help="download company fundamentals from SEC EDGAR")
+    p.add_argument("--store", default="data/fundamentals")
+    p.set_defaults(fn=cmd_fundamentals)
     sub.add_parser("signals", help="list the signal library").set_defaults(fn=cmd_signals)
 
     args = ap.parse_args(argv)

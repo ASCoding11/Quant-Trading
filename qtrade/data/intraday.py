@@ -56,7 +56,7 @@ class AlpacaBars:
     """Minimal client for ``GET /v2/stocks/bars`` with paging and back-off."""
 
     def __init__(self, key: str | None = None, secret: str | None = None, feed: str = "sip",
-                 per_minute: int = 190, session=None):
+                 per_minute: int | None = None, session=None):
         import requests
 
         key = key or os.environ.get("ALPACA_API_KEY") or os.environ.get("APCA_API_KEY_ID")
@@ -66,13 +66,14 @@ class AlpacaBars:
         self.session = session or requests.Session()
         self.session.headers.update({"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret})
         self.feed = feed
+        per_minute = per_minute or int(os.environ.get("ALPACA_RATE_PER_MIN", "190"))
         self.limiter = RateLimiter(per_minute)
         self.calls = 0
 
-    def _get(self, params: dict) -> dict:
-        for attempt in range(8):
+    def _get(self, params: dict, url: str = DATA_URL) -> dict:
+        for attempt in range(10):
             self.limiter.wait()
-            r = self.session.get(DATA_URL, params=params, timeout=60)
+            r = self.session.get(url, params=params, timeout=60)
             self.calls += 1
             if r.status_code == 200:
                 return r.json()
@@ -186,18 +187,23 @@ def download(tickers: list[str], store_dir: str | Path, timeframe: str = "5Min",
     client = client or AlpacaBars()
     end = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(minutes=30)).isoformat()
     t0 = time.time()
+    complete = True
     for k, sym in enumerate(tickers):
         if time_budget_min and (time.time() - t0) / 60 > time_budget_min:
             LOG.warning("time budget reached after %d/%d symbols; re-run to resume", k, len(tickers))
+            complete = False
             break
         try:
             added, total = update_symbol(client, store_dir, sym, timeframe, start, end)
         except RuntimeError as exc:
             LOG.warning("%s: %s", sym, exc)
+            complete = False
             continue
         LOG.info("[%d/%d] %-6s +%d bars (total %d, %d API calls so far)",
                  k + 1, len(tickers), sym, added, total, client.calls)
-    return manifest(store_dir, tickers, timeframe)
+    m = manifest(store_dir, tickers, timeframe)
+    m.attrs["complete"] = complete
+    return m
 
 
 def manifest(store_dir: str | Path, tickers: list[str], timeframe: str) -> pd.DataFrame:
@@ -222,6 +228,7 @@ def write_manifest(m: pd.DataFrame, store_dir: str | Path, extra: dict | None = 
         "first": min((x for x in m.get("first", []) if isinstance(x, str)), default=None),
         "last": max((x for x in m.get("last", []) if isinstance(x, str)), default=None),
         "updated": pd.Timestamp.now(tz="UTC").isoformat(),
+        "complete": bool(m.attrs.get("complete", True)),
     } | (extra or {})
     path = Path(store_dir) / "manifest.json"
     path.write_text(json.dumps(summary, indent=2))

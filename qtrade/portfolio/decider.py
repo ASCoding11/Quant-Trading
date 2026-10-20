@@ -97,12 +97,19 @@ class Decider:
         return float(np.clip(1.0 / (1.0 - np.clip(rho, 0.0, 0.95)), 1.0, 20.0))
 
     def decide(self, t: int, w_cur: np.ndarray, equity: float, risk_scale: float = 1.0,
-               allowed: np.ndarray | None = None) -> Decision:
-        """``allowed``: optional mask of names that may be held (e.g. shortable)."""
+               allowed: np.ndarray | None = None, no_short: np.ndarray | None = None) -> Decision:
+        """``allowed``: names that may be held at all. ``no_short``: names that may
+        only be held long (the broker can't borrow them); they are kept out of the
+        short side here, so the book stays balanced instead of losing its shorts
+        after the fact."""
         z = self.pred[t]
         ok = np.isfinite(z) & self.tradable[t] & np.isfinite(self.sigma[t])
         if allowed is not None:
             ok &= allowed
+        if no_short is not None:
+            # a stock we can't short is only a candidate if the model likes it
+            zc = np.where(np.isfinite(z), z - np.nanmean(z[ok]) if ok.any() else z, np.nan)
+            ok &= ~(no_short & (zc < 0))
         idx = np.nonzero(ok)[0]
         N = len(z)
         ic_hat = self.ic_estimate(t)
@@ -123,9 +130,16 @@ class Decider:
             held = w_cur[idx] != 0
             keep = new_ok | (held & buffer_ok)
             idx, zz = idx[keep], zz[keep]
-        tc = unit_cost(self.adv[t, idx], self.sigma[t, idx], equity, self.cfg)
-        w_sel, info = construct(zz, self.sigma[t, idx], self._loadings(t, idx), ic_hat, self.cfg,
-                                risk_scale, w_cur=w_cur[idx], tcost=tc, holding_periods=hold_L)
+        for _ in range(5):
+            tc = unit_cost(self.adv[t, idx], self.sigma[t, idx], equity, self.cfg)
+            w_sel, info = construct(zz, self.sigma[t, idx], self._loadings(t, idx), ic_hat, self.cfg,
+                                    risk_scale, w_cur=w_cur[idx], tcost=tc, holding_periods=hold_L)
+            if no_short is None:
+                break
+            bad = no_short[idx] & (w_sel < -1e-9)   # hedging pushed an unshortable name short
+            if not bad.any():
+                break
+            idx, zz = idx[~bad], zz[~bad]
         w = np.zeros(N)
         w[idx] = w_sel
         return Decision(w, info, ic_hat, hold_L, len(idx))

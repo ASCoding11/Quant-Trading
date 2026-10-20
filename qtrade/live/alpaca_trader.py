@@ -199,10 +199,11 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
     cols = md.tickers
     w_cur = np.array([pos_val.get(t, 0.0) / deploy for t in cols]) if deploy > 0 else np.zeros(len(cols))
     allowed = None if tradable is None else np.array([t in tradable for t in cols])
+    no_short = None if shortable is None else np.array([t not in shortable for t in cols])
     dd = equity / peak - 1 if peak > 0 else 0.0
     risk_scale = cfg.portfolio.drawdown_scale if dd < -cfg.portfolio.drawdown_limit else 1.0
     t = len(md.dates) - 1
-    d = dec.decide(t, w_cur, deploy, risk_scale, allowed=allowed)
+    d = dec.decide(t, w_cur, deploy, risk_scale, allowed=allowed, no_short=no_short)
 
     prices = {tk: float(px) for tk, px in md.close.iloc[-1].items() if np.isfinite(px)}
     tw = {tk: float(w) for tk, w in zip(cols, d.weights) if abs(w) > 1e-6}

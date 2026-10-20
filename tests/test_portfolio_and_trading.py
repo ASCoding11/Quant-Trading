@@ -166,3 +166,24 @@ def test_backup_scheduled_run_skips_when_already_traded(monkeypatch, tmp_path):
     monkeypatch.setattr(lt, "load_universe", lambda d: (_ for _ in ()).throw(RuntimeError("reached model")))
     with pytest.raises(RuntimeError, match="reached model"):
         lt.run_paper(cfg, dry_run=False, once_per_day=True)
+
+
+def test_unshortable_names_never_get_short_weights(market, cfg):
+    import copy
+
+    from qtrade.portfolio.decider import Decider
+
+    md, _ = market
+    c = copy.deepcopy(cfg)
+    c.portfolio.max_names = 30
+    ctx = FeatureContext(md, c)
+    fwd = forward_returns(md, c.model.horizon).where(ctx.tradable).to_numpy()
+    dec = Decider(ctx, fwd, fwd, c)
+    t = 600
+    no_short = np.zeros(len(md.tickers), dtype=bool)
+    no_short[::2] = True                       # half the universe can't be borrowed
+    d = dec.decide(t, np.zeros(len(md.tickers)), 10_000, no_short=no_short)
+    w = d.weights
+    assert (w[no_short] >= -1e-9).all()        # never short the unborrowable names
+    assert (w < 0).sum() > 3 and (w > 0).sum() > 3
+    assert abs(w.sum()) < 0.05 * np.abs(w).sum()   # still roughly dollar-neutral

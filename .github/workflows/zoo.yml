@@ -76,6 +76,12 @@ jobs:
           fetch_dataset news news || echo "no news"
           # free public data (macro, index changes, insider trades, short volume); cached between runs
           python -m qtrade.research.fetch_public || echo "public data partly unavailable"
+          # daily statistics from the 5-minute bars (built once; the raw bars are too big to cache)
+          if [ ! -f data/public/intraday_stats.parquet ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+            fetch_dataset intraday_5min intraday/5min && python -m qtrade.research.intraday_stats data/intraday/5min || echo "no intraday stats"
+            rm -rf data/intraday
+          fi
           du -sh data/*
       - name: Save data for the model jobs
         uses: actions/cache/save@v4

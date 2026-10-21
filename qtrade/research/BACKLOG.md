@@ -44,10 +44,10 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 ## Not yet covered (added after review)
 
 - [x] Free public data loaders: FRED macro, S&P 500 changes, FINRA short volume, SEC insider trades, all US stocks incl. delisted (Alpaca)
-- [ ] Survivorship-free universe study: signal ICs on a point-in-time top-1000 (with delisted stocks) vs today's survivors, 2017-2026
-- [ ] Intraday-derived daily signals: realized skew/kurtosis, jump share, first/last half-hour moves
-- [ ] News text: novelty, event types (M&A, FDA, guidance, lawsuit, offering, analyst), event study by type
-- [ ] Index events: S&P 500 additions/removals around the effective date
+- [x] Survivorship-free universe study: signal ICs on a point-in-time top-1000 (with delisted stocks) vs today's survivors, 2017-2026
+- [x] Intraday-derived daily signals: realized skew/kurtosis, jump share, first/last half-hour moves
+- [x] News text: novelty, event types (M&A, FDA, guidance, lawsuit, offering, analyst), event study by type
+- [x] Index events: S&P 500 additions/removals around the effective date
 - [ ] Macro: FRED states for market timing and momentum-crash protection
 - [ ] Broad trend following (~30 ETFs: commodities, currencies, rates, countries), volatility premium (VIX term structure), sector seasonality
 - [ ] Ledoit-Wolf covariance and mean-variance across strategies; capacity vs AUM; open- vs close-auction execution

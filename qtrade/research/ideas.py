@@ -398,3 +398,56 @@ def sue_revision(md, ctx, facts):
     if sue is None:
         return None
     return sue - sue.shift(63)
+
+
+# =============================================================================
+# wave 3: from 5-minute bars (daily statistics built by research/intraday_stats.py)
+# =============================================================================
+def _intra(md, ctx, name):
+    from .intraday_stats import load
+
+    st = load(_root(ctx))
+    if st is None or name not in st:
+        return None
+    return st[name].reindex(index=md.dates, columns=md.tickers)
+
+
+@idea("intraday", 3)
+def realized_skew(md, ctx, facts):
+    """Minus the average realized skewness of 5-minute returns over 5 days (lottery-like intraday moves)."""
+    x = _intra(md, ctx, "rskew")
+    return None if x is None else -x.rolling(5, min_periods=3).mean()
+
+
+@idea("intraday", 3)
+def realized_kurtosis(md, ctx, facts):
+    x = _intra(md, ctx, "rkurt")
+    return None if x is None else -x.rolling(21, min_periods=10).mean()
+
+
+@idea("intraday", 3)
+def jump_share(md, ctx, facts):
+    """Minus the share of variance from jumps over a month (jumpy stocks underperform?)."""
+    x = _intra(md, ctx, "jump_share")
+    return None if x is None else -x.rolling(21, min_periods=10).mean()
+
+
+@idea("intraday", 3)
+def last_half_hour(md, ctx, facts):
+    """Yesterday's last-half-hour return relative to the market (late-day informed trading continues)."""
+    x = _intra(md, ctx, "last30")
+    return None if x is None else x.sub(x.mean(axis=1), axis=0)
+
+
+@idea("intraday", 3)
+def first_half_hour_rev(md, ctx, facts):
+    """Minus today's first-half-hour return (opening overreaction)."""
+    x = _intra(md, ctx, "first30")
+    return None if x is None else -x.sub(x.mean(axis=1), axis=0)
+
+
+@idea("intraday", 3)
+def realized_vol_ratio(md, ctx, facts):
+    """Minus intraday realized vol over the last 5 days vs. the last 63 (vol spikes mean-revert)."""
+    x = _intra(md, ctx, "rv")
+    return None if x is None else -np.log(x.rolling(5, min_periods=3).mean() / x.rolling(63, min_periods=40).mean())

@@ -1,0 +1,46 @@
+{
+  "strategies": {
+    "strategies": 43,
+    "chosen_for_diversified_book": [
+      "spy_tsmom_12m",
+      "spy_ma200",
+      "spy_vol_managed",
+      "spy_hmm_timing",
+      "spy_turn_of_month",
+      "multi_asset_trend",
+      "risk_parity",
+      "cross_asset_mom",
+      "broad_trend_3m",
+      "broad_trend_12m",
+      "broad_trend_blend",
+      "short_vol_contango",
+      "short_vol_always",
+      "spy_macro_timing",
+      "pairs",
+      "etf_pairs",
+      "REVERSAL BOOK (current system)"
+    ],
+    "diversified": [
+      {
+        "portfolio": "diversified (17 strategies chosen on 2006-2014)",
+        "sharpe_1st": 1.28,
+        "ret_1st": 0.128,
+        "max_dd_1st": -0.09,
+        "sharpe_2nd": 0.829,
+        "ret_2nd": 0.089,
+        "max_dd_2nd": -0.169,
+        "vol": 0.104
+      },
+      {
+        "portfolio": "reversal book alone (10% vol)",
+        "sharpe_1st": 0.436,
+        "ret_1st": 0.044,
+        "max_dd_1st": -0.23,
+        "sharpe_2nd": 0.156,
+        "ret_2nd": 0.014,
+        "max_dd_2nd": -0.284,
+        "vol": 0.093
+      }
+    ]
+  }
+}

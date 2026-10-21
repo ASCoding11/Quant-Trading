@@ -56,3 +56,18 @@ def test_flat_signal_is_left_out():
     five = {t: f[f.index < early] for t, f in five.items()}
     book = build_book(five, daily, bars.tickers, {}, Config().auction, bars.days[45])
     assert book["strategies"] == ["overnight_persistence"]
+
+
+def test_sent_today_sees_earlier_market_on_close_orders():
+    from qtrade.intraday.auction_live import _sent_today
+
+    class Client:
+        def __init__(self, orders):
+            self.orders = orders
+
+        def get(self, path, params):
+            return [o for o in self.orders if o["status"] == params["status"]]
+
+    assert _sent_today(Client([{"status": "open", "time_in_force": "cls"}]), "cls")
+    assert _sent_today(Client([{"status": "closed", "time_in_force": "cls"}]), "cls")
+    assert not _sent_today(Client([{"status": "closed", "time_in_force": "day"}]), "cls")

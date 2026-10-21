@@ -1,0 +1,77 @@
+name: research
+
+# Research studies on real data (qtrade/research): data quality, real bid-ask
+# spreads from Alpaca quotes, per-signal edge vs. cost, and HMM accuracy.
+# Runs on pushes to claude/* branches that change the studies, or by hand.
+# Results go to research/ on the "results" branch.
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: ["qtrade/research/**", ".github/workflows/research.yml"]
+  workflow_dispatch:
+    inputs:
+      tasks:
+        description: "Comma list: quality,spreads,edge,hmm"
+        default: "quality,spreads,edge,hmm"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore price cache
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: prices-1000-15-2000-01-01-research-${{ github.run_id }}
+          restore-keys: prices-1000-15-2000-01-01-
+      - name: Select universe
+        run: '[ -f data/universe.csv ] || python -m qtrade universe'
+      - name: Run studies
+        run: |
+          set -o pipefail
+          mkdir -p reports/research
+          python -m qtrade.research --tasks "${{ inputs.tasks || 'quality,spreads,edge,hmm' }}" \
+            --out reports/research 2>&1 | tee reports/research/run.log
+      - name: Publish to the results branch
+        if: always()
+        run: |
+          cat reports/research/README.md >> "$GITHUB_STEP_SUMMARY" || true
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RUN_DIR="research/runs/$(date -u +%Y-%m-%d_%H%M)_${GITHUB_SHA::7}"
+          RES=$(mktemp -d)
+          for attempt in 1 2 3 4 5; do
+            rm -rf "$RES"; mkdir -p "$RES"; cd "$RES"; git init -q
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+            if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
+            mkdir -p "$RUN_DIR"
+            cp -r "$GITHUB_WORKSPACE/reports/research/." "$RUN_DIR/"
+            rm -rf research/latest && cp -r "$GITHUB_WORKSPACE/reports/research" research/latest
+            git add -A && git commit -q -m "Research run ${GITHUB_SHA::7} (run ${{ github.run_id }})"
+            if git push -q origin results; then echo "published $RUN_DIR"; break; fi
+            sleep $((attempt * 15))
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research
+          path: reports/research

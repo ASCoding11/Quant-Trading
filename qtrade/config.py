@@ -45,6 +45,8 @@ class RegimeConfig:
     min_history: int = 756           # 3 years before the first fit
     n_init: int = 5                  # random restarts for EM
     max_iter: int = 200
+    temper: float = 1.0              # weight of each day's evidence (<1: less overconfident)
+    align: bool = False              # keep regime labels fixed across refits (else sort by volatility)
 
 
 @dataclass

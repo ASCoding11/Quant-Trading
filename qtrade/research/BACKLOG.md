@@ -35,8 +35,8 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 
 - [x] Market timing, cross-asset trend/risk parity, sector momentum, stock
   factors, pairs, earnings premium
-- [x] (partly) Momentum crash protection (vol-scaled, macro-timed); still open: sector- and beta-neutral factor books
-  (volatility-scaled momentum); ETF pair trades; a risk-parity blend of the
+- [x] Momentum crash protection (vol-scaled, macro-timed); sector- and beta-neutral and
+  vol-scaled factor books; ETF pair trades; a risk-parity blend of the
   momentum and reversal books
 - [ ] Intraday (5-minute data): opening drive, last-half-hour momentum,
   overnight-intraday reversal

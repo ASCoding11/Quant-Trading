@@ -35,7 +35,16 @@ Stock factors (long top / short bottom quintile, monthly, measured costs):
   sue (earnings drift), accruals, multi_factor (equal blend), factor_momentum
   (each month, hold the factors whose own 12-month return is positive)
 
+Neutral and scaled versions of the factor books (mom_12_1, low_vol, high_52w, gross_prof):
+
+  *_sector_neutral    ranked inside each peer cluster, so no sector bets
+  *_beta_neutral      the book's beta hedged with an equal-weight market leg
+  *_vol_scaled        sized by 1 / trailing 6-month volatility (crash protection)
+  risk_parity(...)    momentum and the reversal book blended by 1 / trailing volatility
+
 Other stat-arb:
+
+  etf_pairs           the same pairs rule on liquid ETFs (sectors, countries, rates, commodities)
 
   pairs               pairs of highly correlated peers; trade the price ratio when it
                       is 2 sd from its 60-day mean, exit at 0.5 sd or after 21 days
@@ -179,6 +188,103 @@ def factor_strategies(md, ctx, alt: dict) -> tuple[dict[str, pd.Series], dict[st
         out["factor_momentum"] = (hold * f).sum(axis=1) / hold.sum(axis=1).replace(0, np.nan)
         out["factor_momentum"] = out["factor_momentum"].fillna(0)
     return out, raw
+
+
+def neutral_factor_strategies(md, ctx, raw: dict[str, pd.DataFrame]) -> dict[str, pd.Series]:
+    """The same quintile books made sector-neutral (ranked within peer clusters),
+    beta-neutral (market exposure hedged with an equal-weight market leg) and
+    volatility-scaled (sized by 1 / trailing 6-month volatility of the book)."""
+    from .edge import cost_panel
+
+    cost = cost_panel(ctx)
+    o = md.open
+    r1 = (o.shift(-2) / o.shift(-1) - 1).clip(-0.5, 0.5).fillna(0)
+    monthly = _month_ends(md.dates)
+    cl = ctx.clusters
+    beta = ctx.beta_252
+    mkt = r1.where(ctx.tradable).mean(axis=1)
+    out = {}
+
+    def book(w):
+        return ((w * r1).sum(axis=1) - (w.diff().abs() * cost).sum(axis=1)).shift(1).fillna(0)
+
+    for k in ("mom_12_1", "low_vol", "high_52w", "gross_prof"):
+        if k not in raw:
+            continue
+        sig = raw[k].where(ctx.tradable)
+        # sector-neutral: percentile rank inside each peer cluster
+        st = sig.stack()
+        g = cl.stack().reindex(st.index)
+        dates = st.index.get_level_values(0)
+        rk = st.groupby([dates, g.to_numpy()]).rank(pct=True).unstack().reindex_like(sig)
+        w = (rk > 0.8).astype(float) - (rk <= 0.2).astype(float)
+        w = w.div(w.abs().sum(axis=1), axis=0).where(monthly, np.nan).ffill().fillna(0.0)
+        out[f"{k}_sector_neutral"] = book(w)
+        # beta-neutral: hedge the book's beta with the equal-weight market (2 bp per unit traded)
+        w = _quintile_ls(raw[k], ctx.tradable, monthly)
+        b = (w * beta.reindex_like(w)).sum(axis=1)
+        hedge = -b.shift(1) * mkt
+        out[f"{k}_beta_neutral"] = book(w) + hedge.fillna(0) - b.diff().abs().shift(1).fillna(0) * 2e-4
+        if k == "mom_12_1":                                    # macro_timing already has momentum_vol_scaled
+            continue
+        # volatility-scaled: target the book's period-1 volatility using trailing 126-day vol
+        base = book(w)
+        vol = base.rolling(126, min_periods=60).std().shift(1)
+        out[f"{k}_vol_scaled"] = (base * (base.loc[:SPLIT].std() / vol).clip(0, 2)).fillna(0)
+    return out
+
+
+def etf_pairs(etf, top_pairs: int = 10, entry: float = 2.0, exit_: float = 0.5, max_hold: int = 21) -> pd.Series:
+    """Pairs trading among liquid ETFs: each year, the most correlated pairs over the
+    previous year; trade the log-price ratio at 2 sd from its 60-day mean."""
+    names = list(dict.fromkeys(ASSETS + SECTORS + BROAD))
+    c = etf.close[[n for n in names if n in etf.close]]
+    lp = np.log(c)
+    ret = c.pct_change(fill_method=None).fillna(0)
+    dates = c.index
+    pnl = pd.Series(0.0, index=dates)
+    for yr in sorted(set(dates.year))[2:]:
+        start = dates[dates.year == yr][0]
+        form = ret.loc[:start].iloc[-252:]
+        form = form.loc[:, (form != 0).mean() > 0.9]
+        if form.shape[1] < 2:
+            continue
+        cm = form.corr().to_numpy()
+        iu = np.triu_indices(len(cm), 1)
+        best = np.argsort(-np.nan_to_num(cm[iu]))[:top_pairs]
+        pairs = [(form.columns[iu[0][b]], form.columns[iu[1][b]]) for b in best if cm[iu][b] > 0.8]
+        if not pairs:
+            continue
+        days = dates[dates.year == yr]
+        wp = 1.0 / len(pairs)
+        for a, b in pairs:
+            spread = lp[a] - lp[b]
+            z = ((spread - spread.rolling(60).mean()) / spread.rolling(60).std()).loc[days].to_numpy()
+            ra, rb = ret[a].loc[days].to_numpy(), ret[b].loc[days].to_numpy()
+            pos, held = 0, 0
+            x = np.zeros(len(days))
+            for i in range(1, len(days)):
+                x[i] = pos * (ra[i] - rb[i]) * wp / 2
+                new = pos
+                if pos == 0 and np.isfinite(z[i]) and abs(z[i]) > entry:
+                    new = -int(np.sign(z[i]))
+                elif pos != 0 and (abs(z[i]) < exit_ or held >= max_hold or not np.isfinite(z[i])):
+                    new = 0
+                if new != pos:
+                    x[i] -= abs(new - pos) * wp * ETF_COST
+                    held = 0
+                held += 1 if new != 0 else 0
+                pos = new
+            pnl.loc[days] += x
+    return pnl
+
+
+def risk_parity_blend(books: dict[str, pd.Series]) -> pd.Series:
+    """Blend return series with weights 1 / trailing 126-day volatility (known a day ahead)."""
+    R = pd.DataFrame(books).fillna(0)
+    iv = 1 / R.rolling(126, min_periods=60).std().shift(1)
+    w = iv.div(iv.sum(axis=1), axis=0)
+    return (w * R).sum(axis=1).fillna(0)
 
 
 def pairs_strategy(md, ctx, top_pairs: int = 5, entry: float = 2.0, exit_: float = 0.5,
@@ -478,6 +584,8 @@ def run(md, ctx, out: Path, cfg, alt: dict | None = None, reversal: pd.Series | 
                         ("sector seasonality", lambda: sector_seasonality(etf)),
                         ("macro", macro),
                         ("pairs", lambda: {"pairs": pairs_strategy(md, ctx)}),
+                        ("ETF pairs", lambda: {"etf_pairs": etf_pairs(etf)}),
+                        ("neutral factor books", lambda: neutral_factor_strategies(md, ctx, fac_raw)),
                         ("earnings premium", earnings)):
         try:
             strat |= block()
@@ -485,6 +593,9 @@ def run(md, ctx, out: Path, cfg, alt: dict | None = None, reversal: pd.Series | 
             LOG.exception("strategy block %s failed: %s", name, exc)
     if reversal is not None:
         strat["REVERSAL BOOK (current system)"] = reversal
+        for k in ("mom_12_1", "momentum_vol_scaled"):
+            if k in strat:
+                strat[f"risk_parity({k} + reversal)"] = risk_parity_blend({"m": strat[k], "r": reversal})
     R = pd.DataFrame(strat).loc["2006-01-01":].fillna(0.0)
     R = R.loc[:, R.abs().sum() > 0]
     tab = pd.DataFrame({k: _stats(R[k]) for k in R}).T

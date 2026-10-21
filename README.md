@@ -298,6 +298,48 @@ News articles likewise carry their publication time.
 `qtrade.data.intraday.load_panel`, `qtrade.data.news.load_news` and
 `qtrade.data.fundamentals.load_fundamentals`.
 
+## Intraday trading (every 5 minutes)
+
+A second strategy, in [`qtrade/intraday/`](qtrade/intraday), trades the same
+idea (short-term reversal) at a much faster clock, on the 5-minute bars in the
+`intraday_5min` dataset:
+
+- **Signals**, recomputed at every bar for the 500 most liquid stocks: minus
+  the last 5, 15 and 60 minutes' return relative to the other stocks, the
+  return since the open, the overnight gap, distance from today's VWAP, and
+  abnormal volume (reversals on light volume are stronger). Each is scaled by
+  the stock's own 5-minute volatility and weighted separately for the open,
+  midday and the close.
+- **Model**: ridge regression forecasting the next 30 minutes, refit every
+  month on the previous 12 (walk-forward).
+- **Trading**: decide at a bar's close, fill at the next bar's open. 20 longs
+  and 20 shorts, dollar-neutral, 2x gross, with the same cost-aware no-trade
+  band as the daily book. **Flat from 15:45 every day**, so there is no
+  overnight risk and no borrow fee.
+- **Costs**: every intraday trade crosses the spread (no auction), charged by
+  liquidity tier (1-8 bp half-spread) plus slippage and square-root impact.
+  The report also shows half and double costs, and trading every 15, 30 and 60
+  minutes instead of every 5.
+
+**Backtest:** Actions -> **intraday-backtest** -> Run workflow (needs the
+`DATA_KEY` secret). The report and the trained `model.json` go to
+`intraday/` on the `results` branch. Locally:
+`python -m qtrade intraday-backtest --store data/intraday/5min`, or
+`--synthetic` for an offline check.
+
+**Paper trading:** Actions -> **intraday-trade** -> Run workflow (dry run by
+default). To run it every trading day, set a repository **variable**
+`TRADING_MODE` = `intraday`; the daily paper-trade workflow then stands aside,
+because both strategies would otherwise fight over the same account. It waits
+for the open, rebalances a few seconds after every 5-minute bar using
+Alpaca's free real-time (IEX) feed, and closes everything at 15:45. A GitHub
+job can only run 6 hours, so it hands over to a follow-up run mid-afternoon.
+
+> **Pattern-day-trader rule.** US brokers only allow unlimited day trading in
+> margin accounts with at least **$25,000** of equity. Alpaca's paper account
+> starts at $100k, so paper trading is fine, but this strategy **cannot be run
+> with real money in a $10k account**: it day-trades dozens of times a day.
+
 ## Paper trading
 
 1. Create a free account at [alpaca.markets](https://alpaca.markets), switch
@@ -336,6 +378,7 @@ qtrade/
   portfolio/    Kelly/neutral optimizer, no-trade band, shared daily decision
   backtest/     engine, cost model, metrics (PSR/DSR), HTML report
   live/         Alpaca paper trader
+  intraday/     5-minute reversal strategy: features, walk-forward model, backtest, live loop
   pipeline.py   data -> signals -> regimes -> forecasts
   cli.py        python -m qtrade ...
 tests/          no-look-ahead, HMM recovery, neutrality, accounting, orders

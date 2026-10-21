@@ -9,6 +9,8 @@
     python -m qtrade intraday            # download 5-minute bars from Alpaca
     python -m qtrade news                # download news headlines from Alpaca
     python -m qtrade fundamentals        # download SEC fundamentals
+    python -m qtrade intraday-backtest   # intraday reversal strategy on 5-minute bars
+    python -m qtrade intraday-paper      # trade it on Alpaca paper every 5 minutes
     python -m qtrade signals             # list every signal in the library
 """
 from __future__ import annotations
@@ -144,6 +146,48 @@ def cmd_intraday(args):
     print(f"{done}/{len(symbols)} symbols stored, {int(m['rows'].sum()):,} bars. Manifest: {path}")
 
 
+def cmd_intraday_backtest(args):
+    """Walk-forward backtest of the intraday reversal strategy."""
+    from .intraday.runner import run
+
+    cfg = _cfg(args)
+    icfg = cfg.intraday
+    if args.symbols:
+        icfg.n_symbols = args.symbols
+    if args.every:
+        icfg.rebalance_every = args.every
+    if args.synthetic:
+        from .intraday.synthetic import make_intraday
+
+        bars = make_intraday(n_stocks=100, n_days=300, seed=1)
+        icfg.min_train_months = 2
+    else:
+        from .intraday.bars import load_store
+
+        bars = load_store(args.store or icfg.store, icfg.n_symbols, args.start or icfg.start, icfg.bar_minutes)
+    out = run(bars, cfg, args.out)
+    s = out["summary"]
+    print(f"\n{s['variant']}: Sharpe {s['sharpe']:.2f} after costs ({s['sharpe_pre_cost']:.2f} before), "
+          f"{s['ann_return'] * 100:.1f}%/yr, max DD {s['max_drawdown'] * 100:.1f}%")
+    print(out["variants"][["sharpe", "sharpe_pre_cost", "sharpe_2nd_half", "ann_return", "turnover_per_day"]]
+          .round(2).to_string())
+    print(f"\nReport: {args.out}/README.md")
+
+
+def cmd_intraday_paper(args):
+    """Trade the intraday strategy on Alpaca paper, every bar until the close."""
+    from .intraday.live import run_intraday_paper
+
+    cfg = _cfg(args)
+    if args.every:
+        cfg.intraday.rebalance_every = args.every
+    res = run_intraday_paper(cfg, args.model, dry_run=not args.send, minutes=args.minutes)
+    if args.status_file:
+        Path_ = __import__("pathlib").Path
+        Path_(args.status_file).write_text(res["status"])
+    print(f"intraday session: {res['status']} after {len(res.get('cycles', []))} cycles")
+
+
 def _universe_tickers(cfg) -> list[str]:
     from .data import load_universe
 
@@ -238,6 +282,21 @@ def main(argv=None):
     p.add_argument("--budget", type=float, help="stop after this many minutes (resume later)")
     p.add_argument("--reselect", action="store_true", help="re-pick the most liquid stocks")
     p.set_defaults(fn=cmd_intraday)
+    p = sub.add_parser("intraday-backtest", help="backtest the intraday reversal strategy")
+    p.add_argument("--store", help="intraday bar store (default data/intraday/5min)")
+    p.add_argument("--symbols", type=int, help="most liquid N names (default 500)")
+    p.add_argument("--start", help="first day, e.g. 2018-01-01")
+    p.add_argument("--every", type=int, help="rebalance every N bars (default 1)")
+    p.add_argument("--out", default="reports/intraday")
+    p.add_argument("--synthetic", action="store_true", help="use a simulated market (offline check)")
+    p.set_defaults(fn=cmd_intraday_backtest)
+    p = sub.add_parser("intraday-paper", help="trade the intraday strategy on Alpaca paper")
+    p.add_argument("--model", default="data/intraday_model.json", help="model.json from intraday-backtest")
+    p.add_argument("--send", action="store_true", help="really submit orders (paper account)")
+    p.add_argument("--every", type=int, help="rebalance every N bars (default 1)")
+    p.add_argument("--minutes", type=float, help="stop after this many minutes (GitHub's 6-hour job limit)")
+    p.add_argument("--status-file", help="write done / continue / closed here")
+    p.set_defaults(fn=cmd_intraday_paper)
     p = sub.add_parser("news", help="download news headlines from Alpaca")
     p.add_argument("--symbols", type=int, default=1000, help="first N stocks of the universe")
     p.add_argument("--start", default="2015-01-01")

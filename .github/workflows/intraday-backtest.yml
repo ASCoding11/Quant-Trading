@@ -1,0 +1,79 @@
+name: intraday-backtest
+
+# Walk-forward backtest of the intraday reversal strategy on the 5-minute bars
+# kept (encrypted) in the "data" release. Needs the DATA_KEY secret. Results,
+# and the model.json that intraday-trade uses, go to intraday/ on the
+# "results" branch and are attached to the run as "intraday-report".
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: "Most liquid N stocks"
+        default: "500"
+      start:
+        description: "First day (blank = all data, 2016+)"
+        default: ""
+      every:
+        description: "Rebalance every N five-minute bars (1 = every 5 min)"
+        default: "1"
+      label:
+        description: "Name for this run in the results branch"
+        default: "default"
+
+permissions:
+  contents: write   # read release assets, publish to the results branch
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      DATA_KEY: ${{ secrets.DATA_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Free disk space (the dataset is several GB)
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Fetch 5-minute bars
+        run: |
+          source scripts/datastore.sh
+          fetch_dataset intraday_5min intraday/5min || { echo "::error::No intraday_5min dataset - run alpaca-data with 'bars:5Min:1000' first."; exit 1; }
+      - name: Backtest
+        run: |
+          set -o pipefail
+          mkdir -p reports/intraday
+          START="${{ inputs.start }}"
+          python -m qtrade intraday-backtest --store data/intraday/5min --symbols "${{ inputs.symbols }}" \
+            --every "${{ inputs.every }}" ${START:+--start "$START"} --out reports/intraday 2>&1 | tee reports/intraday/run.log
+      - name: Publish results (job summary + "results" branch)
+        if: success()
+        run: |
+          sed 's#](equity.png)#](https://github.com/${{ github.repository }}/raw/results/intraday/latest/equity.png)#' \
+            reports/intraday/README.md >> "$GITHUB_STEP_SUMMARY"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RUN_DIR="intraday/runs/$(date -u +%Y-%m-%d_%H%M)_${{ inputs.label }}"
+          RES=$(mktemp -d)
+          for attempt in 1 2 3 4 5; do
+            rm -rf "$RES"; mkdir -p "$RES"; cd "$RES"; git init -q
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+            if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
+            mkdir -p "$RUN_DIR"
+            cp -r "$GITHUB_WORKSPACE/reports/intraday/." "$RUN_DIR/"
+            rm -rf intraday/latest && cp -r "$GITHUB_WORKSPACE/reports/intraday" intraday/latest
+            git add -A && git commit -q -m "Intraday backtest ${{ inputs.label }} (run ${{ github.run_id }})"
+            if git push -q origin results; then echo "published $RUN_DIR"; break; fi
+            sleep $((attempt * 15))
+          done
+          cd "$GITHUB_WORKSPACE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: intraday-report
+          path: reports/intraday

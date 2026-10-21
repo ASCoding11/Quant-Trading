@@ -238,16 +238,17 @@ def earnings_premium(md, ctx, facts: pd.DataFrame | None) -> pd.Series | None:
 
     f = facts[facts["form"].isin(["10-Q", "10-K"]) & facts["filed"].notna()][["ticker", "filed"]].drop_duplicates()
     dates = md.dates
-    nxt = pd.DataFrame(np.nan, index=dates, columns=md.tickers)
+    day_num = ((dates - pd.Timestamp("1970-01-01")).days).to_numpy(dtype=float)
+    nxt = pd.DataFrame(np.nan, index=dates, columns=md.tickers)       # expected next filing, as a day number
     for t, g in f.groupby("ticker"):
         if t not in nxt.columns:
             continue
         filed = pd.DatetimeIndex(sorted(g["filed"].unique()))
-        s = pd.Series(filed + pd.Timedelta(days=91), index=filed + pd.Timedelta(days=1))
+        expected = ((filed + pd.Timedelta(days=91)) - pd.Timestamp("1970-01-01")).days.to_numpy(dtype=float)
+        s = pd.Series(expected, index=filed + pd.Timedelta(days=1))   # known from the day after a filing
         s = s[~s.index.duplicated(keep="last")]
-        nxt[t] = pd.Series(s.to_numpy(), index=s.index).reindex(dates, method="ffill").to_numpy()
-    days_to = (nxt - pd.DataFrame(np.repeat(dates.values[:, None], nxt.shape[1], 1), index=dates,
-                                  columns=nxt.columns)).apply(lambda c: pd.to_timedelta(c).dt.days)
+        nxt[t] = s.reindex(dates, method="ffill").to_numpy()
+    days_to = nxt.sub(day_num, axis=0)
     soon = (days_to >= 1) & (days_to <= 7) & ctx.tradable
     w = soon.astype(float).div(soon.sum(axis=1).replace(0, np.nan), axis=0).fillna(0)
     other = (~soon & ctx.tradable).astype(float)
@@ -274,23 +275,24 @@ def run(md, ctx, out: Path, cfg, alt: dict | None = None, reversal: pd.Series | 
     alt = alt or {}
     etf = _etfs("2003-01-01")
     strat = {}
-    strat |= timing_strategies(etf, ctx, cfg)
-    strat |= cross_asset_strategies(etf)
-    fac, _ = factor_strategies(md, ctx, alt)
-    strat |= fac
-    try:
-        strat["pairs"] = pairs_strategy(md, ctx)
-    except Exception as exc:
-        LOG.warning("pairs skipped: %s", exc)
-    from pathlib import Path as _P
+    fpath = Path(cfg.data.cache_dir) / "fundamentals" / "fundamentals.parquet"
 
-    fpath = _P(cfg.data.cache_dir) / "fundamentals" / "fundamentals.parquet"
-    if fpath.exists():
+    def earnings():
         from ..data.fundamentals import load_fundamentals
 
-        ep = earnings_premium(md, ctx, load_fundamentals(fpath.parent))
-        if ep is not None:
-            strat["earnings_premium"] = ep
+        ep = earnings_premium(md, ctx, load_fundamentals(fpath.parent)) if fpath.exists() else None
+        return {"earnings_premium": ep} if ep is not None else {}
+
+    # each block is independent: one failing must not lose the others
+    for name, block in (("timing", lambda: timing_strategies(etf, ctx, cfg)),
+                        ("cross-asset", lambda: cross_asset_strategies(etf)),
+                        ("factors", lambda: factor_strategies(md, ctx, alt)[0]),
+                        ("pairs", lambda: {"pairs": pairs_strategy(md, ctx)}),
+                        ("earnings premium", earnings)):
+        try:
+            strat |= block()
+        except Exception as exc:
+            LOG.exception("strategy block %s failed: %s", name, exc)
     if reversal is not None:
         strat["REVERSAL BOOK (current system)"] = reversal
     R = pd.DataFrame(strat).loc["2006-01-01":].fillna(0.0)

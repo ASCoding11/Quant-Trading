@@ -1,10 +1,10 @@
 name: intraday-trade
 
 # Intraday paper trading: rebalances every 5 minutes on Alpaca paper and goes
-# flat before the close. It owns the whole paper account, so it only runs on
-# schedule when the repository variable TRADING_MODE is "intraday" (and the
-# daily paper-trade workflow then stands aside). Settings -> Secrets and
-# variables -> Actions -> Variables -> TRADING_MODE = intraday.
+# flat before the close. It owns the whole paper account, so only one of the
+# two traders runs on schedule: intraday by default, or the daily paper-trade
+# workflow when the repository variable TRADING_MODE is set to "daily"
+# (Settings -> Secrets and variables -> Actions -> Variables).
 #
 # Uses the model.json published by the intraday-backtest workflow. A GitHub job
 # lasts at most 6 hours and the session is 6.5, so a run that reaches its time
@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   trade:
-    if: github.event_name != 'schedule' || vars.TRADING_MODE == 'intraday'
+    if: github.event_name != 'schedule' || (vars.TRADING_MODE || 'intraday') == 'intraday'
     runs-on: ubuntu-latest
     timeout-minutes: 358
     env:

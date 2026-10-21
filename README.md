@@ -334,9 +334,12 @@ idea (short-term reversal) at a much faster clock, on the 5-minute bars in the
 `--synthetic` for an offline check.
 
 **Paper trading:** Actions -> **intraday-trade** -> Run workflow (dry run by
-default). To run it every trading day, set a repository **variable**
-`TRADING_MODE` = `intraday`; the daily paper-trade workflow then stands aside,
-because both strategies would otherwise fight over the same account. It waits
+default). **It is the scheduled trader by default**: every trading day it
+runs and the daily paper-trade workflow stands aside, because both strategies
+would otherwise fight over the same account. Set a repository **variable**
+`TRADING_MODE` = `daily` to trade the daily book instead. It uses the intraday
+model zoo's winner (`intraday/zoo/model_zoo.joblib`, retrained monthly) when
+one exists, otherwise the production ridge. It waits
 for the open, rebalances a few seconds after every 5-minute bar using
 Alpaca's free real-time (IEX) feed, and closes everything at 15:45. A GitHub
 job can only run 6 hours, so it hands over to a follow-up run mid-afternoon.

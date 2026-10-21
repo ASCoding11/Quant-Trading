@@ -1,0 +1,54 @@
+{
+  "intraday": {
+    "strategies": [
+      {
+        "strategy": "market_intraday_momentum (equal-weight market, 15:30 -> close)",
+        "net_sharpe_1st": -0.78,
+        "net_sharpe_2nd": -1.91,
+        "breakeven_bp_2nd": -0.47
+      },
+      {
+        "strategy": "opening_drive (first 30 min -> rest of day)",
+        "net_sharpe_1st": -12.38,
+        "net_sharpe_2nd": -9.47,
+        "breakeven_bp_2nd": -1.61
+      },
+      {
+        "strategy": "late_momentum (overnight + first 30 -> last 30)",
+        "net_sharpe_1st": -38.47,
+        "net_sharpe_2nd": -27.46,
+        "breakeven_bp_2nd": -0.23
+      },
+      {
+        "strategy": "gap_reversal_open (gap -> open to close, short gappers)",
+        "net_sharpe_1st": -9.67,
+        "net_sharpe_2nd": -6.95,
+        "breakeven_bp_2nd": 2.65
+      },
+      {
+        "strategy": "gap_reversal_10am (gap -> 10:00 to close)",
+        "net_sharpe_1st": -7.05,
+        "net_sharpe_2nd": -5.3,
+        "breakeven_bp_2nd": 0.49
+      },
+      {
+        "strategy": "overnight_persistence (past month's overnight -> tonight)",
+        "net_sharpe_1st": -24.51,
+        "net_sharpe_2nd": -13.89,
+        "breakeven_bp_2nd": 0.52
+      },
+      {
+        "strategy": "intraday_persistence (past month's open-to-close -> today's)",
+        "net_sharpe_1st": -9.92,
+        "net_sharpe_2nd": -10.94,
+        "breakeven_bp_2nd": -0.06
+      },
+      {
+        "strategy": "last30_next_overnight (last 30 min -> tonight)",
+        "net_sharpe_1st": -34.1,
+        "net_sharpe_2nd": -25.32,
+        "breakeven_bp_2nd": -1.01
+      }
+    ]
+  }
+}

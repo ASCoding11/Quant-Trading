@@ -1,54 +1,56 @@
-04:10:12 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-04:10:13 INFO    qtrade | research task: strategies
-04:10:18 INFO    qtrade | downloaded 45 / 45 tickers
-04:10:43 WARNING qtrade | FRED T10Y2Y failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=20)
-04:11:03 WARNING qtrade | FRED T10Y3M failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=20)
-04:11:04 INFO    qtrade | macro from Yahoo: ['term_spread_10y3m', 'term_spread_10y5y', 'credit_spread_hyg_lqd', 'breakeven_tip_ief', 'dollar_index', 'oil_wti', 'vix']
-04:11:22 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
-04:11:46 INFO    qtrade | factor model: 309 refits, 15 factors
-04:12:20 INFO    qtrade | computed 3 signals
+04:23:23 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+04:23:23 INFO    qtrade | research task: intraday
+04:23:30 INFO    qtrade | intraday strategies: 8
 {
- "strategies": {
-  "strategies": 43,
-  "chosen_for_diversified_book": [
-   "spy_tsmom_12m",
-   "spy_ma200",
-   "spy_vol_managed",
-   "spy_hmm_timing",
-   "spy_turn_of_month",
-   "multi_asset_trend",
-   "risk_parity",
-   "cross_asset_mom",
-   "broad_trend_3m",
-   "broad_trend_12m",
-   "broad_trend_blend",
-   "short_vol_contango",
-   "short_vol_always",
-   "spy_macro_timing",
-   "pairs",
-   "etf_pairs",
-   "REVERSAL BOOK (current system)"
-  ],
-  "diversified": [
+ "intraday": {
+  "strategies": [
    {
-    "portfolio": "diversified (17 strategies chosen on 2006-2014)",
-    "sharpe_1st": 1.284,
-    "ret_1st": 0.128,
-    "max_dd_1st": -0.091,
-    "sharpe_2nd": 0.833,
-    "ret_2nd": 0.092,
-    "max_dd_2nd": -0.178,
-    "vol": 0.106
+    "strategy": "market_intraday_momentum (equal-weight market, 15:30 -> close)",
+    "net_sharpe_1st": -0.78,
+    "net_sharpe_2nd": -1.91,
+    "breakeven_bp_2nd": -0.47
    },
    {
-    "portfolio": "reversal book alone (10% vol)",
-    "sharpe_1st": 0.436,
-    "ret_1st": 0.044,
-    "max_dd_1st": -0.23,
-    "sharpe_2nd": 0.156,
-    "ret_2nd": 0.014,
-    "max_dd_2nd": -0.284,
-    "vol": 0.093
+    "strategy": "opening_drive (first 30 min -> rest of day)",
+    "net_sharpe_1st": -12.38,
+    "net_sharpe_2nd": -9.47,
+    "breakeven_bp_2nd": -1.61
+   },
+   {
+    "strategy": "late_momentum (overnight + first 30 -> last 30)",
+    "net_sharpe_1st": -38.47,
+    "net_sharpe_2nd": -27.46,
+    "breakeven_bp_2nd": -0.23
+   },
+   {
+    "strategy": "gap_reversal_open (gap -> open to close, short gappers)",
+    "net_sharpe_1st": -9.67,
+    "net_sharpe_2nd": -6.95,
+    "breakeven_bp_2nd": 2.65
+   },
+   {
+    "strategy": "gap_reversal_10am (gap -> 10:00 to close)",
+    "net_sharpe_1st": -7.05,
+    "net_sharpe_2nd": -5.3,
+    "breakeven_bp_2nd": 0.49
+   },
+   {
+    "strategy": "overnight_persistence (past month's overnight -> tonight)",
+    "net_sharpe_1st": -24.51,
+    "net_sharpe_2nd": -13.89,
+    "breakeven_bp_2nd": 0.52
+   },
+   {
+    "strategy": "intraday_persistence (past month's open-to-close -> today's)",
+    "net_sharpe_1st": -9.92,
+    "net_sharpe_2nd": -10.94,
+    "breakeven_bp_2nd": -0.06
+   },
+   {
+    "strategy": "last30_next_overnight (last 30 min -> tonight)",
+    "net_sharpe_1st": -34.1,
+    "net_sharpe_2nd": -25.32,
+    "breakeven_bp_2nd": -1.01
    }
   ]
  }

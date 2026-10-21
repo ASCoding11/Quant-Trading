@@ -13,8 +13,8 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: "Comma list: quality,spreads,edge,alt,conditional,hmm"
-        default: "quality,spreads,edge,alt,conditional,hmm"
+        description: "Comma list: quality,spreads,edge,alt,conditional,combos,hmm"
+        default: "quality,spreads,edge,alt,conditional,combos,hmm"
 
 permissions:
   contents: write
@@ -56,7 +56,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p reports/research
-          python -m qtrade.research --tasks "${{ inputs.tasks || 'quality,spreads,edge,alt,conditional,hmm' }}" \
+          python -m qtrade.research --tasks "${{ inputs.tasks || 'quality,spreads,edge,alt,conditional,combos,hmm' }}" \
             --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
         if: always()

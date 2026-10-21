@@ -13,7 +13,7 @@ from ..utils import LOG, setup_logging
 def main(argv=None):
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tasks", default="quality,spreads,edge,alt,conditional,hmm")
+    ap.add_argument("--tasks", default="quality,spreads,edge,alt,conditional,combos,hmm")
     ap.add_argument("--out", default="reports/research")
     ap.add_argument("--config")
     ap.add_argument("--synthetic", action="store_true", help="offline smoke test on a simulated market")
@@ -92,6 +92,17 @@ def main(argv=None):
                     c.index = c.index.to_timestamp()
                     news_counts = c
                 summary[task] = run(md, ctx, out, cfg, sigs, news_counts)
+            elif task == "combos":
+                from ..signals import REGISTRY, compute_signals
+                from .combos import run
+
+                sigs = compute_signals(ctx)
+                fam = {n: REGISTRY[n].family for n in sigs}
+                for k, v in extra.get("alt", {}).items():
+                    sigs[k] = v
+                    fam[k] = "fundamental" if k in ("sue", "ear", "earnings_yield", "book_to_market",
+                                                    "gross_prof", "asset_growth", "accruals") else "news"
+                summary[task] = run(md, ctx, out, sigs, fam)
             elif task == "hmm":
                 from .hmm_eval import run
                 summary[task] = run(md, ctx, out, cfg)
@@ -100,7 +111,7 @@ def main(argv=None):
             summary[task] = {"error": f"{type(exc).__name__}: {exc}"}
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
     parts = ["# Research results", ""]
-    for name in ("data_quality", "spreads", "edge", "alt", "conditional", "hmm"):
+    for name in ("data_quality", "spreads", "edge", "alt", "conditional", "combos", "hmm"):
         p = out / f"{name}.md"
         if p.exists():
             parts.append(p.read_text())

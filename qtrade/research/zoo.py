@@ -316,8 +316,60 @@ def _daily_corr(z, y):
     return dc(z, y)
 
 
+def run_ideas(cfg, horizon: int, out: Path, synthetic: bool = False) -> pd.DataFrame:
+    """Score every idea in qtrade/research/ideas.py at one horizon."""
+    from ..features.context import FeatureContext
+    from .edge import Bench
+    from .ideas import compute_ideas
+
+    if synthetic:
+        from ..data import make_market
+
+        md, _ = make_market(n_stocks=100, n_days=5800, seed=1, start="2003-01-02")
+        cfg.universe.min_dollar_volume = 0
+    else:
+        from ..cli import _market
+
+        md = _market(cfg)
+    ctx = FeatureContext(md, cfg)
+    sigs, themes = compute_ideas(md, ctx, cfg.data.cache_dir)
+    o = md.open
+    y = cs_rank_gauss((o.shift(-(1 + horizon)) / o.shift(-1) - 1).where(ctx.tradable)).to_numpy()
+    first = np.asarray(md.dates < SPLIT)
+    years = np.asarray(md.dates.year)
+    bench = Bench(md, ctx)
+    rows = []
+    for n, z in sigs.items():
+        ic = _daily_corr(z.to_numpy(dtype=np.float32), y)
+        a, b = ic[first & np.isfinite(ic)], ic[~first & np.isfinite(ic)]
+        row = {"kind": "signal", "name": n, "family": themes[n], "set": "", "horizon": horizon,
+               "ic_1st": a.mean() if len(a) else np.nan, "ic_2nd": b.mean() if len(b) else np.nan,
+               "t_1st": a.mean() / a.std() * np.sqrt(len(a) / horizon) if len(a) > 50 else np.nan,
+               "t_2nd": b.mean() / b.std() * np.sqrt(len(b) / horizon) if len(b) > 50 else np.nan,
+               "years_positive": float((pd.Series(ic).groupby(years).mean().dropna() > 0).mean())}
+        # trade it in its own best direction as judged on 2006-2014 only
+        sgn = np.sign(row["ic_1st"]) if np.isfinite(row["ic_1st"]) and row["ic_1st"] != 0 else 1.0
+        best = None
+        for hl in HALFLIVES:
+            st = bench.score(z * sgn, hl, "all")
+            if best is None or st["breakeven_bp_1st"] > best[1]["breakeven_bp_1st"]:
+                best = (hl, st)
+        row |= {"best_halflife_1st": best[0], "breakeven_bp_1st": best[1]["breakeven_bp_1st"],
+                "breakeven_bp_2nd": best[1]["breakeven_bp_2nd"], "net_sharpe_1st": best[1]["net_sharpe_1st"],
+                "net_sharpe_2nd": best[1]["net_sharpe_2nd"]}
+        rows.append(row)
+        LOG.info("idea %-18s h=%d IC %.4f / %.4f", n, horizon, row["ic_1st"], row["ic_2nd"])
+    df = pd.DataFrame(rows)
+    out.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out / f"zoo_ideas_h{horizon}.csv", index=False)
+    return df
+
+
 def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False) -> pd.DataFrame:
     from .edge import Bench
+
+    if group == "ideas":
+        return run_ideas(cfg, horizon, out, synthetic)
 
     if synthetic:
         from ..data import make_market
@@ -491,11 +543,18 @@ def aggregate(in_dir: Path, out: Path, extra_dir: Path | None = None) -> dict:
     for _, r in sig.iterrows():
         rows.append({"what": "signal", "name": r["name"], "family": r["family"], "horizon_days": r["horizon"],
                      "ic_2006_14": r["ic_1st"], "ic_2015_26": r["ic_2nd"], "t_2006_14": r["t_1st"],
-                     "t_2015_26": r["t_2nd"], "years_positive": r["years_positive"]})
-    for _, r in mod.drop_duplicates(["name", "set", "horizon"]).iterrows():
+                     "t_2015_26": r["t_2nd"], "years_positive": r["years_positive"],
+                     "breakeven_bp_2006_14": r.get("breakeven_bp_1st", np.nan),
+                     "breakeven_bp_2015_26": r.get("breakeven_bp_2nd", np.nan),
+                     "net_sharpe_2006_14": r.get("net_sharpe_1st", np.nan),
+                     "net_sharpe_2015_26": r.get("net_sharpe_2nd", np.nan)})
+    best_trade = mod.sort_values("net_sharpe_1st", ascending=False).drop_duplicates(["name", "set", "horizon"])
+    for _, r in best_trade.iterrows():
         rows.append({"what": "model", "name": f"{r['name']} on {r['set']}", "family": r["family"],
                      "horizon_days": r["horizon"], "ic_2006_14": r["ic_1st"], "ic_2015_26": r["ic_2nd"],
-                     "t_2006_14": r["t_1st"], "t_2015_26": r["t_2nd"], "years_positive": r["years_positive"]})
+                     "t_2006_14": r["t_1st"], "t_2015_26": r["t_2nd"], "years_positive": r["years_positive"],
+                     "breakeven_bp_2006_14": r["breakeven_bp_1st"], "breakeven_bp_2015_26": r["breakeven_bp_2nd"],
+                     "net_sharpe_2006_14": r["net_sharpe_1st"], "net_sharpe_2015_26": r["net_sharpe_2nd"]})
     if extra_dir is not None and (extra_dir / "combos.csv").exists():
         cb = pd.read_csv(extra_dir / "combos.csv")
         for _, r in cb.iterrows():
@@ -590,7 +649,7 @@ def main(argv=None):
 
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra"])
+    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra", "ideas"])
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--out", default="reports/zoo")
     ap.add_argument("--aggregate", help="directory with group results to merge")

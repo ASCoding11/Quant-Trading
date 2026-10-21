@@ -9,7 +9,6 @@
 * Top 1 by period 1: Sharpe 0.42 in period 1 -> **0.11** in period 2.
 * Top 10 by period 1: Sharpe 0.35 in period 1 -> **0.14** in period 2.
 * Top 50 by period 1: Sharpe 0.24 in period 1 -> **0.04** in period 2.
-* Ensemble of the 10 best period-1 models (equal weight): IC 0.0078 -> **0.0091**; best single of them in period 2: 0.0218.
 
 ## Model families: results, pros and cons
 

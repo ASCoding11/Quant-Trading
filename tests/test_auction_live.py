@@ -46,3 +46,13 @@ def test_unshortable_names_are_not_shorted():
     five, daily = _frames(bars, 45)
     book = build_book(five, daily, bars.tickers, {}, Config().auction, bars.days[45], shortable=set())
     assert all(w >= 0 for w in book["weights"].values())
+
+
+def test_flat_signal_is_left_out():
+    """Before 15:15 the last-half-hour move does not exist yet: that strategy must sit out."""
+    bars = make_intraday(n_stocks=50, n_days=60, seed=8)
+    five, daily = _frames(bars, 45)
+    early = bars.days[45].tz_localize(NY) + pd.Timedelta(hours=11)
+    five = {t: f[f.index < early] for t, f in five.items()}
+    book = build_book(five, daily, bars.tickers, {}, Config().auction, bars.days[45])
+    assert book["strategies"] == ["overnight_persistence"]

@@ -1,10 +1,304 @@
-02:24:56 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-02:24:56 INFO    qtrade | research task: quality
+01:41:43 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+01:41:43 INFO    qtrade | research task: quality
+01:41:46 INFO    qtrade | research task: spreads
+01:42:08 INFO    qtrade | spreads: 2016-08-03 done (781 rows)
+01:42:27 INFO    qtrade | spreads: 2016-09-12 done (1574 rows)
+01:42:47 INFO    qtrade | spreads: 2016-11-11 done (2365 rows)
+01:43:04 INFO    qtrade | spreads: 2017-01-09 done (3155 rows)
+01:43:28 INFO    qtrade | spreads: 2017-01-18 done (3935 rows)
+01:43:47 INFO    qtrade | spreads: 2017-01-30 done (4719 rows)
+01:44:03 INFO    qtrade | spreads: 2018-07-03 done (5239 rows)
+01:44:19 INFO    qtrade | spreads: 2018-08-22 done (5962 rows)
+01:44:36 INFO    qtrade | spreads: 2018-11-27 done (6692 rows)
+01:44:55 INFO    qtrade | spreads: 2019-07-18 done (7439 rows)
+01:45:11 INFO    qtrade | spreads: 2019-08-19 done (8196 rows)
+01:45:32 INFO    qtrade | spreads: 2019-09-23 done (8945 rows)
+01:45:54 INFO    qtrade | spreads: 2020-04-13 done (9721 rows)
+01:46:17 INFO    qtrade | spreads: 2020-09-02 done (10494 rows)
+01:46:42 INFO    qtrade | spreads: 2020-10-23 done (11235 rows)
+01:47:03 INFO    qtrade | spreads: 2021-01-14 done (11980 rows)
+01:47:26 INFO    qtrade | spreads: 2021-07-23 done (12750 rows)
+01:47:51 INFO    qtrade | spreads: 2021-11-08 done (13513 rows)
+01:48:17 INFO    qtrade | spreads: 2022-02-03 done (14275 rows)
+01:48:47 INFO    qtrade | spreads: 2022-03-07 done (15059 rows)
+01:49:12 INFO    qtrade | spreads: 2022-11-02 done (15830 rows)
+01:49:38 INFO    qtrade | spreads: 2023-02-01 done (16611 rows)
+01:49:59 INFO    qtrade | spreads: 2023-04-20 done (17356 rows)
+01:50:17 INFO    qtrade | spreads: 2023-07-18 done (18122 rows)
+01:50:36 INFO    qtrade | spreads: 2024-01-03 done (18892 rows)
+01:50:48 INFO    qtrade | spreads: 2024-01-11 done (19662 rows)
+01:50:54 INFO    qtrade | spreads: 2024-05-24 done (20389 rows)
+01:50:59 INFO    qtrade | spreads: 2025-07-14 done (21103 rows)
+01:51:06 INFO    qtrade | spreads: 2025-08-26 done (21788 rows)
+01:51:15 INFO    qtrade | spreads: 2025-09-03 done (22521 rows)
+01:51:36 INFO    qtrade | spreads: 2026-04-23 done (23231 rows)
+01:52:06 INFO    qtrade | spreads: 2026-05-15 done (23953 rows)
+01:52:31 INFO    qtrade | spreads: 2026-08-11 done (24668 rows)
+01:52:31 INFO    qtrade | research task: edge
+01:53:01 INFO    qtrade | factor model: 309 refits, 15 factors
+01:54:08 INFO    qtrade | computed 44 signals
+01:54:12 INFO    qtrade | edge: rev_1d done
+01:54:17 INFO    qtrade | edge: rev_5d done
+01:54:22 INFO    qtrade | edge: rev_21d done
+01:54:27 INFO    qtrade | edge: resid_rev_1d done
+01:54:31 INFO    qtrade | edge: resid_rev_5d done
+01:54:36 INFO    qtrade | edge: ou_sscore done
+01:54:41 INFO    qtrade | edge: bollinger_z done
+01:54:46 INFO    qtrade | edge: rsi_14 done
+01:54:50 INFO    qtrade | edge: overnight_rev done
+01:54:55 INFO    qtrade | edge: intraday_rev done
+01:55:00 INFO    qtrade | edge: low_volume_rev done
+01:55:05 INFO    qtrade | edge: mom_12_1 done
+01:55:09 INFO    qtrade | edge: mom_6_1 done
+01:55:14 INFO    qtrade | edge: resid_mom done
+01:55:19 INFO    qtrade | edge: high_52w done
+01:55:23 INFO    qtrade | edge: trend_quality done
+01:55:28 INFO    qtrade | edge: mom_accel done
+01:55:33 INFO    qtrade | edge: overnight_mom done
+01:55:38 INFO    qtrade | edge: intraday_rev_21 done
+01:55:42 INFO    qtrade | edge: cluster_mom done
+01:55:47 INFO    qtrade | edge: abn_volume done
+01:55:52 INFO    qtrade | edge: amihud done
+01:55:56 INFO    qtrade | edge: turnover_trend done
+01:56:01 INFO    qtrade | edge: vol_price_corr done
+01:56:06 INFO    qtrade | edge: size_proxy done
+01:56:11 INFO    qtrade | edge: low_vol done
+01:56:15 INFO    qtrade | edge: idio_vol done
+01:56:20 INFO    qtrade | edge: max_effect done
+01:56:25 INFO    qtrade | edge: neg_skew done
+01:56:29 INFO    qtrade | edge: bab done
+01:56:33 INFO    qtrade | edge: downside_beta done
+01:56:38 INFO    qtrade | edge: vol_of_vol done
+01:56:43 INFO    qtrade | edge: range_vol_ratio done
+01:56:48 INFO    qtrade | edge: close_location done
+01:56:52 INFO    qtrade | edge: cs_spread done
+01:56:57 INFO    qtrade | edge: gk_ratio done
+01:57:02 INFO    qtrade | edge: same_month done
+01:57:07 INFO    qtrade | edge: weekday_seasonality done
+01:57:11 INFO    qtrade | edge: turn_of_month done
+01:57:16 INFO    qtrade | edge: peer_gap done
+01:57:21 INFO    qtrade | edge: peer_lead done
+01:57:25 INFO    qtrade | edge: kalman_trend done
+01:57:30 INFO    qtrade | edge: autocorr_signal done
+01:57:35 INFO    qtrade | edge: market_corr done
+01:57:37 INFO    qtrade | research task: alt
+01:58:25 INFO    qtrade | fundamental signals: ['earnings_yield', 'book_to_market', 'gross_prof', 'asset_growth', 'accruals', 'sue', 'ear']
+01:58:33 INFO    qtrade | news signals: 1164220 articles mapped to the universe
+01:58:47 INFO    qtrade | edge: earnings_yield done
+01:58:51 INFO    qtrade | edge: book_to_market done
+01:58:55 INFO    qtrade | edge: gross_prof done
+01:58:59 INFO    qtrade | edge: asset_growth done
+01:59:03 INFO    qtrade | edge: accruals done
+01:59:07 INFO    qtrade | edge: sue done
+01:59:12 INFO    qtrade | edge: ear done
+01:59:16 INFO    qtrade | edge: news_volume done
+01:59:20 INFO    qtrade | edge: news_tone done
+01:59:24 INFO    qtrade | edge: no_news_rev done
+01:59:28 INFO    qtrade | edge: news_mom done
+01:59:28 INFO    qtrade | research task: poisson
+02:00:45 INFO    qtrade | poisson: dispersion 24.4, INGARCH persistence 0.910
+02:00:58 INFO    qtrade | edge: crash_risk done
+02:01:02 INFO    qtrade | edge: jump_skew done
+02:01:07 INFO    qtrade | edge: jump_intensity done
+02:01:11 INFO    qtrade | edge: news_surprise done
+02:01:16 INFO    qtrade | edge: pred_crash_intensity done
+02:01:20 INFO    qtrade | edge: pred_jump_skew done
+02:01:24 INFO    qtrade | edge: news_surprise_glm done
+02:01:24 INFO    qtrade | research task: conditional
+02:01:30 INFO    qtrade | computed 4 signals
+02:01:49 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:02:00 INFO    qtrade | conditional: rev_5d done
+02:02:09 INFO    qtrade | conditional: resid_rev_1d done
+02:02:18 INFO    qtrade | conditional: low_volume_rev done
+02:02:27 INFO    qtrade | conditional: peer_gap done
+02:02:37 INFO    qtrade | conditional: composite done
+02:02:46 INFO    qtrade | conditional: no_news_rev done
+02:02:55 INFO    qtrade | conditional: sue done
+02:03:03 INFO    qtrade | conditional: ear done
+02:03:03 INFO    qtrade | research task: combos
+02:04:13 INFO    qtrade | computed 44 signals
+02:04:32 INFO    qtrade | combos: 62 single signals scored
+02:05:38 INFO    qtrade | combos: 100/1891 pairs
+02:06:44 INFO    qtrade | combos: 200/1891 pairs
+02:07:50 INFO    qtrade | combos: 300/1891 pairs
+02:08:57 INFO    qtrade | combos: 400/1891 pairs
+02:10:03 INFO    qtrade | combos: 500/1891 pairs
+02:11:09 INFO    qtrade | combos: 600/1891 pairs
+02:12:15 INFO    qtrade | combos: 700/1891 pairs
+02:13:22 INFO    qtrade | combos: 800/1891 pairs
+02:14:28 INFO    qtrade | combos: 900/1891 pairs
+02:15:35 INFO    qtrade | combos: 1000/1891 pairs
+02:16:40 INFO    qtrade | combos: 1100/1891 pairs
+02:17:47 INFO    qtrade | combos: 1200/1891 pairs
+02:18:52 INFO    qtrade | combos: 1300/1891 pairs
+02:19:59 INFO    qtrade | combos: 1400/1891 pairs
+02:21:04 INFO    qtrade | combos: 1500/1891 pairs
+02:22:09 INFO    qtrade | combos: 1600/1891 pairs
+02:23:15 INFO    qtrade | combos: 1700/1891 pairs
+02:24:20 INFO    qtrade | combos: 1800/1891 pairs
+02:26:05 INFO    qtrade | research task: hmm
+02:26:13 INFO    qtrade | regime HMM: 24 walk-forward fits, 1 states
+02:26:13 INFO    qtrade | hmm rolling K=1 temper=1.00: pred_ll 1.491 / 2.359, brier skill 0.000 / 0.000
+02:26:30 INFO    qtrade | regime HMM: 24 walk-forward fits, 2 states
+02:26:30 INFO    qtrade | hmm rolling K=2 temper=1.00: pred_ll 2.141 / 2.967, brier skill 0.010 / 0.010
+02:26:43 INFO    qtrade | regime HMM: 24 walk-forward fits, 2 states
+02:26:43 INFO    qtrade | hmm rolling K=2 temper=0.50: pred_ll 2.132 / 2.950, brier skill 0.011 / 0.009
+02:26:55 INFO    qtrade | regime HMM: 24 walk-forward fits, 2 states
+02:26:55 INFO    qtrade | hmm rolling K=2 temper=0.20: pred_ll 1.761 / 2.850, brier skill -0.001 / 0.004
+02:27:06 INFO    qtrade | regime HMM: 24 walk-forward fits, 2 states
+02:27:06 INFO    qtrade | hmm rolling K=2 temper=0.10: pred_ll 1.680 / 2.843, brier skill -0.004 / 0.002
+02:27:23 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:27:23 INFO    qtrade | hmm rolling K=3 temper=1.00: pred_ll 2.572 / 3.271, brier skill 0.011 / 0.010
+02:27:39 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:27:39 INFO    qtrade | hmm rolling K=3 temper=0.50: pred_ll 2.522 / 3.196, brier skill 0.013 / 0.006
+02:27:52 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:27:52 INFO    qtrade | hmm rolling K=3 temper=0.20: pred_ll 2.267 / 3.105, brier skill 0.009 / 0.007
+02:28:04 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:28:04 INFO    qtrade | hmm rolling K=3 temper=0.10: pred_ll 2.336 / 2.997, brier skill 0.015 / 0.012
+02:28:26 INFO    qtrade | regime HMM: 24 walk-forward fits, 4 states
+02:28:26 INFO    qtrade | hmm rolling K=4 temper=1.00: pred_ll 2.382 / 3.555, brier skill 0.009 / 0.012
+02:28:45 INFO    qtrade | regime HMM: 24 walk-forward fits, 4 states
+02:28:45 INFO    qtrade | hmm rolling K=4 temper=0.50: pred_ll 2.541 / 3.502, brier skill 0.008 / 0.015
+02:29:00 INFO    qtrade | regime HMM: 24 walk-forward fits, 4 states
+02:29:00 INFO    qtrade | hmm rolling K=4 temper=0.20: pred_ll 2.413 / 3.348, brier skill 0.007 / 0.008
+02:29:13 INFO    qtrade | regime HMM: 24 walk-forward fits, 4 states
+02:29:13 INFO    qtrade | hmm rolling K=4 temper=0.10: pred_ll 2.409 / 3.244, brier skill 0.012 / 0.006
+02:29:18 INFO    qtrade | regime HMM: 24 walk-forward fits, 1 states
+02:29:18 INFO    qtrade | hmm daily K=1 temper=1.00: pred_ll 2.017 / 2.771, brier skill 0.000 / 0.000
+02:29:37 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:29:37 INFO    qtrade | hmm daily K=3 temper=1.00: pred_ll 4.805 / 5.466, brier skill -0.000 / 0.001
+02:30:05 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:30:06 INFO    qtrade | hmm daily K=3 temper=0.50: pred_ll 4.060 / 5.046, brier skill 0.000 / -0.001
+02:30:18 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:30:18 INFO    qtrade | hmm daily K=3 temper=0.20: pred_ll 2.684 / 3.297, brier skill 0.012 / 0.007
 {
  "quality": {
   "bad_prints_masked": 0,
   "max_abs_close-to-close": 257.3333245152623,
   "max_abs_overnight": 225.24998169143745,
   "max_abs_intraday": 5.249999960001184
- }
-}
+ },
+ "spreads": {
+  "observations": 24668,
+  "symbols": 140,
+  "days": 33,
+  "corwin_schultz_rank_corr_with_quoted": 0.24755620010468646,
+  "auction_abs_gap_median_bp": 18.467335660120597,
+  "auction_gap_mean_bp": -1.359101505389652
+ },
+ "edge": {
+  "n_signals": 44,
+  "n_survivors_5bp": 48,
+  "composite": [
+   {
+    "halflife": 0,
+    "universe": "all",
+    "gross_ret_1st": 0.103,
+    "gross_sharpe_1st": 1.875,
+    "turnover_1st": 0.858,
+    "breakeven_bp_1st": 4.749,
+    "net_sharpe_1st": -1.427,
+    "gross_ret_2nd": 0.057,
+    "gross_sharpe_2nd": 0.92,
+    "turnover_2nd": 0.908,
+    "breakeven_bp_2nd": 2.507,
+    "net_sharpe_2nd": -1.651
+   },
+   {
+    "halflife": 0,
+    "universe": "top300",
+    "gross_ret_1st": 0.105,
+    "gross_sharpe_1st": 1.636,
+    "turnover_1st": 0.869,
+    "breakeven_bp_1st": 4.784,
+    "net_sharpe_1st": -0.214,
+    "gross_ret_2nd": 0.053,
+    "gross_sharpe_2nd": 0.734,
+    "turnover_2nd": 0.915,
+    "breakeven_bp_2nd": 2.284,
+    "net_sharpe_2nd": -0.444
+   },
+   {
+    "halflife": 5,
+    "universe": "all",
+    "gross_ret_1st": 0.063,
+    "gross_sharpe_1st": 1.138,
+    "turnover_1st": 0.187,
+    "breakeven_bp_1st": 13.472,
+    "net_sharpe_1st": 0.42,
+    "gross_ret_2nd": 0.03,
+    "gross_sharpe_2nd": 0.455,
+    "turnover_2nd": 0.191,
+    "breakeven_bp_2nd": 6.315,
+    "net_sharpe_2nd": -0.053
+   },
+   {
+    "halflife": 5,
+    "universe": "top300",
+    "gross_ret_1st": 0.061,
+    "gross_sharpe_1st": 0.942,
+    "turnover_1st": 0.194,
+    "breakeven_bp_1st": 12.555,
+    "net_sharpe_1st": 0.521,
+    "gross_ret_2nd": 0.023,
+    "gross_sharpe_2nd": 0.294,
+    "turnover_2nd": 0.203,
+    "breakeven_bp_2nd": 4.486,
+    "net_sharpe_2nd": 0.05
+   },
+   {
+    "halflife": 20,
+    "universe": "all",
+    "gross_ret_1st": 0.046,
+    "gross_sharpe_1st": 0.846,
+    "turnover_1st": 0.093,
+    "breakeven_bp_1st": 19.569,
+    "net_sharpe_1st": 0.467,
+    "gross_ret_2nd": 0.015,
+    "gross_sharpe_2nd": 0.258,
+    "turnover_2nd": 0.089,
+    "breakeven_bp_2nd": 6.827,
+    "net_sharpe_2nd": -0.011
+   },
+   {
+    "halflife": 20,
+    "universe": "top300",
+    "gross_ret_1st": 0.039,
+    "gross_sharpe_1st": 0.593,
+    "turnover_1st": 0.099,
+    "breakeven_bp_1st": 15.375,
+    "net_sharpe_1st": 0.368,
+    "gross_ret_2nd": 0.012,
+    "gross_sharpe_2nd": 0.161,
+    "turnover_2nd": 0.104,
+    "breakeven_bp_2nd": 4.458,
+    "net_sharpe_2nd": 0.023
+   }
+  ]
+ },
+ "alt": {
+  "signals": [
+   "earnings_yield",
+   "book_to_market",
+   "gross_prof",
+   "asset_growth",
+   "accruals",
+   "sue",
+   "ear",
+   "news_volume",
+   "news_tone",
+   "no_news_rev",
+   "news_mom"
+  ]
+ },
+ "poisson": {
+  "dispersion": 24.4269596154166,
+  "ingarch": {
+   "w": 0.928210511436244,
+   "a": 0.4948280816770301,
+   "b": 0.41477095204633535,
+   "persistence": 0.9095990337233655
+  },
+  "hawkes_branching": [
+   [
+ 

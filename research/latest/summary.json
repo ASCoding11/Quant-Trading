@@ -1,45 +1,120 @@
 {
-  "strategies": {
-    "strategies": 43,
-    "chosen_for_diversified_book": [
-      "spy_tsmom_12m",
-      "spy_ma200",
-      "spy_vol_managed",
-      "spy_hmm_timing",
-      "spy_turn_of_month",
-      "multi_asset_trend",
-      "risk_parity",
-      "cross_asset_mom",
-      "broad_trend_3m",
-      "broad_trend_12m",
-      "broad_trend_blend",
-      "short_vol_contango",
-      "short_vol_always",
-      "spy_macro_timing",
-      "pairs",
-      "etf_pairs",
-      "REVERSAL BOOK (current system)"
-    ],
-    "diversified": [
+  "flip": {
+    "replication": [
       {
-        "portfolio": "diversified (17 strategies chosen on 2006-2014)",
-        "sharpe_1st": 1.28,
-        "ret_1st": 0.128,
-        "max_dd_1st": -0.09,
-        "sharpe_2nd": 0.829,
-        "ret_2nd": 0.089,
-        "max_dd_2nd": -0.169,
-        "vol": 0.104
+        "variant": "momentum flip, VIX 20 (staggered, net)",
+        "sharpe_2006-14": 0.671,
+        "sharpe_2015-20": 0.74,
+        "sharpe_2021-26": 0.232,
+        "sharpe_2017-26": 0.498,
+        "return_2015_26": 0.037,
+        "max_dd_2015_26": -0.11
       },
       {
-        "portfolio": "reversal book alone (10% vol)",
-        "sharpe_1st": 0.436,
-        "ret_1st": 0.044,
-        "max_dd_1st": -0.23,
-        "sharpe_2nd": 0.156,
-        "ret_2nd": 0.014,
-        "max_dd_2nd": -0.284,
-        "vol": 0.093
+        "variant": "  gross (no costs)",
+        "sharpe_2006-14": 0.774,
+        "sharpe_2015-20": 0.809,
+        "sharpe_2021-26": 0.332,
+        "sharpe_2017-26": 0.573,
+        "return_2015_26": 0.043,
+        "max_dd_2015_26": -0.11
+      },
+      {
+        "variant": "  plain momentum, never flipped",
+        "sharpe_2006-14": -0.481,
+        "sharpe_2015-20": -0.25,
+        "sharpe_2021-26": -0.119,
+        "sharpe_2017-26": -0.189,
+        "return_2015_26": -0.015,
+        "max_dd_2015_26": -0.349
+      },
+      {
+        "variant": "  always short momentum",
+        "sharpe_2006-14": 0.355,
+        "sharpe_2015-20": 0.172,
+        "sharpe_2021-26": 0.035,
+        "sharpe_2017-26": 0.113,
+        "return_2015_26": 0.009,
+        "max_dd_2015_26": -0.172
+      },
+      {
+        "variant": "  threshold 16",
+        "sharpe_2006-14": 0.275,
+        "sharpe_2015-20": 0.729,
+        "sharpe_2021-26": 0.198,
+        "sharpe_2017-26": 0.507,
+        "return_2015_26": 0.036,
+        "max_dd_2015_26": -0.129
+      },
+      {
+        "variant": "  threshold 18",
+        "sharpe_2006-14": 0.459,
+        "sharpe_2015-20": 0.763,
+        "sharpe_2021-26": 0.12,
+        "sharpe_2017-26": 0.466,
+        "return_2015_26": 0.034,
+        "max_dd_2015_26": -0.11
+      },
+      {
+        "variant": "  threshold 22",
+        "sharpe_2006-14": 0.641,
+        "sharpe_2015-20": 0.62,
+        "sharpe_2021-26": 0.064,
+        "sharpe_2017-26": 0.389,
+        "return_2015_26": 0.028,
+        "max_dd_2015_26": -0.11
+      },
+      {
+        "variant": "  threshold 25",
+        "sharpe_2006-14": 0.47,
+        "sharpe_2015-20": 0.456,
+        "sharpe_2021-26": -0.01,
+        "sharpe_2017-26": 0.3,
+        "return_2015_26": 0.018,
+        "max_dd_2015_26": -0.115
+      },
+      {
+        "variant": "  threshold 30",
+        "sharpe_2006-14": 0.247,
+        "sharpe_2015-20": 0.162,
+        "sharpe_2021-26": -0.015,
+        "sharpe_2017-26": 0.145,
+        "return_2015_26": 0.005,
+        "max_dd_2015_26": -0.168
+      }
+    ],
+    "survivorship": [
+      {
+        "universe": "survivors (today's universe)",
+        "book": "flip VIX 20",
+        "gross_sharpe_2017_26": 0.465,
+        "gross_return_2017_26": 0.035,
+        "gross_sharpe_2017_20": 0.718,
+        "gross_sharpe_2021_26": 0.244
+      },
+      {
+        "universe": "survivors (today's universe)",
+        "book": "plain momentum",
+        "gross_sharpe_2017_26": -0.241,
+        "gross_return_2017_26": -0.021,
+        "gross_sharpe_2017_20": -0.337,
+        "gross_sharpe_2021_26": -0.166
+      },
+      {
+        "universe": "point-in-time incl. delisted",
+        "book": "flip VIX 20",
+        "gross_sharpe_2017_26": 0.525,
+        "gross_return_2017_26": 0.047,
+        "gross_sharpe_2017_20": 0.656,
+        "gross_sharpe_2021_26": 0.438
+      },
+      {
+        "universe": "point-in-time incl. delisted",
+        "book": "plain momentum",
+        "gross_sharpe_2017_26": 0.282,
+        "gross_return_2017_26": 0.028,
+        "gross_sharpe_2017_20": 0.082,
+        "gross_sharpe_2021_26": 0.404
       }
     ]
   }

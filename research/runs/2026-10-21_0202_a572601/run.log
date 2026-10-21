@@ -1,0 +1,129 @@
+01:52:15 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+01:52:16 INFO    qtrade | research task: garch
+01:52:44 INFO    qtrade | factor model: 309 refits, 15 factors
+01:53:43 INFO    qtrade | computed 44 signals
+01:57:23 INFO    qtrade | garch: best market model gjr_t, best stock model garch
+01:57:23 INFO    qtrade | research task: glm
+01:58:21 INFO    qtrade | computed 44 signals
+01:58:35 INFO    qtrade | glm: models for 2006 fitted
+01:58:44 INFO    qtrade | glm: models for 2007 fitted
+01:58:53 INFO    qtrade | glm: models for 2008 fitted
+01:59:04 INFO    qtrade | glm: models for 2009 fitted
+01:59:13 INFO    qtrade | glm: models for 2010 fitted
+01:59:24 INFO    qtrade | glm: models for 2011 fitted
+01:59:35 INFO    qtrade | glm: models for 2012 fitted
+01:59:48 INFO    qtrade | glm: models for 2013 fitted
+01:59:58 INFO    qtrade | glm: models for 2014 fitted
+02:00:08 INFO    qtrade | glm: models for 2015 fitted
+02:00:19 INFO    qtrade | glm: models for 2016 fitted
+02:00:30 INFO    qtrade | glm: models for 2017 fitted
+02:00:40 INFO    qtrade | glm: models for 2018 fitted
+02:00:55 INFO    qtrade | glm: models for 2019 fitted
+02:01:06 INFO    qtrade | glm: models for 2020 fitted
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sklearn/neural_network/_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (30) reached and the optimization hasn't converged yet.
+  warnings.warn(
+02:01:21 INFO    qtrade | glm: models for 2021 fitted
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sklearn/neural_network/_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (30) reached and the optimization hasn't converged yet.
+  warnings.warn(
+02:01:37 INFO    qtrade | glm: models for 2022 fitted
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sklearn/neural_network/_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (30) reached and the optimization hasn't converged yet.
+  warnings.warn(
+02:01:52 INFO    qtrade | glm: models for 2023 fitted
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sklearn/neural_network/_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (30) reached and the optimization hasn't converged yet.
+  warnings.warn(
+02:02:06 INFO    qtrade | glm: models for 2024 fitted
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sklearn/neural_network/_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (30) reached and the optimization hasn't converged yet.
+  warnings.warn(
+02:02:22 INFO    qtrade | glm: models for 2025 fitted
+02:02:33 INFO    qtrade | glm: models for 2026 fitted
+{
+ "garch": {
+  "market_best_1d": "gjr_t",
+  "stock_best": "garch",
+  "vol_managed": [
+   {
+    "scaling": "none",
+    "sharpe_1st": 0.434,
+    "max_dd_1st": -0.149,
+    "sharpe_2nd": -0.053,
+    "max_dd_2nd": -0.211
+   },
+   {
+    "scaling": "rolling_63",
+    "sharpe_1st": 0.053,
+    "max_dd_1st": -0.17,
+    "sharpe_2nd": -0.354,
+    "max_dd_2nd": -0.172
+   },
+   {
+    "scaling": "ewma",
+    "sharpe_1st": -0.064,
+    "max_dd_1st": -0.187,
+    "sharpe_2nd": -0.434,
+    "max_dd_2nd": -0.191
+   },
+   {
+    "scaling": "garch",
+    "sharpe_1st": -0.021,
+    "max_dd_1st": -0.159,
+    "sharpe_2nd": -0.441,
+    "max_dd_2nd": -0.198
+   },
+   {
+    "scaling": "gjr_t",
+    "sharpe_1st": -0.031,
+    "max_dd_1st": -0.166,
+    "sharpe_2nd": -0.534,
+    "max_dd_2nd": -0.219
+   }
+  ]
+ },
+ "glm": {
+  "models": [
+   {
+    "model": "ridge",
+    "ic5_2010_14": 0.0124,
+    "ic5_2015_26": 0.0062,
+    "years_positive": 0.7143,
+    "hl0_breakeven_2nd": 1.6175,
+    "hl0_net_sharpe_2nd": -1.1503,
+    "hl5_breakeven_2nd": 5.0576,
+    "hl5_net_sharpe_2nd": -0.0851
+   },
+   {
+    "model": "logistic",
+    "ic5_2010_14": 0.0094,
+    "ic5_2015_26": 0.0053,
+    "years_positive": 0.6667,
+    "hl0_breakeven_2nd": 1.4457,
+    "hl0_net_sharpe_2nd": -1.2269,
+    "hl5_breakeven_2nd": 2.5545,
+    "hl5_net_sharpe_2nd": -0.2062
+   },
+   {
+    "model": "huber",
+    "ic5_2010_14": 0.0115,
+    "ic5_2015_26": 0.0045,
+    "years_positive": 0.6667,
+    "hl0_breakeven_2nd": 1.4467,
+    "hl0_net_sharpe_2nd": -1.2257,
+    "hl5_breakeven_2nd": 2.138,
+    "hl5_net_sharpe_2nd": -0.2243
+   },
+   {
+    "model": "mlp",
+    "ic5_2010_14": 0.0106,
+    "ic5_2015_26": 0.009,
+    "years_positive": 0.7143,
+    "hl0_breakeven_2nd": 1.5437,
+    "hl0_net_sharpe_2nd": -1.9721,
+    "hl5_breakeven_2nd": 8.8158,
+    "hl5_net_sharpe_2nd": 0.1339
+   }
+  ],
+  "vol_qlike": {
+   "gamma_glm": -7.403221280721466,
+   "rolling_63": -7.305245741901706
+  }
+ }
+}

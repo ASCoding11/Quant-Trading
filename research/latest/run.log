@@ -1,117 +1,32 @@
-00:59:20 INFO    qtrade | cached prices come from an older version of the downloader; downloading again
-00:59:31 INFO    qtrade | downloaded 100 / 1000 tickers
-00:59:42 INFO    qtrade | downloaded 200 / 1000 tickers
-00:59:52 INFO    qtrade | downloaded 300 / 1000 tickers
-01:00:04 INFO    qtrade | downloaded 400 / 1000 tickers
-01:00:15 INFO    qtrade | downloaded 500 / 1000 tickers
-01:00:26 INFO    qtrade | downloaded 600 / 1000 tickers
-01:00:38 INFO    qtrade | downloaded 700 / 1000 tickers
-01:00:50 INFO    qtrade | downloaded 800 / 1000 tickers
-01:01:02 INFO    qtrade | downloaded 900 / 1000 tickers
-01:01:13 INFO    qtrade | downloaded 1000 / 1000 tickers
-01:01:17 INFO    qtrade | research task: quality
-01:01:20 INFO    qtrade | research task: spreads
-01:01:41 INFO    qtrade | spreads: 2016-08-03 done (781 rows)
-01:01:54 INFO    qtrade | spreads: 2016-09-12 done (1574 rows)
-01:02:07 INFO    qtrade | spreads: 2016-11-11 done (2365 rows)
-01:02:19 INFO    qtrade | spreads: 2017-01-09 done (3155 rows)
-01:02:35 INFO    qtrade | spreads: 2017-01-18 done (3935 rows)
-01:02:51 INFO    qtrade | spreads: 2017-01-30 done (4719 rows)
-01:03:06 INFO    qtrade | spreads: 2018-07-03 done (5239 rows)
-01:03:31 INFO    qtrade | spreads: 2018-08-22 done (5962 rows)
-01:03:53 INFO    qtrade | spreads: 2018-11-27 done (6692 rows)
-01:04:13 INFO    qtrade | spreads: 2019-07-18 done (7439 rows)
-01:04:29 INFO    qtrade | spreads: 2019-08-19 done (8196 rows)
-01:04:42 INFO    qtrade | spreads: 2019-09-23 done (8945 rows)
-01:04:51 INFO    qtrade | spreads: 2020-04-13 done (9721 rows)
-01:05:01 INFO    qtrade | spreads: 2020-09-02 done (10494 rows)
-01:05:12 INFO    qtrade | spreads: 2020-10-23 done (11235 rows)
-01:05:23 INFO    qtrade | spreads: 2021-01-14 done (11980 rows)
-01:05:36 INFO    qtrade | spreads: 2021-07-23 done (12750 rows)
-01:05:50 INFO    qtrade | spreads: 2021-11-08 done (13513 rows)
-01:06:03 INFO    qtrade | spreads: 2022-02-03 done (14275 rows)
-01:06:17 INFO    qtrade | spreads: 2022-03-07 done (15059 rows)
-01:06:33 INFO    qtrade | spreads: 2022-11-02 done (15830 rows)
-01:06:49 INFO    qtrade | spreads: 2023-02-01 done (16611 rows)
-01:07:03 INFO    qtrade | spreads: 2023-04-20 done (17356 rows)
-01:07:17 INFO    qtrade | spreads: 2023-07-18 done (18122 rows)
-01:07:32 INFO    qtrade | spreads: 2024-01-03 done (18892 rows)
-01:07:47 INFO    qtrade | spreads: 2024-01-11 done (19662 rows)
-01:07:59 INFO    qtrade | spreads: 2024-05-24 done (20389 rows)
-01:08:15 INFO    qtrade | spreads: 2025-07-14 done (21103 rows)
-01:08:42 INFO    qtrade | spreads: 2025-08-26 done (21788 rows)
-01:09:04 INFO    qtrade | spreads: 2025-09-03 done (22521 rows)
-01:09:33 INFO    qtrade | spreads: 2026-04-23 done (23231 rows)
-01:10:00 INFO    qtrade | spreads: 2026-05-15 done (23953 rows)
-01:10:23 INFO    qtrade | spreads: 2026-08-11 done (24668 rows)
-01:10:23 INFO    qtrade | research task: edge
-01:10:48 INFO    qtrade | factor model: 309 refits, 15 factors
-01:11:41 INFO    qtrade | computed 44 signals
-01:11:46 INFO    qtrade | edge: rev_1d done
-01:11:51 INFO    qtrade | edge: rev_5d done
-01:11:56 INFO    qtrade | edge: rev_21d done
-01:12:01 INFO    qtrade | edge: resid_rev_1d done
-01:12:06 INFO    qtrade | edge: resid_rev_5d done
-01:12:11 INFO    qtrade | edge: ou_sscore done
-01:12:16 INFO    qtrade | edge: bollinger_z done
-01:12:21 INFO    qtrade | edge: rsi_14 done
-01:12:27 INFO    qtrade | edge: overnight_rev done
-01:12:32 INFO    qtrade | edge: intraday_rev done
-01:12:37 INFO    qtrade | edge: low_volume_rev done
-01:12:42 INFO    qtrade | edge: mom_12_1 done
-01:12:47 INFO    qtrade | edge: mom_6_1 done
-01:12:52 INFO    qtrade | edge: resid_mom done
-01:12:57 INFO    qtrade | edge: high_52w done
-01:13:02 INFO    qtrade | edge: trend_quality done
-01:13:07 INFO    qtrade | edge: mom_accel done
-01:13:12 INFO    qtrade | edge: overnight_mom done
-01:13:17 INFO    qtrade | edge: intraday_rev_21 done
-01:13:22 INFO    qtrade | edge: cluster_mom done
-01:13:27 INFO    qtrade | edge: abn_volume done
-01:13:32 INFO    qtrade | edge: amihud done
-01:13:38 INFO    qtrade | edge: turnover_trend done
-01:13:43 INFO    qtrade | edge: vol_price_corr done
-01:13:48 INFO    qtrade | edge: size_proxy done
-01:13:54 INFO    qtrade | edge: low_vol done
-01:13:59 INFO    qtrade | edge: idio_vol done
-01:14:04 INFO    qtrade | edge: max_effect done
-01:14:09 INFO    qtrade | edge: neg_skew done
-01:14:14 INFO    qtrade | edge: bab done
-01:14:19 INFO    qtrade | edge: downside_beta done
-01:14:24 INFO    qtrade | edge: vol_of_vol done
-01:14:29 INFO    qtrade | edge: range_vol_ratio done
-01:14:35 INFO    qtrade | edge: close_location done
-01:14:40 INFO    qtrade | edge: cs_spread done
-01:14:45 INFO    qtrade | edge: gk_ratio done
-01:14:50 INFO    qtrade | edge: same_month done
-01:14:55 INFO    qtrade | edge: weekday_seasonality done
-01:15:00 INFO    qtrade | edge: turn_of_month done
-01:15:06 INFO    qtrade | edge: peer_gap done
-01:15:10 INFO    qtrade | edge: peer_lead done
-01:15:16 INFO    qtrade | edge: kalman_trend done
-01:15:21 INFO    qtrade | edge: autocorr_signal done
-01:15:26 INFO    qtrade | edge: market_corr done
-01:15:28 INFO    qtrade | research task: alt
-01:16:04 INFO    qtrade | fundamental signals: ['earnings_yield', 'book_to_market', 'gross_prof', 'asset_growth', 'accruals', 'sue', 'ear']
-01:16:11 INFO    qtrade | news signals: 1164220 articles mapped to the universe
-01:16:24 INFO    qtrade | edge: earnings_yield done
-01:16:29 INFO    qtrade | edge: book_to_market done
-01:16:34 INFO    qtrade | edge: gross_prof done
-01:16:38 INFO    qtrade | edge: asset_growth done
-01:16:43 INFO    qtrade | edge: accruals done
-01:16:48 INFO    qtrade | edge: sue done
-01:16:53 INFO    qtrade | edge: ear done
-01:16:58 INFO    qtrade | edge: news_volume done
-01:17:03 INFO    qtrade | edge: news_tone done
-01:17:08 INFO    qtrade | edge: no_news_rev done
-01:17:13 INFO    qtrade | edge: news_mom done
-01:17:13 INFO    qtrade | research task: conditional
-01:17:19 INFO    qtrade | computed 4 signals
-01:17:36 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
-01:17:48 INFO    qtrade | conditional: rev_5d done
-01:17:59 INFO    qtrade | conditional: resid_rev_1d done
-01:18:10 INFO    qtrade | conditional: low_volume_rev done
-01:18:21 INFO    qtrade | conditional: peer_gap done
-01:18:32 INFO    qtrade | conditional: composite done
-01:18:43 INFO    qtrade | conditional: no_news_rev done
-01:18:53 INFO    qtrade | conditional: sue done
+01:19:41 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+01:19:41 INFO    qtrade | research task: quality
+01:19:45 INFO    qtrade | research task: spreads
+01:20:15 INFO    qtrade | spreads: 2016-08-03 done (781 rows)
+01:20:41 INFO    qtrade | spreads: 2016-09-12 done (1574 rows)
+01:21:00 INFO    qtrade | spreads: 2016-11-11 done (2365 rows)
+01:21:16 INFO    qtrade | spreads: 2017-01-09 done (3155 rows)
+01:21:49 INFO    qtrade | spreads: 2017-01-18 done (3935 rows)
+01:22:16 INFO    qtrade | spreads: 2017-01-30 done (4719 rows)
+01:22:37 INFO    qtrade | spreads: 2018-07-03 done (5239 rows)
+01:23:00 INFO    qtrade | spreads: 2018-08-22 done (5962 rows)
+01:23:34 INFO    qtrade | spreads: 2018-11-27 done (6692 rows)
+01:24:03 INFO    qtrade | spreads: 2019-07-18 done (7439 rows)
+01:24:29 INFO    qtrade | spreads: 2019-08-19 done (8196 rows)
+01:24:57 INFO    qtrade | spreads: 2019-09-23 done (8945 rows)
+01:25:22 INFO    qtrade | spreads: 2020-04-13 done (9721 rows)
+01:25:40 INFO    qtrade | spreads: 2020-09-02 done (10494 rows)
+01:25:58 INFO    qtrade | spreads: 2020-10-23 done (11235 rows)
+01:26:19 INFO    qtrade | spreads: 2021-01-14 done (11980 rows)
+01:26:38 INFO    qtrade | spreads: 2021-07-23 done (12750 rows)
+01:26:56 INFO    qtrade | spreads: 2021-11-08 done (13513 rows)
+01:27:16 INFO    qtrade | spreads: 2022-02-03 done (14275 rows)
+01:27:37 INFO    qtrade | spreads: 2022-03-07 done (15059 rows)
+01:27:59 INFO    qtrade | spreads: 2022-11-02 done (15830 rows)
+01:28:32 INFO    qtrade | spreads: 2023-02-01 done (16611 rows)
+01:29:03 INFO    qtrade | spreads: 2023-04-20 done (17356 rows)
+01:29:28 INFO    qtrade | spreads: 2023-07-18 done (18122 rows)
+01:29:51 INFO    qtrade | spreads: 2024-01-03 done (18892 rows)
+01:30:13 INFO    qtrade | spreads: 2024-01-11 done (19662 rows)
+01:30:34 INFO    qtrade | spreads: 2024-05-24 done (20389 rows)
+01:30:54 INFO    qtrade | spreads: 2025-07-14 done (21103 rows)
+01:31:23 INFO    qtrade | spreads: 2025-08-26 done (21788 rows)

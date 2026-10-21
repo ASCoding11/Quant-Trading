@@ -252,6 +252,12 @@ repository variable `QTRADE_CONFIG` = `config/default.yaml`
 
 ## Research data
 
+**Results to share:** [`research_data/`](research_data/README.md) has every
+research output (signal and model correlations, strategy returns, backtests)
+as CSV and Markdown, refreshed with `bash scripts/export_research_data.sh`.
+SEC fundamentals, insider trades and S&P 500 changes are published
+unencrypted in the release **public-data**.
+
 Four datasets beyond daily prices are kept in the GitHub release **data**.
 Each is a tar archive split into 1.9 GB parts, because GitHub caps release
 files at 2 GB. A manifest of what each contains (symbols, row counts, date

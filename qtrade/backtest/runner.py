@@ -70,6 +70,11 @@ def run(md: MarketData, cfg: Config, out_dir: str | Path | None = None, syntheti
     path = write_report(main, summary, cmp_tbl, ic_table, imgs, cfg, out_dir, notes)
     write_markdown(summary, cmp_tbl, ic_table, imgs, out_dir, notes, cfg, diag)
 
+    if research.wf.selected:
+        sel = pd.DataFrame(research.wf.selected, index=research.signal_names).T.astype(int)
+        sel.to_csv(out_dir / "selected_signals.csv")
+        LOG.info("stable-signal selection: kept on average %.1f of %d signals; most often kept:\n%s",
+                 sel.sum(axis=1).mean(), sel.shape[1], sel.mean().sort_values(ascending=False).head(15).round(2))
     main.daily.to_csv(out_dir / "daily.csv")
     cmp_tbl.to_csv(out_dir / "model_comparison.csv")
     ic_table.to_csv(out_dir / "signal_ic.csv", index=False)

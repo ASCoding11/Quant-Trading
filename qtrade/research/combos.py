@@ -74,9 +74,22 @@ def run(md, ctx, out: Path, sigs: dict[str, pd.DataFrame], families: dict[str, s
         return res
 
     single = {}
+    stab_rows = []
+    parts_1st = np.array_split(np.nonzero(first)[0], 3)           # 2004-14 in three chunks
     for n in names:
         single[n] = stats(Z[n])
+        i5 = _daily_corr(Z[n], y[5])
+        means = [np.nanmean(i5[p]) for p in parts_1st]
+        a = i5[first & np.isfinite(i5)]
+        t1 = a.mean() / a.std() * np.sqrt(len(a) / 5) if len(a) > 50 else np.nan
+        stable = len(set(np.sign(means))) == 1 and abs(t1) >= 2
+        stab_rows.append({"signal": n, "family": families.get(n, ""), "ic5_part1": means[0], "ic5_part2": means[1],
+                          "ic5_part3": means[2], "t_2004_14": t1, "kept_by_2004_14_rule": stable,
+                          "ic5_2015_26": np.nanmean(i5[~first]),
+                          "same_sign_2015_26": bool(np.sign(np.nanmean(i5[~first])) == np.sign(means[0]))})
     LOG.info("combos: %d single signals scored", len(names))
+    stab = pd.DataFrame(stab_rows)
+    stab.to_csv(out / "stability.csv", index=False)
     rows = []
     pairs = list(combinations(names, 2))
     for k, (a, b) in enumerate(pairs):
@@ -134,6 +147,17 @@ def run(md, ctx, out: Path, sigs: dict[str, pd.DataFrame], families: dict[str, s
              "### Pairs that stuck: same sign in both periods, positive IC in >= 80% of years, and better "
              "than either signal alone in 2015-2026", "",
              sticky.head(top)[cols].round(4).to_markdown(index=False) if len(sticky) else "(none)", "",
+             "### Does consistency up to 2014 predict consistency after?", "",
+             "Rule, using 2004-2014 only: IC of the same sign in each third of 2004-2014 and |t| >= 2. "
+             "The model's `select_stable` option applies the same rule at every refit on its own training "
+             "window.", "",
+             f"Kept by the rule: {int(stab['kept_by_2004_14_rule'].sum())} of {len(stab)}. Of those, "
+             f"{int(stab.loc[stab['kept_by_2004_14_rule'], 'same_sign_2015_26'].sum())} kept the same sign in "
+             f"2015-2026; of the dropped ones, "
+             f"{int(stab.loc[~stab['kept_by_2004_14_rule'], 'same_sign_2015_26'].sum())} of "
+             f"{int((~stab['kept_by_2004_14_rule']).sum())} did.", "",
+             stab.sort_values(["kept_by_2004_14_rule", "t_2004_14"], key=lambda c: c.abs() if c.dtype != bool else c,
+                              ascending=False).round(4).to_markdown(index=False), "",
              "### Single signals for reference", "",
              sing.sort_values("ic5_1st", key=np.abs, ascending=False)[["signal", "family", "ic5_1st", "ic5_2nd",
                                                                        "years_positive", "persistence"]]

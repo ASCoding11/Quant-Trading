@@ -66,6 +66,11 @@ class ModelConfig:
     rff_features: int = 256          # random Fourier features (kernel ridge)
     seed: int = 7
     signals: list[str] | None = None # None = every registered signal
+    # keep only signals whose IC had the same sign in every part of the training
+    # window (and a big enough t-stat); the rest are dropped at that refit
+    select_stable: bool = False
+    stable_splits: int = 3           # sub-periods of the training window that must agree
+    stable_min_t: float = 2.0        # minimum |t| of the signal's IC over the whole window
 
 
 @dataclass

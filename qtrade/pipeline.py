@@ -76,6 +76,7 @@ def build_research(md: MarketData, cfg: Config, final_refit: bool = False,
         min_history=rc.min_history, n_init=rc.n_init, max_iter=rc.max_iter, seed=cfg.model.seed,
         temper=rc.temper, align=rc.align,
     )
+    ctx.regimes = regimes          # the portfolio can size by regime (portfolio.regime_ic)
     wf = walk_forward(feats, target, regimes.to_numpy(), md.dates, cfg,
                       model_names=models, final_refit=final_refit)
     LOG.info("research pipeline complete")

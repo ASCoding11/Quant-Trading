@@ -86,6 +86,8 @@ class PortfolioConfig:
     cost_aversion: float = 1.0       # scales costs in the no-trade band (>1 trades less)
     trade_rate: float = 1.0          # extra partial adjustment toward target (1 = off)
     no_trade_band: float = 0.0002    # ignore trades smaller than 2 bp of equity
+    regime_ic: bool = False          # estimate the forecast's IC separately for each HMM regime
+    edge_scaling: float | None = None  # scale exposure by IC_hat / this (capped at 1); None = off
     drawdown_limit: float = 0.15     # cut risk after a 15% drawdown
     drawdown_scale: float = 0.5      # ...to half size until recovery
 

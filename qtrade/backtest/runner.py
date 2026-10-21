@@ -93,6 +93,10 @@ DIAGNOSTIC_VARIANTS = {
     "quoted_spread_costs": {"costs": {"spread_tiers": [[500e6, 1.5], [100e6, 3.0], [20e6, 6.0], [0.0, 12.0]]}},
     "rank_weights": {"portfolio": {"weighting": "rank"}},
     "dollar_neutral_only": {"portfolio": {"factor_neutral": False}},
+    "regime_ic": {"portfolio": {"regime_ic": True}},
+    # exposure follows the expected IC: full size at IC 0.015 (about twice the typical level)
+    "regime_ic + edge_scaling": {"portfolio": {"regime_ic": True, "edge_scaling": 0.015}},
+    "edge_scaling": {"portfolio": {"edge_scaling": 0.015}},
 }
 SWEEP_HALFLIFE = [0, 3, 7, 15, 30]
 SWEEP_COST_AVERSION = [0.0, 0.25, 0.5, 1.0]

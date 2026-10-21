@@ -1,0 +1,32 @@
+03:55:58 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+03:55:59 INFO    qtrade | research task: events
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/events.py:95: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  m = hl.str.contains(pat, regex=True)
+03:57:50 WARNING qtrade | index events skipped: 
+03:57:50 INFO    qtrade | research task: survivorship
+03:57:51 INFO    qtrade | all stocks: 14793 symbols (active + delisted)
+04:10:29 INFO    qtrade | survivorship: horizon 5 done
+04:11:25 INFO    qtrade | survivorship: horizon 21 done
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 186, in <module>
+    main()
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 174, in main
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 202, in encode
+    chunks = list(chunks)
+             ^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 377, in _iterencode_dict
+    raise TypeError(f'keys must be str, int, float, bool or None, '
+TypeError: keys must be str, int, float, bool or None, not tuple

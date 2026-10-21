@@ -1,89 +1,32 @@
-03:42:35 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-03:42:35 INFO    qtrade | research task: alt
-03:43:24 INFO    qtrade | fundamental signals: ['earnings_yield', 'book_to_market', 'gross_prof', 'asset_growth', 'accruals', 'sue', 'ear']
-03:43:31 INFO    qtrade | news signals: 1164220 articles mapped to the universe
-03:43:48 INFO    qtrade | edge: earnings_yield done
-03:43:53 INFO    qtrade | edge: book_to_market done
-03:43:57 INFO    qtrade | edge: gross_prof done
-03:44:01 INFO    qtrade | edge: asset_growth done
-03:44:05 INFO    qtrade | edge: accruals done
-03:44:09 INFO    qtrade | edge: sue done
-03:44:13 INFO    qtrade | edge: ear done
-03:44:18 INFO    qtrade | edge: news_volume done
-03:44:22 INFO    qtrade | edge: news_tone done
-03:44:26 INFO    qtrade | edge: no_news_rev done
-03:44:30 INFO    qtrade | edge: news_mom done
-03:44:30 INFO    qtrade | research task: strategies
-03:44:35 INFO    qtrade | downloaded 45 / 45 tickers
-03:45:41 WARNING qtrade | FRED T10Y2Y failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:46:41 WARNING qtrade | FRED T10Y3M failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:47:41 WARNING qtrade | FRED BAA10Y failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:48:41 WARNING qtrade | FRED DFII10 failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:49:41 WARNING qtrade | FRED DTWEXBGS failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:50:41 WARNING qtrade | FRED DCOILWTICO failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:51:41 WARNING qtrade | FRED VIXCLS failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:52:42 WARNING qtrade | FRED NFCI failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:53:42 WARNING qtrade | FRED ICSA failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=60)
-03:54:00 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
-03:54:25 INFO    qtrade | factor model: 309 refits, 15 factors
-03:54:45 INFO    qtrade | computed 3 signals
-{
- "alt": {
-  "signals": [
-   "earnings_yield",
-   "book_to_market",
-   "gross_prof",
-   "asset_growth",
-   "accruals",
-   "sue",
-   "ear",
-   "news_volume",
-   "news_tone",
-   "no_news_rev",
-   "news_mom"
-  ]
- },
- "strategies": {
-  "strategies": 33,
-  "chosen_for_diversified_book": [
-   "accruals",
-   "spy_tsmom_12m",
-   "spy_ma200",
-   "spy_vol_managed",
-   "spy_hmm_timing",
-   "spy_turn_of_month",
-   "multi_asset_trend",
-   "risk_parity",
-   "cross_asset_mom",
-   "broad_trend_3m",
-   "broad_trend_12m",
-   "broad_trend_blend",
-   "short_vol_contango",
-   "short_vol_always",
-   "pairs",
-   "REVERSAL BOOK (current system)"
-  ],
-  "diversified": [
-   {
-    "portfolio": "diversified (16 strategies chosen on 2006-2014)",
-    "sharpe_1st": 1.29,
-    "ret_1st": 0.129,
-    "max_dd_1st": -0.096,
-    "sharpe_2nd": 0.853,
-    "ret_2nd": 0.095,
-    "max_dd_2nd": -0.174,
-    "vol": 0.106
-   },
-   {
-    "portfolio": "reversal book alone (10% vol)",
-    "sharpe_1st": 0.436,
-    "ret_1st": 0.044,
-    "max_dd_1st": -0.23,
-    "sharpe_2nd": 0.156,
-    "ret_2nd": 0.014,
-    "max_dd_2nd": -0.284,
-    "vol": 0.093
-   }
-  ]
- }
-}
+03:55:58 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+03:55:59 INFO    qtrade | research task: events
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/events.py:95: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  m = hl.str.contains(pat, regex=True)
+03:57:50 WARNING qtrade | index events skipped: 
+03:57:50 INFO    qtrade | research task: survivorship
+03:57:51 INFO    qtrade | all stocks: 14793 symbols (active + delisted)
+04:10:29 INFO    qtrade | survivorship: horizon 5 done
+04:11:25 INFO    qtrade | survivorship: horizon 21 done
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 186, in <module>
+    main()
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 174, in main
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 202, in encode
+    chunks = list(chunks)
+             ^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 377, in _iterencode_dict
+    raise TypeError(f'keys must be str, int, float, bool or None, '
+TypeError: keys must be str, int, float, bool or None, not tuple

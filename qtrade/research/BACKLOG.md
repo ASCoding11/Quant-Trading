@@ -57,4 +57,4 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 ## Added overnight
 
 - [x] Ideas wave 5: news-event signals from the event study (buybacks, lawsuits, M&A, net upgrades, dividend raises, CEO changes) — in-sample by construction, judge with care
-- [ ] Out-of-sample check for wave 5 once more news history exists (or split 2015-2020 / 2021-2026)
+- [x] Ideas report IC for 2015-20 and 2021-26 separately (an honest split for news signals)

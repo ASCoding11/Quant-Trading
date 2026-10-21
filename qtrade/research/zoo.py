@@ -408,6 +408,10 @@ def run_ideas(cfg, horizon: int, out: Path, synthetic: bool = False) -> pd.DataF
                "t_1st": a.mean() / a.std() * np.sqrt(len(a) / horizon) if len(a) > 50 else np.nan,
                "t_2nd": b.mean() / b.std() * np.sqrt(len(b) / horizon) if len(b) > 50 else np.nan,
                "years_positive": float((pd.Series(ic).groupby(years).mean().dropna() > 0).mean())}
+        # a split inside 2015-2026, for signals that only exist from 2015 (news)
+        for lab, m in (("2015_20", (years >= 2015) & (years <= 2020)), ("2021_26", years >= 2021)):
+            x = ic[m & np.isfinite(ic)]
+            row[f"ic_{lab}"] = x.mean() if len(x) > 50 else np.nan
         # trade it in its own best direction as judged on 2006-2014 only
         sgn = np.sign(row["ic_1st"]) if np.isfinite(row["ic_1st"]) and row["ic_1st"] != 0 else 1.0
         best = None
@@ -739,7 +743,8 @@ def aggregate(in_dir: Path, out: Path, extra_dir: Path | None = None) -> dict:
                      "breakeven_bp_2006_14": r.get("breakeven_bp_1st", np.nan),
                      "breakeven_bp_2015_26": r.get("breakeven_bp_2nd", np.nan),
                      "net_sharpe_2006_14": r.get("net_sharpe_1st", np.nan),
-                     "net_sharpe_2015_26": r.get("net_sharpe_2nd", np.nan)})
+                     "net_sharpe_2015_26": r.get("net_sharpe_2nd", np.nan),
+                     "ic_2015_20": r.get("ic_2015_20", np.nan), "ic_2021_26": r.get("ic_2021_26", np.nan)})
     best_trade = mod.sort_values("net_sharpe_1st", ascending=False).drop_duplicates(["name", "set", "horizon"])
     for _, r in best_trade.iterrows():
         rows.append({"what": "model", "name": f"{r['name']} on {r['set']}", "family": r["family"],
@@ -758,6 +763,13 @@ def aggregate(in_dir: Path, out: Path, extra_dir: Path | None = None) -> dict:
     same = np.sign(cor["ic_2006_14"]) == np.sign(cor["ic_2015_26"])
     cor["same_sign_both_periods"] = same
     cor["weaker_period_ic"] = np.where(same, np.minimum(cor["ic_2006_14"].abs(), cor["ic_2015_26"].abs()), 0.0)
+    if "ic_2015_20" in cor:
+        # signals that only exist from 2015 (news): judge on 2015-2020 vs 2021-2026 instead
+        late = cor["ic_2006_14"].isna() & cor["ic_2015_20"].notna() & cor["ic_2021_26"].notna()
+        same_late = np.sign(cor["ic_2015_20"]) == np.sign(cor["ic_2021_26"])
+        cor.loc[late, "same_sign_both_periods"] = same_late[late]
+        cor.loc[late, "weaker_period_ic"] = np.where(
+            same_late, np.minimum(cor["ic_2015_20"].abs(), cor["ic_2021_26"].abs()), 0.0)[late]
     cor["survivorship_prone"] = cor["name"].apply(lambda s: any(k in s for k in SURVIVORSHIP_PRONE))
     cor = cor.sort_values("weaker_period_ic", ascending=False)
     cor.to_csv(out / "best_correlations.csv", index=False)

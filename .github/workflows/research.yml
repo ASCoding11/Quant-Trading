@@ -34,6 +34,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       DATA_KEY: ${{ secrets.DATA_KEY }}
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -79,6 +80,8 @@ jobs:
           fi
           TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,intraday,hmm}
           echo "tasks: $TASKS"
+          # optional: Google search interest for the consumer study (unofficial client; skipped if it fails)
+          case "$TASKS" in *consumer*) pip install -q pytrends || echo "pytrends unavailable";; esac
           python -m qtrade.research --tasks "$TASKS" --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
         if: always() && hashFiles('reports/research/**') != ''
@@ -97,7 +100,7 @@ jobs:
             # a partial run (some tasks only) adds its files to latest instead of replacing it
           mkdir -p research/latest && cp -r "$GITHUB_WORKSPACE/reports/research/." research/latest/
           { echo "# Research results"; echo
-            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies multi flip events survivorship intraday hmm; do
+            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies multi flip consumer events survivorship intraday hmm; do
               [ -f "research/latest/$f.md" ] && { cat "research/latest/$f.md"; echo; }
             done; } > research/latest/README.md
             git add -A && git commit -q -m "Research run ${GITHUB_SHA::7} (run ${{ github.run_id }})"

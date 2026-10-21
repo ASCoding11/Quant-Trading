@@ -35,7 +35,7 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 
 - [x] Market timing, cross-asset trend/risk parity, sector momentum, stock
   factors, pairs, earnings premium
-- [ ] Sector- and beta-neutral factor books; momentum crash protection
+- [x] (partly) Momentum crash protection (vol-scaled, macro-timed); still open: sector- and beta-neutral factor books
   (volatility-scaled momentum); ETF pair trades; a risk-parity blend of the
   momentum and reversal books
 - [ ] Intraday (5-minute data): opening drive, last-half-hour momentum,
@@ -48,8 +48,8 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 - [x] Intraday-derived daily signals: realized skew/kurtosis, jump share, first/last half-hour moves
 - [x] News text: novelty, event types (M&A, FDA, guidance, lawsuit, offering, analyst), event study by type
 - [x] Index events: S&P 500 additions/removals around the effective date
-- [ ] Macro: FRED states for market timing and momentum-crash protection
-- [ ] Broad trend following (~30 ETFs: commodities, currencies, rates, countries), volatility premium (VIX term structure), sector seasonality
-- [ ] Ledoit-Wolf covariance and mean-variance across strategies; capacity vs AUM; open- vs close-auction execution
+- [x] Macro: FRED states for market timing and momentum-crash protection
+- [x] Broad trend following (~30 ETFs: commodities, currencies, rates, countries), volatility premium (VIX term structure), sector seasonality
+- [x] Ledoit-Wolf covariance and mean-variance across strategies; capacity vs AUM; open- vs close-auction execution
 - [ ] Sequence models on raw return histories; online model weighting; sizing by model disagreement
 - [ ] Not possible with free data: options (implied vol, skew), analyst revisions, borrow fees, supply chains, 13F (large)

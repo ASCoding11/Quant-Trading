@@ -80,6 +80,8 @@ def load_fred(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
             LOG.info("FRED %s: %d values", sid, len(x))
         except Exception as exc:
             LOG.warning("FRED %s failed: %s", sid, exc)
+    if not cols:
+        return pd.DataFrame()
     out = pd.DataFrame(cols).sort_index()
     out = out.resample("D").last().ffill()
     out.to_parquet(path)

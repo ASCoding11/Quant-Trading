@@ -54,13 +54,18 @@ from ..utils import LOG
 SPLIT = "2015-01-01"
 ASSETS = ["SPY", "EFA", "EEM", "TLT", "IEF", "GLD", "DBC", "VNQ"]
 SECTORS = ["XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"]
+# a broader futures-like menu through ETFs: commodities, currencies, rates, credit, countries
+BROAD = ["USO", "UNG", "DBA", "DBB", "SLV", "GLD", "UUP", "FXE", "FXY", "FXA", "SHY", "IEF", "TLT", "TIP",
+         "LQD", "HYG", "EWJ", "EWG", "EWU", "FXI", "EWZ", "EWC", "EWA", "EWY", "EWT", "SPY", "QQQ", "IWM",
+         "VNQ", "EEM"]
+VOL = ["SVXY", "VIXY", "^VIX3M"]
 ETF_COST = 1e-4
 
 
 def _etfs(start: str):
     from ..data.loader import download_prices
 
-    return download_prices(ASSETS + SECTORS + ["^VIX"], start=start)
+    return download_prices(list(dict.fromkeys(ASSETS + SECTORS + BROAD + VOL + ["^VIX"])), start=start)
 
 
 def _net(pos: pd.Series | pd.DataFrame, ret: pd.Series | pd.DataFrame, cost: float = ETF_COST) -> pd.Series:
@@ -259,6 +264,168 @@ def earnings_premium(md, ctx, facts: pd.DataFrame | None) -> pd.Series | None:
     return ((w * r1).sum(axis=1) - (w.diff().abs() * cost).sum(axis=1)).shift(1).fillna(0)
 
 
+# -----------------------------------------------------------------------------
+# wave 2
+# -----------------------------------------------------------------------------
+def broad_strategies(etf) -> dict[str, pd.Series]:
+    """Trend following and momentum over ~30 ETFs spanning the major asset classes."""
+    have = [t for t in BROAD if t in etf.close.columns]
+    c = etf.close[have]
+    r = c.pct_change(fill_method=None)
+    vol = r.rolling(63, min_periods=40).std() * np.sqrt(252)
+    out = {}
+    for lb, name in ((63, "trend_3m"), (252, "trend_12m")):
+        sign = np.sign(c / c.shift(lb) - 1)
+        w = (sign * 0.10 / vol).clip(-2, 2).div(c.notna().sum(axis=1).clip(lower=1), axis=0)
+        out[f"broad_{name}"] = _net(w, r.fillna(0))
+    blend = (np.sign(c / c.shift(21) - 1) + np.sign(c / c.shift(63) - 1) + np.sign(c / c.shift(252) - 1)) / 3
+    w = (blend * 0.10 / vol).clip(-2, 2).div(c.notna().sum(axis=1).clip(lower=1), axis=0)
+    out["broad_trend_blend"] = _net(w, r.fillna(0))
+    me = _month_ends(c.index)
+    rk = (c.shift(21) / c.shift(252) - 1).rank(axis=1, pct=True)
+    xs = ((rk > 0.75).astype(float) - (rk <= 0.25).astype(float))
+    xs = xs.div(xs.abs().sum(axis=1).replace(0, np.nan), axis=0).where(me).ffill()
+    out["broad_xs_momentum"] = _net(xs, r.fillna(0))
+    return out
+
+
+def vol_premium_strategies(etf) -> dict[str, pd.Series]:
+    """Short volatility through SVXY, only when the VIX curve is in contango (VIX < VIX3M)."""
+    c = etf.close
+    out = {}
+    if "SVXY" in c and "^VIX3M" in c:
+        r = c["SVXY"].pct_change(fill_method=None)
+        contango = (c["^VIX"] < c["^VIX3M"]).astype(float)
+        out["short_vol_contango"] = _net(contango, r.fillna(0))
+        out["short_vol_always"] = r.fillna(0)
+    if "VIXY" in c and "^VIX3M" in c:
+        r = c["VIXY"].pct_change(fill_method=None)
+        back = (c["^VIX"] > c["^VIX3M"]).astype(float)
+        out["long_vol_backwardation"] = _net(back, r.fillna(0))
+    return out
+
+
+def sector_seasonality(etf) -> dict[str, pd.Series]:
+    """Each month, long the 3 sectors with the best average return in that calendar month over
+    the previous 10 years, short the worst 3."""
+    s = etf.close[SECTORS]
+    r = s.pct_change(fill_method=None)
+    m = np.log(s).resample("ME").last().diff()
+    seas = sum(m.shift(12 * k) for k in range(1, 11)) / 10                # average for the *coming* month
+    seas = seas.shift(-1)
+    rk = seas.rank(axis=1)
+    w = ((rk >= len(SECTORS) - 2).astype(float) - (rk <= 3).astype(float)) / 3
+    w = w.reindex(r.index, method="ffill")
+    return {"sector_seasonality": _net(w, r.fillna(0))}
+
+
+def macro_timing(etf, fred: pd.DataFrame | None, factor_rets: dict) -> tuple[dict, pd.DataFrame]:
+    """Macro states (FRED) to time the market and momentum. Each rule is set from
+    2006-2014 relationships only; the table shows each variable's correlation with
+    the next month's market and momentum returns in both periods."""
+    if fred is None or fred.empty:
+        return {}, pd.DataFrame()
+    spy = etf.close["SPY"]
+    r = spy.pct_change(fill_method=None).fillna(0)
+    f = fred.reindex(r.index, method="ffill")
+    fwd_mkt = np.log(spy.shift(-21) / spy)
+    mom = factor_rets.get("mom_12_1")
+    fwd_mom = mom[::-1].rolling(21).sum()[::-1].shift(-1).reindex(r.index) if mom is not None else None
+    rows = []
+    feats = {}
+    for col in f.columns:
+        x = f[col]
+        z = (x - x.rolling(252, min_periods=126).mean()) / x.rolling(252, min_periods=126).std()   # vs. its last year
+        feats[col] = z
+        row = {"variable": col}
+        for per, msk in (("1st", (r.index >= "2006-01-01") & (r.index < SPLIT)), ("2nd", r.index >= SPLIT)):
+            row[f"corr_next_month_market_{per}"] = z[msk].corr(fwd_mkt[msk])
+            if fwd_mom is not None:
+                row[f"corr_next_month_momentum_{per}"] = z[msk].corr(fwd_mom[msk])
+        rows.append(row)
+    tab = pd.DataFrame(rows)
+    out = {}
+    # market: hold SPY when the combined macro score (signs from 2006-2014) is positive
+    s1 = tab.set_index("variable")["corr_next_month_market_1st"]
+    score = sum(np.sign(s1[c]) * feats[c].clip(-3, 3) for c in s1.index if np.isfinite(s1[c]))
+    out["spy_macro_timing"] = _net((score > 0).astype(float), r)
+    if mom is not None and "corr_next_month_momentum_1st" in tab:
+        s2 = tab.set_index("variable")["corr_next_month_momentum_1st"]
+        score_m = sum(np.sign(s2[c]) * feats[c].clip(-3, 3) for c in s2.index if np.isfinite(s2[c]))
+        lev = (1 + np.tanh(score_m.reindex(mom.index) / 2)).clip(0, 2)    # 0x to 2x, 1x when neutral
+        out["momentum_macro_timed"] = (mom * lev.shift(2)).fillna(0)
+        # Daniel-Moskowitz style crash protection: scale momentum by 1 / its own recent volatility
+        vol = mom.rolling(126, min_periods=60).std().shift(1)
+        out["momentum_vol_scaled"] = (mom * (mom.loc[:SPLIT].std() / vol).clip(0, 2)).fillna(0)
+    return out, tab
+
+
+def optimize_strategies(R: pd.DataFrame, keep: list[str]) -> pd.DataFrame:
+    """Mean-variance across strategies with a Ledoit-Wolf covariance, estimated on 2006-2014,
+    vs. inverse-volatility and equal weights, all judged on 2015-2026."""
+    from sklearn.covariance import LedoitWolf
+
+    first = R.loc[:SPLIT, keep]
+    rows = []
+    lw = LedoitWolf().fit(first.to_numpy())
+    cov = lw.covariance_
+    mu = first.mean().to_numpy()
+    w_mv = np.clip(np.linalg.solve(cov + 1e-10 * np.eye(len(keep)), mu), 0, None)   # long-only tangency
+    w_mv = w_mv / w_mv.sum() if w_mv.sum() > 0 else np.full(len(keep), 1 / len(keep))
+    w_iv = (1 / first.std()).to_numpy().copy()
+    w_iv /= w_iv.sum()
+    w_eq = np.full(len(keep), 1 / len(keep))
+    for name, w in (("Ledoit-Wolf mean-variance", w_mv), ("inverse volatility", w_iv), ("equal weight", w_eq)):
+        book = R[keep] @ w
+        book = book * (0.10 / (book.loc[:SPLIT].std() * np.sqrt(252)))
+        rows.append({"weights": name, **_stats(book),
+                     "top_weights": ", ".join(f"{k} {v:.0%}" for k, v in
+                                              sorted(zip(keep, w), key=lambda kv: -kv[1])[:5])})
+    return pd.DataFrame(rows)
+
+
+def capacity(md, ctx, signal: pd.DataFrame, name: str, aums=(1e4, 1e6, 1e7, 1e8, 1e9)) -> pd.DataFrame:
+    """Net Sharpe of a monthly quintile long-short in ``signal`` as the account grows:
+    square-root market impact on top of the spread, 0.5 x daily vol x sqrt(trade / ADV)."""
+    from .edge import cost_panel
+
+    monthly = _month_ends(md.dates)
+    w = _quintile_ls(signal, ctx.tradable, monthly)
+    o = md.open
+    r1 = (o.shift(-2) / o.shift(-1) - 1).clip(-0.5, 0.5).fillna(0)
+    spread = cost_panel(ctx)
+    sig = ctx.vol_63.fillna(0.02)
+    adv = ctx.adv.where(ctx.adv > 0)
+    gross = (w * r1).sum(axis=1)
+    dw = w.diff().abs()
+    rows = []
+    for aum in aums:
+        impact = 0.5 * sig * np.sqrt((dw * aum) / adv).fillna(0)
+        net = (gross - (dw * (spread + impact)).sum(axis=1)).shift(1).fillna(0)
+        rows.append({"strategy": name, "account_usd": aum, **_stats(net)})
+    return pd.DataFrame(rows)
+
+
+def execution_comparison(md, ctx, sigs: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """The same daily long-short traded at the next open vs. the next close (auction choice)."""
+    from .edge import cost_panel
+
+    cost = cost_panel(ctx)
+    o, c = md.open, md.close
+    r_open = (o.shift(-2) / o.shift(-1) - 1).clip(-0.5, 0.5).fillna(0)     # trade at open t+1, hold to open t+2
+    r_close = (c.shift(-2) / c.shift(-1) - 1).clip(-0.5, 0.5).fillna(0)    # trade at close t+1, hold to close t+2
+    rows = []
+    for name, z in sigs.items():
+        x = z.ewm(halflife=5, ignore_na=True).mean().where(ctx.tradable)
+        x = x.sub(x.mean(axis=1), axis=0)
+        w = x.div(x.abs().sum(axis=1), axis=0).fillna(0)
+        tc = (w.diff().abs() * cost).sum(axis=1)
+        for fill, rr in (("next open", r_open), ("next close", r_close)):
+            net = ((w * rr).sum(axis=1) - tc).shift(1).fillna(0)
+            rows.append({"signal": name, "fill": fill, **_stats(net)})
+    return pd.DataFrame(rows)
+
+
 def _stats(r: pd.Series) -> dict:
     out = {}
     for tag, m in (("1st", (r.index >= "2006-01-01") & (r.index < SPLIT)), ("2nd", r.index >= SPLIT)):
@@ -284,9 +451,32 @@ def run(md, ctx, out: Path, cfg, alt: dict | None = None, reversal: pd.Series | 
         return {"earnings_premium": ep} if ep is not None else {}
 
     # each block is independent: one failing must not lose the others
+    fac, fac_raw = {}, {}
+    try:
+        fac, fac_raw = factor_strategies(md, ctx, alt)
+    except Exception as exc:
+        LOG.exception("factor strategies failed: %s", exc)
+    strat |= fac
+    fred = None
+    try:
+        from ..data.public import load_fred
+
+        fred = load_fred(cfg.data.cache_dir)
+    except Exception as exc:
+        LOG.warning("FRED unavailable: %s", exc)
+    macro_tab = pd.DataFrame()
+
+    def macro():
+        nonlocal macro_tab
+        o, macro_tab = macro_timing(etf, fred, fac)
+        return o
+
     for name, block in (("timing", lambda: timing_strategies(etf, ctx, cfg)),
                         ("cross-asset", lambda: cross_asset_strategies(etf)),
-                        ("factors", lambda: factor_strategies(md, ctx, alt)[0]),
+                        ("broad ETFs", lambda: broad_strategies(etf)),
+                        ("volatility premium", lambda: vol_premium_strategies(etf)),
+                        ("sector seasonality", lambda: sector_seasonality(etf)),
+                        ("macro", macro),
                         ("pairs", lambda: {"pairs": pairs_strategy(md, ctx)}),
                         ("earnings premium", earnings)):
         try:
@@ -319,6 +509,22 @@ def run(md, ctx, out: Path, cfg, alt: dict | None = None, reversal: pd.Series | 
             rv = R[rev_col] * (0.10 / (R[rev_col].loc[:SPLIT].std() * np.sqrt(252)))
             combo_rows.append({"portfolio": "reversal book alone (10% vol)", **_stats(rv)})
     combo = pd.DataFrame(combo_rows)
+    opt = optimize_strategies(R, keep) if len(keep) >= 2 else pd.DataFrame()
+    cap_rows = []
+    for nm in ("mom_12_1", "high_52w", "gross_prof"):
+        if nm in fac_raw:
+            try:
+                cap_rows.append(capacity(md, ctx, fac_raw[nm], nm))
+            except Exception as exc:
+                LOG.warning("capacity %s failed: %s", nm, exc)
+    cap = pd.concat(cap_rows) if cap_rows else pd.DataFrame()
+    exe = pd.DataFrame()
+    try:
+        from ..signals import compute_signals
+
+        exe = execution_comparison(md, ctx, compute_signals(ctx, ["rev_5d", "resid_rev_1d", "mom_12_1"]))
+    except Exception as exc:
+        LOG.warning("execution comparison failed: %s", exc)
     corr = R.corr()
     R.to_csv(out / "strategy_returns.csv")
     tab.to_csv(out / "strategies.csv")
@@ -331,6 +537,14 @@ def run(md, ctx, out: Path, cfg, alt: dict | None = None, reversal: pd.Series | 
              f"Strategies with period-1 Sharpe > 0.3 ({', '.join(keep) if keep else 'none'}), weighted by "
              "1 / volatility, scaled to 10% volatility on period 1 only.", "",
              combo.round(3).to_markdown(index=False) if len(combo) else "(none)", "",
+             "### Optimising across strategies (weights from 2006-2014 only)", "",
+             opt.round(3).to_markdown(index=False) if len(opt) else "(not enough strategies)", "",
+             "### Macro variables vs. next month's market and momentum returns", "",
+             macro_tab.round(3).to_markdown(index=False) if len(macro_tab) else "(no FRED data)", "",
+             "### Capacity: net Sharpe as the account grows (square-root market impact)", "",
+             cap.round(3).to_markdown(index=False) if len(cap) else "(none)", "",
+             "### Execution: trade at the next open or the next close?", "",
+             exe.round(3).to_markdown(index=False) if len(exe) else "(none)", "",
              "### Correlation matrix", "", corr.round(2).to_markdown(), ""]
     (out / "strategies.md").write_text("\n".join(lines) + "\n")
     return {"strategies": len(tab), "chosen_for_diversified_book": keep,

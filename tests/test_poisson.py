@@ -30,3 +30,25 @@ def test_poisson_hmm_recovers_regime_rates():
     hmm = PoissonHMM(2).fit(n)
     np.testing.assert_allclose(hmm.rates, rates, rtol=0.1)
     assert (hmm.filter(n).argmax(axis=1) == s).mean() > 0.95
+
+
+def test_bivariate_hawkes_recovers_cross_excitation():
+    from qtrade.research.poisson import decayed_sums, fit_hawkes_bivariate
+
+    rng = np.random.default_rng(2)
+    T, beta = 6000, 0.3
+    mu = np.array([0.3, 0.3])
+    a = np.array([[0.05, 0.15], [0.02, 0.10]])     # down jumps trigger up jumps (rebounds)
+    u, d = np.zeros(T), np.zeros(T)
+    SU = SD = 0.0
+    for t in range(T):
+        if t:
+            SU = np.exp(-beta) * SU + u[t - 1]
+            SD = np.exp(-beta) * SD + d[t - 1]
+        u[t] = rng.poisson(mu[0] + a[0, 0] * SU + a[0, 1] * SD)
+        d[t] = rng.poisson(mu[1] + a[1, 0] * SU + a[1, 1] * SD)
+    fit = fit_hawkes_bivariate(u, d)
+    assert abs(fit["beta"] - beta) < 0.1
+    np.testing.assert_allclose(fit["alpha"], a, atol=0.04)
+    assert fit["alpha"][0, 1] > fit["alpha"][1, 0]
+    assert np.allclose(decayed_sums(np.array([1.0, 0, 0]), np.log(2)), [0, 1, 0.5])

@@ -51,5 +51,5 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 - [x] Macro: FRED states for market timing and momentum-crash protection
 - [x] Broad trend following (~30 ETFs: commodities, currencies, rates, countries), volatility premium (VIX term structure), sector seasonality
 - [x] Ledoit-Wolf covariance and mean-variance across strategies; capacity vs AUM; open- vs close-auction execution
-- [ ] Sequence models on raw return histories; online model weighting; sizing by model disagreement
+- [x] Sequence models on raw return histories; online model weighting; sizing by model disagreement
 - [ ] Not possible with free data: options (implied vol, skew), analyst revisions, borrow fees, supply chains, 13F (large)

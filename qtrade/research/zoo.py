@@ -238,6 +238,10 @@ def families() -> dict:
         "ridge_expanding": ("extra", lambda: Ridge(alpha=100.0), "rank", None, {"train_years": 99}),
         "regime_ridge": ("extra", lambda: Ridge(alpha=100.0), "rank", None, {"regime": True}),
         "stack_avg": ("extra", StackAvg, "rank", 300_000),
+        # sequence models: learn from raw return / volume histories instead of hand-made signals
+        "lag_ridge": ("seq", lambda: Ridge(alpha=100.0), "rank", None),
+        "lag_gbm": ("seq", hgb(15, 300, 0.05), "rank", 300_000),
+        "lag_mlp": ("seq", mlp((64, 32)), "rank", 300_000),
     }
 
 
@@ -276,6 +280,12 @@ PROS_CONS = {
     "ridge_expanding": ("Uses all history: most stable weights", "Slow to adapt to decaying signals"),
     "regime_ridge": ("Different weights in calm vs stressed markets", "Doubles parameters; HMM noise feeds in"),
     "stack_avg": ("Diversifies across model types", "Three times the cost; inherits each model's flaws"),
+    "lag_ridge": ("Learns its own reversal/momentum weights from raw lags", "Linear in past returns"),
+    "lag_gbm": ("Finds nonlinear patterns in raw histories", "Needs lots of data; easy to overfit"),
+    "lag_mlp": ("Sequence model: no hand-made features at all", "Noisiest; random initialisation"),
+    "online_weighted": ("Shifts weight to whichever model works lately", "Chases noise if ICs are noisy"),
+    "equal_ensemble": ("Simple, robust blend of three model types", "Keeps weight on models that stopped working"),
+    "disagreement_sized": ("Bets less when models disagree", "Disagreement may not mean lower accuracy"),
 }
 
 
@@ -365,6 +375,99 @@ def run_ideas(cfg, horizon: int, out: Path, synthetic: bool = False) -> pd.DataF
     return df
 
 
+def lag_features(ctx, md) -> dict[str, pd.DataFrame]:
+    """Raw histories, each scaled cross-sectionally: the last 20 daily factor-residual
+    returns (in units of the stock's vol), the last 10 daily volume changes, and the
+    last 12 monthly returns."""
+    from ..signals import normalize_signal
+
+    e = ctx.resid
+    sd = e.rolling(63, min_periods=40).std()
+    z = e / sd
+    lv = np.log(md.volume.replace(0, np.nan)).diff()
+    m = ctx.log_ret.rolling(21, min_periods=15).sum()
+    out = {}
+    for k in range(20):
+        out[f"lag_resid_{k + 1}d"] = normalize_signal(z.shift(k), ctx.tradable)
+    for k in range(10):
+        out[f"lag_volchg_{k + 1}d"] = normalize_signal(lv.shift(k), ctx.tradable)
+    for k in range(12):
+        out[f"lag_month_{k + 1}"] = normalize_signal(m.shift(21 * k), ctx.tradable)
+    return out
+
+
+def run_online(md, ctx, sigs, names, horizon, y_rank, y5, first, years, bench, cfg) -> list[dict]:
+    """Three different learners, then three ways to combine them: equal weights,
+    weights that follow each model's recent out-of-sample IC, and an equal blend
+    whose size shrinks when the models disagree."""
+    fam = families()
+    members = ["ridge_100", "gbm_shallow", "mlp_16"]
+    X = np.stack([sigs[n].to_numpy(dtype=np.float32) for n in names], axis=-1)
+    dates = md.dates
+    yrs = sorted(set(years))
+    step = max(5, horizon)
+    rng = np.random.default_rng(0)
+    preds = {}
+    for mname in members:
+        _, make, target, cap = fam[mname][:4]
+        P = np.full(X.shape[:2], np.nan, dtype=np.float32)
+        for yr in [y for y in yrs if y >= yrs[0] + TRAIN_YEARS + 1]:
+            first_day = int(np.argmax(years == yr))
+            lo = int(np.argmax(years >= yr - TRAIN_YEARS))
+            tr_days = np.arange(lo, first_day - horizon - 2, step)
+            te_days = np.flatnonzero(years == yr)
+            Xt = X[tr_days].reshape(-1, len(names))
+            yt = y_rank[tr_days].ravel()
+            ok = np.flatnonzero(np.isfinite(Xt).all(axis=1) & np.isfinite(yt))
+            if len(ok) < 1000:
+                continue
+            if cap and len(ok) > cap:
+                ok = np.sort(rng.choice(ok, cap, replace=False))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                m = make().fit(Xt[ok], yt[ok])
+            Xe = X[te_days].reshape(-1, len(names))
+            oke = np.isfinite(Xe).all(axis=1)
+            p = np.full(len(Xe), np.nan)
+            p[oke] = m.predict(Xe[oke])
+            P[te_days] = p.reshape(len(te_days), -1)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            P = (P - np.nanmean(P, axis=1, keepdims=True)) / np.nanstd(P, axis=1, keepdims=True)
+        preds[mname] = P
+        LOG.info("online: member %s done", mname)
+    Z = np.stack([preds[m] for m in members])                               # M x T x N
+    ics = np.stack([_daily_corr(preds[m], y_rank) for m in members])        # M x T
+    # weights at day t use ICs whose labels were known: up to t - horizon - 1, trailing 63 days
+    ic_df = pd.DataFrame(ics.T).shift(horizon + 1).rolling(63, min_periods=20).mean()
+    w = ic_df.clip(lower=0).to_numpy()
+    w = np.where(w.sum(axis=1, keepdims=True) > 0, w / np.maximum(w.sum(axis=1, keepdims=True), 1e-12), 1 / len(members))
+    combos = {
+        "equal_ensemble": np.nanmean(Z, axis=0),
+        "online_weighted": np.nansum(Z * w.T[:, :, None], axis=0),
+    }
+    disagree = np.nanstd(Z, axis=0)
+    combos["disagreement_sized"] = combos["equal_ensemble"] / (1.0 + disagree)
+    rows = []
+    for name, P in combos.items():
+        P = P.astype(np.float32)
+        ic_h, ic5 = _daily_corr(P, y_rank), _daily_corr(P, y5)
+        base = {"kind": "model", "name": name, "family": "online", "set": "price", "horizon": horizon}
+        stats = {}
+        for tag, ic in (("", ic_h), ("5d_", ic5)):
+            a, b = ic[first & np.isfinite(ic)], ic[~first & np.isfinite(ic)]
+            hh = horizon if tag == "" else 5
+            stats |= {f"{tag}ic_1st": a.mean() if len(a) else np.nan, f"{tag}ic_2nd": b.mean() if len(b) else np.nan,
+                      f"{tag}t_1st": a.mean() / a.std() * np.sqrt(len(a) / hh) if len(a) > 50 else np.nan,
+                      f"{tag}t_2nd": b.mean() / b.std() * np.sqrt(len(b) / hh) if len(b) > 50 else np.nan}
+        stats["years_positive"] = float((pd.Series(ic_h).groupby(years).mean().dropna() > 0).mean())
+        Pz = pd.DataFrame(P, index=dates, columns=md.tickers)
+        for hl in HALFLIVES:
+            for uni in ("all", "top300"):
+                rows.append(base | stats | {"halflife": hl, "universe": uni, **bench.score(Pz, hl, uni)})
+        LOG.info("online %s h=%d: IC %.4f / %.4f", name, horizon, stats["ic_1st"], stats["ic_2nd"])
+    return rows
+
+
 def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False) -> pd.DataFrame:
     from .edge import Bench
 
@@ -396,6 +499,16 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
     bench = Bench(md, ctx)
     core = [n for n in sigs if n in fam]
     sets = signal_sets(core, fam, afam)
+    if group in ("seq", "online"):
+        lags = lag_features(ctx, md)
+        sigs = {**sigs, **lags}
+        sets = {"lags": list(lags), "lags+price": list(lags) + core} if group == "seq" else {"price": core}
+    if group == "online":
+        rows = run_online(md, ctx, sigs, sets["price"], horizon, y_rank, y5, first, years, bench, cfg)
+        df = pd.DataFrame(rows)
+        out.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out / f"zoo_{group}_h{horizon}.csv", index=False)
+        return df
     fams = {k: v for k, v in families().items() if v[0] == group}
     p_stress = None
     if any(len(v) > 4 and v[4].get("regime") for v in fams.values()):
@@ -649,7 +762,7 @@ def main(argv=None):
 
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra", "ideas"])
+    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra", "ideas", "seq", "online"])
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--out", default="reports/zoo")
     ap.add_argument("--aggregate", help="directory with group results to merge")

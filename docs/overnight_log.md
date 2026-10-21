@@ -39,3 +39,9 @@ Findings so far:
 - Execution: 5-day reversal does better filled at the next open (0.07-0.09) than the next close (-0.03); 1-day residual reversal loses either way once costs are in.
 - Capacity: momentum goes from 0.05 to -0.16 (2015-26) between $10k and $1B, so it's fine at retail size.
 - FRED timed out from the runners → added a Yahoo fallback (5ddc44b) and started the strategies study again.
+
+## 04:20 UTC
+- Event study (fixed first day, real data 2015-26): buyback headlines **+33 bp next open→close (t 6.6), +37 bp at 21 days**; analyst upgrades +4.5 bp (t 3.2); M&A headlines drift **-22 bp over 21 days (t -3.2)**; lawsuit/probe news *reverses* **+76 bp over 21 days (t 3.6)**; CEO changes -38 bp day 1. Stale news reverses more than novel news (-22 bp at 21 days, t -2.6), matching Tetlock.
+- Survivorship (Alpaca, 14,736 stocks incl. 1,954 delisted, 2017-26): on a point-in-time universe, **momentum is stronger** (21d IC 0.035 vs 0.005 on survivors) and so is low vol; **illiquidity/size look worse** (amihud bias +0.039, size +0.025: their apparent edge was survivorship); reversals slightly overstated (+0.01-0.02).
+- Fixed: survivorship JSON keys, S&P change table lookup, research workflow failing on untagged pushes (451d5df).
+- New: neutral/vol-scaled factor books + ETF pairs + momentum/reversal risk parity (06019fa); intraday strategies (9e1406f); zoo `features` group: sticky-pair products, best ideas, lasso→GBM (8b6c5a5); ideas wave 5 news events.

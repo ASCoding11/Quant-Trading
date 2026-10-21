@@ -53,3 +53,8 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 - [x] Ledoit-Wolf covariance and mean-variance across strategies; capacity vs AUM; open- vs close-auction execution
 - [x] Sequence models on raw return histories; online model weighting; sizing by model disagreement
 - [ ] Not possible with free data: options (implied vol, skew), analyst revisions, borrow fees, supply chains, 13F (large)
+
+## Added overnight
+
+- [x] Ideas wave 5: news-event signals from the event study (buybacks, lawsuits, M&A, net upgrades, dividend raises, CEO changes) — in-sample by construction, judge with care
+- [ ] Out-of-sample check for wave 5 once more news history exists (or split 2015-2020 / 2021-2026)

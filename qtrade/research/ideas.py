@@ -507,3 +507,90 @@ def reversal_in_winners(md, ctx, facts):
     """Product: 5-day reversal, only counted for stocks with positive 12-1 momentum."""
     mom = _reg(ctx, "mom_12_1")
     return _reg(ctx, "rev_5d").where(mom > 0, 0.0)
+
+
+# wave 5: news events found in the event study (headline types; news since 2015)
+_EVENT_CACHE: dict = {}
+
+
+def _event_counts(md, ctx, kind: str) -> pd.DataFrame | None:
+    """Headlines of one event type per (day, stock), dated the day the news is
+    known at the close: an article before the open counts on that day, one
+    during or after the session on the next trading day."""
+    from pathlib import Path
+
+    from .events import EVENT_RULES, _usable_day
+
+    key = (id(md), kind)
+    if key in _EVENT_CACHE:
+        return _EVENT_CACHE[key]
+    npath = Path(_root(ctx)) / "news"
+    if not any(npath.glob("news_*.parquet")):
+        return None
+    if (id(md), "_x") not in _EVENT_CACHE:
+        from ..data.news import load_news
+
+        x = load_news(npath)[["created_at", "headline", "symbols"]]
+        x = x.assign(ticker=x["symbols"].str.split(",")).explode("ticker")
+        tick = {t: i for i, t in enumerate(md.tickers)}
+        x = x[x["ticker"].isin(tick)]
+        x = x.assign(row=_usable_day(md.dates, x["created_at"]), col=x["ticker"].map(tick),
+                     hl=x["headline"].fillna("").str.lower())
+        x = x[x["row"] < len(md.dates)]
+        _EVENT_CACHE[(id(md), "_x")] = x
+    x = _EVENT_CACHE[(id(md), "_x")]
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ev = x[x["hl"].str.contains(EVENT_RULES[kind], regex=True)].drop_duplicates(["row", "col"])
+    a = np.zeros((len(md.dates), len(md.tickers)), dtype=np.float32)
+    np.add.at(a, (ev["row"].to_numpy(), ev["col"].to_numpy()), 1.0)
+    out = pd.DataFrame(a, index=md.dates, columns=md.tickers)
+    out[out.index < "2015-01-01"] = np.nan                    # no news archive before 2015
+    _EVENT_CACHE[key] = out
+    return out
+
+
+def _recent(md, ctx, kind: str, days: int):
+    c = _event_counts(md, ctx, kind)
+    return None if c is None else c.rolling(days, min_periods=1).sum()
+
+
+@idea("news events (in-sample: picked from the 2015-26 event study)", 5)
+def buyback_news(md, ctx, facts):
+    """Buyback headlines in the last 10 days (event study: +33 bp the first day, still +37 bp at 21)."""
+    return _recent(md, ctx, "buyback", 10)
+
+
+@idea("news events (in-sample: picked from the 2015-26 event study)", 5)
+def lawsuit_news_reversal(md, ctx, facts):
+    """Lawsuit / probe headlines in the last 21 days: the selloff reverses (+76 bp over 21 days)."""
+    return _recent(md, ctx, "lawsuit / probe", 21)
+
+
+@idea("news events (in-sample: picked from the 2015-26 event study)", 5)
+def mna_news_drift(md, ctx, facts):
+    """M&A headlines in the last 21 days, negative: names in deal news drift down (-22 bp)."""
+    r = _recent(md, ctx, "merger / acquisition", 21)
+    return None if r is None else -r
+
+
+@idea("news events (in-sample: picked from the 2015-26 event study)", 5)
+def analyst_net_upgrades(md, ctx, facts):
+    """Upgrades minus downgrades over the last 10 days."""
+    up, dn = _recent(md, ctx, "analyst upgrade", 10), _recent(md, ctx, "analyst downgrade", 10)
+    return None if up is None else up - dn
+
+
+@idea("news events (in-sample: picked from the 2015-26 event study)", 5)
+def dividend_raise_news(md, ctx, facts):
+    """Dividend-raise headlines in the last 5 days."""
+    return _recent(md, ctx, "dividend raise", 5)
+
+
+@idea("news events (in-sample: picked from the 2015-26 event study)", 5)
+def ceo_change_news(md, ctx, facts):
+    """CEO-change headlines in the last 5 days, negative (-38 bp the first day)."""
+    r = _recent(md, ctx, "CEO change", 5)
+    return None if r is None else -r

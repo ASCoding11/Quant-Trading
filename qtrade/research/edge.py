@@ -114,6 +114,16 @@ class Bench:
         return pd.DataFrame(rows), pd.DataFrame(decay)
 
 
+def first_period_composite(sigs: dict, dec: pd.DataFrame | None = None, bench: "Bench | None" = None) -> pd.DataFrame:
+    """Signals weighted by their 2004-2014 one-day IC t-stat, keeping |t| > 2 -
+    chosen without looking at 2015-2026."""
+    if dec is None:
+        dec = pd.DataFrame([r for n, z in sigs.items() for r in bench.decay(n, z) if r["horizon"] == 1])
+    first = dec[dec["horizon"] == 1].set_index("signal")["t_1st"]
+    w_sig = first.where(first.abs() > 2, 0.0)
+    return sum(sigs[s] * w for s, w in w_sig.items() if w != 0)
+
+
 def run(md, ctx, out: Path, half_spread_bp: dict | None = None) -> dict:
     """``half_spread_bp``: measured half-spread by liquidity tier (from the
     spreads study); defaults to the cost model's quoted tiers."""
@@ -121,10 +131,7 @@ def run(md, ctx, out: Path, half_spread_bp: dict | None = None) -> dict:
     sigs = compute_signals(ctx)
     tab, dec = bench.table(sigs, {n: REGISTRY[n].family for n in sigs})
 
-    # composite chosen on the first period only
-    first = dec[dec["horizon"] == 1].set_index("signal")["t_1st"]
-    w_sig = first.where(first.abs() > 2, 0.0)                     # keep signals with |t| > 2 in 2004-2014
-    composite = sum(sigs[s] * w for s, w in w_sig.items() if w != 0)
+    composite = first_period_composite(sigs, dec)
     comp = pd.DataFrame([{"halflife": hl, "universe": uni, **bench.score(composite, hl, uni)}
                          for hl in HALFLIVES for uni in ("all", "top300")])
     _write(tab, dec, comp, out)

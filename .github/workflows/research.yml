@@ -13,15 +13,16 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,hmm"
-        default: "quality,spreads,edge,alt,poisson,conditional,combos,hmm"
+        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,hmm (blank = all)"
+        default: ""
 
 permissions:
   contents: write
 
+# each commit gets its own run, so a new push doesn't cancel a long run in progress
 concurrency:
-  group: research-${{ github.ref }}
-  cancel-in-progress: true
+  group: research-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   research:
@@ -53,11 +54,19 @@ jobs:
           fetch_dataset fundamentals fundamentals || echo "no fundamentals dataset"
           fetch_dataset news news || echo "no news dataset"
       - name: Run studies
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           set -o pipefail
           mkdir -p reports/research
-          python -m qtrade.research --tasks "${{ inputs.tasks || 'quality,spreads,edge,alt,poisson,conditional,combos,hmm' }}" \
-            --out reports/research 2>&1 | tee reports/research/run.log
+          # a commit message containing "[research: garch,glm]" runs only those tasks
+          TASKS="${{ inputs.tasks }}"
+          if [ -z "$TASKS" ]; then
+            TASKS=$(printf '%s' "$COMMIT_MSG" | grep -o '\[research: [a-z,]*\]' | sed 's/\[research: //; s/\]//' | head -1)
+          fi
+          TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,hmm}
+          echo "tasks: $TASKS"
+          python -m qtrade.research --tasks "$TASKS" --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
         if: always()
         run: |
@@ -72,7 +81,12 @@ jobs:
             if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
             mkdir -p "$RUN_DIR"
             cp -r "$GITHUB_WORKSPACE/reports/research/." "$RUN_DIR/"
-            rm -rf research/latest && cp -r "$GITHUB_WORKSPACE/reports/research" research/latest
+            # a partial run (some tasks only) adds its files to latest instead of replacing it
+          mkdir -p research/latest && cp -r "$GITHUB_WORKSPACE/reports/research/." research/latest/
+          { echo "# Research results"; echo
+            for f in data_quality spreads edge alt poisson conditional combos garch glm hmm; do
+              [ -f "research/latest/$f.md" ] && { cat "research/latest/$f.md"; echo; }
+            done; } > research/latest/README.md
             git add -A && git commit -q -m "Research run ${GITHUB_SHA::7} (run ${{ github.run_id }})"
             if git push -q origin results; then echo "published $RUN_DIR"; break; fi
             sleep $((attempt * 15))

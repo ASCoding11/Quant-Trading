@@ -27,7 +27,7 @@ def _news_counts(cfg, extra: dict):
 def main(argv=None):
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tasks", default="quality,spreads,edge,alt,poisson,conditional,combos,hmm")
+    ap.add_argument("--tasks", default="quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,hmm")
     ap.add_argument("--out", default="reports/research")
     ap.add_argument("--config")
     ap.add_argument("--synthetic", action="store_true", help="offline smoke test on a simulated market")
@@ -128,6 +128,20 @@ def main(argv=None):
                     sigs[k] = v
                     fam[k] = extra.get("alt_family", {}).get(k, "")
                 summary[task] = run(md, ctx, out, sigs, fam)
+            elif task == "garch":
+                from .garch import run
+
+                comp = extra.get("composite")
+                if comp is None:
+                    from ..signals import compute_signals
+                    from .edge import Bench, first_period_composite
+
+                    comp = first_period_composite(compute_signals(ctx), bench=Bench(md, ctx))
+                summary[task] = run(md, ctx, out, comp)
+            elif task == "glm":
+                from .glm import run
+
+                summary[task] = run(md, ctx, out)
             elif task == "hmm":
                 from .hmm_eval import run
                 summary[task] = run(md, ctx, out, cfg)
@@ -136,7 +150,8 @@ def main(argv=None):
             summary[task] = {"error": f"{type(exc).__name__}: {exc}"}
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
     parts = ["# Research results", ""]
-    for name in ("data_quality", "spreads", "edge", "alt", "poisson", "conditional", "combos", "hmm"):
+    for name in ("data_quality", "spreads", "edge", "alt", "poisson", "conditional", "combos", "garch", "glm",
+                 "hmm"):
         p = out / f"{name}.md"
         if p.exists():
             parts.append(p.read_text())

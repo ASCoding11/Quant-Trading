@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,hmm (blank = all)"
+        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,hmm (blank = all)"
         default: ""
 
 permissions:
@@ -53,6 +53,10 @@ jobs:
           source scripts/datastore.sh
           fetch_dataset fundamentals fundamentals || echo "no fundamentals dataset"
           fetch_dataset news news || echo "no news dataset"
+          # daily returns of the reversal book from the most recent clean backtest, for correlations
+          git fetch -q --depth 1 origin results || true
+          RUN=$(git ls-tree --name-only origin/results runs/ 2>/dev/null | grep clean-data | tail -1)
+          [ -n "$RUN" ] && git show "origin/results:$RUN/daily.csv" > data/reversal_daily.csv || true
       - name: Run studies
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
@@ -64,7 +68,7 @@ jobs:
           if [ -z "$TASKS" ]; then
             TASKS=$(printf '%s' "$COMMIT_MSG" | grep -o '\[research: [a-z,]*\]' | sed 's/\[research: //; s/\]//' | head -1)
           fi
-          TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,hmm}
+          TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,hmm}
           echo "tasks: $TASKS"
           python -m qtrade.research --tasks "$TASKS" --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
@@ -84,7 +88,7 @@ jobs:
             # a partial run (some tasks only) adds its files to latest instead of replacing it
           mkdir -p research/latest && cp -r "$GITHUB_WORKSPACE/reports/research/." research/latest/
           { echo "# Research results"; echo
-            for f in data_quality spreads edge alt poisson conditional combos garch glm hmm; do
+            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies hmm; do
               [ -f "research/latest/$f.md" ] && { cat "research/latest/$f.md"; echo; }
             done; } > research/latest/README.md
             git add -A && git commit -q -m "Research run ${GITHUB_SHA::7} (run ${{ github.run_id }})"

@@ -27,7 +27,7 @@ def _news_counts(cfg, extra: dict):
 def main(argv=None):
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tasks", default="quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,hmm")
+    ap.add_argument("--tasks", default="quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,hmm")
     ap.add_argument("--out", default="reports/research")
     ap.add_argument("--config")
     ap.add_argument("--synthetic", action="store_true", help="offline smoke test on a simulated market")
@@ -142,6 +142,20 @@ def main(argv=None):
                 from .glm import run
 
                 summary[task] = run(md, ctx, out)
+            elif task == "strategies":
+                import pandas as pd
+
+                from .strategies import run
+
+                alt_raw = {}
+                if extra.get("alt"):
+                    alt_raw = {k: v for k, v in extra["alt"].items()
+                               if k in ("gross_prof", "book_to_market", "sue", "accruals")}
+                rev = None
+                rpath = Path(cfg.data.cache_dir) / "reversal_daily.csv"
+                if rpath.exists():
+                    rev = pd.read_csv(rpath, index_col=0, parse_dates=True)["ret"]
+                summary[task] = run(md, ctx, out, cfg, alt_raw, rev)
             elif task == "hmm":
                 from .hmm_eval import run
                 summary[task] = run(md, ctx, out, cfg)
@@ -151,7 +165,7 @@ def main(argv=None):
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
     parts = ["# Research results", ""]
     for name in ("data_quality", "spreads", "edge", "alt", "poisson", "conditional", "combos", "garch", "glm",
-                 "hmm"):
+                 "strategies", "hmm"):
         p = out / f"{name}.md"
         if p.exists():
             parts.append(p.read_text())

@@ -2,9 +2,10 @@
 
 Every combination of
 
-  model family  (21: simple weightings, linear GLMs, trees, neural nets, kernels)
+  model family  (34: simple weightings, linear GLMs, trees, neural nets, kernels,
+                 PLS, Bayesian ridge, SVR, time-decayed / expanding / regime ridge, stacking)
   signal set    (4: reversal only, all price signals, + fundamentals, + news)
-  horizon       (3: 1, 5, 21 days)
+  horizon       (1, 5, 21 and 63 days)
 
 is refit once a year on the previous five years and forecasts the next year.
 Each forecast is then traded six ways (smoothing half-life 0 / 5 / 20 days x
@@ -107,14 +108,14 @@ class RFFRidge:
     """Random Fourier features + ridge: approximate Gaussian-kernel regression."""
     needs_day = False
 
-    def __init__(self, D=256, seed=0):
-        self.D, self.rng = D, np.random.default_rng(seed)
+    def __init__(self, D=256, seed=0, scale=1.0):
+        self.D, self.rng, self.scale = D, np.random.default_rng(seed), scale
 
     def fit(self, X, y, day=None):
         from sklearn.linear_model import Ridge
 
         p = X.shape[1]
-        self.W = self.rng.standard_normal((p, self.D)) / np.sqrt(p)
+        self.W = self.rng.standard_normal((p, self.D)) / (np.sqrt(p) * self.scale)
         self.b = self.rng.uniform(0, 2 * np.pi, self.D)
         self.r = Ridge(alpha=10.0).fit(self._phi(X), y)
         return self
@@ -126,10 +127,64 @@ class RFFRidge:
         return self.r.predict(self._phi(X))
 
 
+class DecayRidge:
+    """Ridge with recent days weighted more (half-life one year): adapts to change."""
+    needs_day = True
+
+    def fit(self, X, y, day):
+        from sklearn.linear_model import Ridge
+
+        w = 0.5 ** ((day.max() - day) / 252)
+        self.r = Ridge(alpha=100.0).fit(X, y, sample_weight=w)
+        return self
+
+    def predict(self, X):
+        return self.r.predict(X)
+
+
+class StackAvg:
+    """Average of three different learners' standardized forecasts."""
+    needs_day = False
+
+    def fit(self, X, y, day=None):
+        from sklearn.ensemble import HistGradientBoostingRegressor
+        from sklearn.linear_model import Ridge
+        from sklearn.neural_network import MLPRegressor
+
+        self.ms = [Ridge(alpha=100.0).fit(X, y),
+                   HistGradientBoostingRegressor(max_leaf_nodes=8, max_iter=200, learning_rate=0.05,
+                                                 min_samples_leaf=500, max_bins=64, random_state=0).fit(X, y),
+                   MLPRegressor(hidden_layer_sizes=(16,), alpha=1e-3, max_iter=30, early_stopping=True,
+                                random_state=0).fit(X, y)]
+        self.sd = [np.std(m.predict(X[:20000])) + 1e-12 for m in self.ms]
+        return self
+
+    def predict(self, X):
+        return sum(m.predict(X) / s for m, s in zip(self.ms, self.sd)) / len(self.ms)
+
+
+class PLS:
+    needs_day = False
+
+    def __init__(self, k):
+        self.k = k
+
+    def fit(self, X, y, day=None):
+        from sklearn.cross_decomposition import PLSRegression
+
+        self.m = PLSRegression(n_components=self.k, scale=False).fit(X, y)
+        return self
+
+    def predict(self, X):
+        return self.m.predict(X).ravel()
+
+
 def families() -> dict:
-    """name -> (group, factory, target, row cap)."""
-    from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor
-    from sklearn.linear_model import ElasticNet, HuberRegressor, Lasso, LogisticRegression, Ridge
+    """name -> (group, factory, target, row cap[, options]). Options: train_years
+    (window override), regime (add signal x HMM-stress interactions)."""
+    from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor, RandomForestRegressor
+    from sklearn.linear_model import BayesianRidge, ElasticNet, HuberRegressor, Lasso, LogisticRegression, Ridge
+    from sklearn.svm import LinearSVR
     from sklearn.neural_network import MLPRegressor
 
     hgb = lambda leaves, it, lr: (lambda: HistGradientBoostingRegressor(  # noqa: E731
@@ -161,6 +216,28 @@ def families() -> dict:
         "mlp_64": ("nn", mlp((64,)), "rank", 300_000),
         "mlp_64_32": ("nn", mlp((64, 32)), "rank", 300_000),
         "kernel_rff": ("nn", lambda: RFFRidge(256), "rank", 300_000),
+        # second wave
+        "random_forest": ("extra", lambda: RandomForestRegressor(n_estimators=60, max_depth=8, min_samples_leaf=500,
+                                                                 max_features=0.33, max_samples=0.5, n_jobs=-1,
+                                                                 random_state=0), "rank", 200_000),
+        "gbm_l1": ("extra", lambda: HistGradientBoostingRegressor(loss="absolute_error", max_leaf_nodes=8, max_iter=200,
+                                                                  learning_rate=0.05, min_samples_leaf=500, max_bins=64,
+                                                                  random_state=0), "rank", 300_000),
+        "gbm_early_stop": ("extra", lambda: HistGradientBoostingRegressor(max_leaf_nodes=31, max_iter=600,
+                                                                          learning_rate=0.05, min_samples_leaf=500,
+                                                                          max_bins=64, early_stopping=True,
+                                                                          validation_fraction=0.2, n_iter_no_change=20,
+                                                                          random_state=0), "rank", 300_000),
+        "pls_3": ("extra", lambda: PLS(3), "rank", None),
+        "pls_8": ("extra", lambda: PLS(8), "rank", None),
+        "bayesian_ridge": ("extra", lambda: BayesianRidge(), "rank", None),
+        "linear_svr": ("extra", lambda: LinearSVR(C=1e-3, epsilon=0.0, max_iter=5000, dual="auto"), "rank", 300_000),
+        "rff_narrow": ("extra", lambda: RFFRidge(256, scale=0.5), "rank", 300_000),
+        "rff_wide": ("extra", lambda: RFFRidge(256, scale=2.0), "rank", 300_000),
+        "ridge_decay": ("extra", DecayRidge, "rank", None),
+        "ridge_expanding": ("extra", lambda: Ridge(alpha=100.0), "rank", None, {"train_years": 99}),
+        "regime_ridge": ("extra", lambda: Ridge(alpha=100.0), "rank", None, {"regime": True}),
+        "stack_avg": ("extra", StackAvg, "rank", 300_000),
     }
 
 
@@ -186,6 +263,19 @@ PROS_CONS = {
     "mlp_64": ("More capacity", "More noise and overfitting risk"),
     "mlp_64_32": ("Deepest network", "Least stable; needs more data than a few years give"),
     "kernel_rff": ("Nonlinear at linear cost", "Bandwidth chosen by rule of thumb, not tuned"),
+    "random_forest": ("Bagging: low variance, hard to overfit", "Coarse step functions; slow"),
+    "gbm_l1": ("Boosting that ignores outsized moves", "Loses information in large moves"),
+    "gbm_early_stop": ("Picks its own complexity on held-out data", "Random validation split leaks across days"),
+    "pls_3": ("Components chosen for predictive power, not variance", "Few components may miss edges"),
+    "pls_8": ("More detail than PLS-3", "Closer to plain regression; more noise"),
+    "bayesian_ridge": ("Learns its own penalty from the data", "Assumes Gaussian noise; linear"),
+    "linear_svr": ("Margin-based loss: robust", "Sensitive to its C setting; linear"),
+    "rff_narrow": ("Captures sharp nonlinear effects", "Overfits noise easily"),
+    "rff_wide": ("Smooth nonlinearity, close to linear", "Little gain over ridge"),
+    "ridge_decay": ("Adapts as signals strengthen or fade", "Noisier: effectively less data"),
+    "ridge_expanding": ("Uses all history: most stable weights", "Slow to adapt to decaying signals"),
+    "regime_ridge": ("Different weights in calm vs stressed markets", "Doubles parameters; HMM noise feeds in"),
+    "stack_avg": ("Diversifies across model types", "Three times the cost; inherits each model's flaws"),
 }
 
 
@@ -255,6 +345,13 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
     core = [n for n in sigs if n in fam]
     sets = signal_sets(core, fam, afam)
     fams = {k: v for k, v in families().items() if v[0] == group}
+    p_stress = None
+    if any(len(v) > 4 and v[4].get("regime") for v in fams.values()):
+        from ..models.regime import walk_forward_regimes
+
+        probs, fits = walk_forward_regimes(ctx.market_state, 3, 252, 756, 3, 200, 0, temper=0.5, align=True)
+        hi = int(np.argmax([np.trace(c) for c in fits[-1][1].covars_]))
+        p_stress = probs.iloc[:, hi].reindex(dates).fillna(1 / 3).to_numpy(dtype=np.float32)
     step = max(5, horizon)
     rows, samples = [], {}
     rng = np.random.default_rng(0)
@@ -273,14 +370,18 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
 
     for sname, names in sets.items():
         X = np.stack([sigs[n].to_numpy(dtype=np.float32) for n in names], axis=-1)
-        for fname, (_, make, target, cap) in fams.items():
+        for fname, spec in fams.items():
+            _, make, target, cap = spec[:4]
+            opts = spec[4] if len(spec) > 4 else {}
+            Xf = np.concatenate([X, X * p_stress[:, None, None]], axis=-1) if opts.get("regime") else X
+            nf = Xf.shape[-1]
             P = np.full(X.shape[:2], np.nan, dtype=np.float32)
             for yr in [y for y in yrs if y >= start_year]:
                 first_day = int(np.argmax(years == yr))
-                lo = int(np.argmax(years >= yr - TRAIN_YEARS))
+                lo = int(np.argmax(years >= yr - opts.get("train_years", TRAIN_YEARS)))
                 tr_days = np.arange(lo, first_day - horizon - 2, step)
                 te_days = np.flatnonzero(years == yr)
-                Xt = X[tr_days].reshape(-1, len(names))
+                Xt = Xf[tr_days].reshape(-1, nf)
                 yt = {"rank": y_rank, "raw": y_raw, "sign": y_sign}[target][tr_days].ravel()
                 dt = np.repeat(tr_days, X.shape[1])
                 ok = np.flatnonzero(np.isfinite(Xt).all(axis=1) & np.isfinite(yt))
@@ -292,7 +393,7 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
                     warnings.simplefilter("ignore")
                     m = make()
                     m = m.fit(Xt[ok], yt[ok], dt[ok]) if getattr(m, "needs_day", False) else m.fit(Xt[ok], yt[ok])
-                Xe = X[te_days].reshape(-1, len(names))
+                Xe = Xf[te_days].reshape(-1, nf)
                 oke = np.isfinite(Xe).all(axis=1)
                 p = np.full(len(Xe), np.nan)
                 if oke.any():
@@ -343,10 +444,12 @@ def _expected_max_sharpe(sharpes: np.ndarray) -> float:
 
 def aggregate(in_dir: Path, out: Path, extra_dir: Path | None = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
-    parts = [pd.read_csv(p) for p in sorted(in_dir.rglob("zoo_*_h*.csv"))]
+    parts = [pd.read_csv(p) for p in sorted(in_dir.rglob("zoo_*_h*.csv"), key=lambda p: p.stat().st_mtime)]
     if not parts:
         raise SystemExit(f"no zoo results under {in_dir}")
     allr = pd.concat(parts, ignore_index=True)
+    allr = allr.drop_duplicates([c for c in ("kind", "name", "set", "horizon", "halflife", "universe")
+                                 if c in allr.columns], keep="last")
     sig = allr[allr["kind"] == "signal"].drop_duplicates(["name", "horizon"])
     mod = allr[allr["kind"] == "model"].copy()
     mod["strategy"] = (mod["name"] + " | " + mod["set"] + " | h" + mod["horizon"].astype(str) + " | hl"
@@ -487,7 +590,7 @@ def main(argv=None):
 
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn"])
+    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra"])
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--out", default="reports/zoo")
     ap.add_argument("--aggregate", help="directory with group results to merge")

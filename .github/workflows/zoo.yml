@@ -1,8 +1,13 @@
 name: model-zoo
 
 # Hundreds of forecasting models on real data (qtrade/research/zoo.py), run as
-# 12 parallel jobs (4 model groups x 3 horizons) and merged into a report and
+# parallel jobs (model group x horizon) and merged into a report and
 # best_correlations.csv under research/zoo/ on the "results" branch.
+#
+# A commit message can pick the jobs and add an earlier run's results:
+#   [zoo: extra@1,5,21,63; simple,linear,tree,nn@63]   which jobs to run
+#   [zoo-prev: 123456789]                               merge that run's results too
+# Results from every merge are kept (research/zoo/parts), so later runs add to them.
 
 on:
   push:
@@ -11,6 +16,7 @@ on:
 
 permissions:
   contents: write
+  actions: read     # download an earlier run's results
 
 concurrency:
   group: zoo-${{ github.sha }}
@@ -24,7 +30,29 @@ jobs:
   prep:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    outputs:
+      jobs: ${{ steps.plan.outputs.jobs }}
+      prev: ${{ steps.plan.outputs.prev }}
     steps:
+      - name: Plan the jobs
+        id: plan
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, re
+          msg = os.environ.get("MSG", "")
+          m = re.search(r"\[zoo:\s*([^\]]+)\]", msg)
+          spec = m.group(1) if m else "simple,linear,tree,nn,extra@1,5,21,63"
+          jobs = []
+          for part in spec.split(";"):
+              groups, hs = part.strip().split("@")
+              jobs += [{"group": g.strip(), "horizon": int(h)} for g in groups.split(",") for h in hs.split(",")]
+          prev = re.search(r"\[zoo-prev:\s*(\d+)\]", msg)
+          print("jobs=" + json.dumps(jobs))
+          print("prev=" + (prev.group(1) if prev else ""))
+          PY
+          cat "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -58,8 +86,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [simple, linear, tree, nn]
-        horizon: [1, 5, 21]
+        include: ${{ fromJSON(needs.prep.outputs.jobs) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -81,7 +108,7 @@ jobs:
           path: zoo_part
 
   aggregate:
-    needs: models
+    needs: [prep, models]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -92,12 +119,28 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      - name: Results kept from earlier merges
+        run: |
+          mkdir -p zoo_parts/0_kept
+          git fetch -q --depth 1 origin results || true
+          for f in $(git ls-tree --name-only origin/results research/zoo/parts/ 2>/dev/null); do
+            git show "origin/results:$f" > "zoo_parts/0_kept/$(basename "$f")"
+          done
+      - uses: actions/download-artifact@v4
+        if: needs.prep.outputs.prev != ''
+        with:
+          pattern: zoo-*-h*
+          path: zoo_parts/1_prev
+          run-id: ${{ needs.prep.outputs.prev }}
+          github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
-          pattern: zoo-*
-          path: zoo_parts
+          pattern: zoo-*-h*
+          path: zoo_parts/2_this
       - name: Merge
         run: |
+          # later downloads win when the same model appears twice
+          find zoo_parts/2_this -type f -exec touch {} +
           mkdir -p extra
           git fetch -q --depth 1 origin results && git show origin/results:research/latest/combos.csv > extra/combos.csv 2>/dev/null || rm -f extra/combos.csv
           python -m qtrade.research.zoo --aggregate zoo_parts --extra extra --out reports/zoo
@@ -112,6 +155,10 @@ jobs:
             git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
             if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
             rm -rf research/zoo && mkdir -p research && cp -r "$GITHUB_WORKSPACE/reports/zoo" research/zoo
+            mkdir -p research/zoo/parts
+            for d in 0_kept 1_prev 2_this; do                       # in this order, so newer results win
+              [ -d "$GITHUB_WORKSPACE/zoo_parts/$d" ] && find "$GITHUB_WORKSPACE/zoo_parts/$d" -name 'zoo_*_h*.csv' -exec cp {} research/zoo/parts/ \;
+            done
             git add -A && git commit -q -m "Model zoo (run ${{ github.run_id }})"
             if git push -q origin results; then echo published; break; fi
             sleep $((attempt * 15))

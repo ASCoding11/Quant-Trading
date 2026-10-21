@@ -1,0 +1,506 @@
+"""A model zoo: hundreds of forecasting models on the same data, judged out of sample.
+
+Every combination of
+
+  model family  (21: simple weightings, linear GLMs, trees, neural nets, kernels)
+  signal set    (4: reversal only, all price signals, + fundamentals, + news)
+  horizon       (3: 1, 5, 21 days)
+
+is refit once a year on the previous five years and forecasts the next year.
+Each forecast is then traded six ways (smoothing half-life 0 / 5 / 20 days x
+all stocks / the 300 most liquid) with measured trading costs. Everything is
+reported for 2006-2014 and 2015-2026 separately.
+
+The work is split into groups of families so GitHub can run them in parallel
+(``python -m qtrade.research.zoo --group tree --horizon 5``); ``aggregate``
+merges the pieces, ranks on the first period only, and checks what survived.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from ..utils import LOG, cs_rank_gauss, setup_logging
+
+SPLIT = "2015-01-01"
+TRAIN_YEARS = 5
+HALFLIVES = (0, 5, 20)
+SURVIVORSHIP_PRONE = {"size_proxy", "amihud", "cs_spread", "turnover_trend", "low_vol", "idio_vol", "bab",
+                      "max_effect"}
+
+
+# -----------------------------------------------------------------------------
+# simple models (fit on rows with a day index, so per-day ICs can be computed)
+# -----------------------------------------------------------------------------
+def _daily_ic(X: np.ndarray, y: np.ndarray, day: np.ndarray) -> np.ndarray:
+    order = np.argsort(day, kind="stable")
+    d, Xs, ys = day[order], X[order], y[order]
+    starts = np.r_[0, np.flatnonzero(np.diff(d)) + 1]
+    cnt = np.diff(np.r_[starts, len(d)])
+    return np.add.reduceat(Xs * ys[:, None], starts, axis=0) / cnt[:, None]
+
+
+class _Weights:
+    needs_day = True
+
+    def predict(self, X):
+        return X @ self.w
+
+
+class SignIC(_Weights):
+    """+1/-1 on every signal whose training IC has |t| > 2, 0 otherwise."""
+
+    def fit(self, X, y, day):
+        ic = _daily_ic(X, y, day)
+        t = ic.mean(0) / (ic.std(0) + 1e-12) * np.sqrt(len(ic))
+        self.w = np.sign(ic.mean(0)) * (np.abs(t) > 2)
+        return self
+
+
+class TstatIC(_Weights):
+    """Weights = information ratio, shrunk to 0 when the t-stat is small (Grinold)."""
+
+    def fit(self, X, y, day):
+        ic = _daily_ic(X, y, day)
+        ir = ic.mean(0) / (ic.std(0) + 1e-12)
+        t = ir * np.sqrt(len(ic))
+        self.w = ir * np.clip(1 - 4 / np.maximum(t ** 2, 1e-9), 0, 1)
+        return self
+
+
+class BestSingle(_Weights):
+    """Only the signal with the highest |t| in the training window."""
+
+    def fit(self, X, y, day):
+        ic = _daily_ic(X, y, day)
+        t = ic.mean(0) / (ic.std(0) + 1e-12)
+        self.w = np.zeros(X.shape[1])
+        j = int(np.argmax(np.abs(t)))
+        self.w[j] = np.sign(t[j])
+        return self
+
+
+class PCARidge:
+    needs_day = False
+
+    def __init__(self, k):
+        self.k = k
+
+    def fit(self, X, y, day=None):
+        from sklearn.decomposition import PCA
+        from sklearn.linear_model import Ridge
+
+        self.p = PCA(n_components=min(self.k, X.shape[1])).fit(X)
+        self.r = Ridge(alpha=10.0).fit(self.p.transform(X), y)
+        return self
+
+    def predict(self, X):
+        return self.r.predict(self.p.transform(X))
+
+
+class RFFRidge:
+    """Random Fourier features + ridge: approximate Gaussian-kernel regression."""
+    needs_day = False
+
+    def __init__(self, D=256, seed=0):
+        self.D, self.rng = D, np.random.default_rng(seed)
+
+    def fit(self, X, y, day=None):
+        from sklearn.linear_model import Ridge
+
+        p = X.shape[1]
+        self.W = self.rng.standard_normal((p, self.D)) / np.sqrt(p)
+        self.b = self.rng.uniform(0, 2 * np.pi, self.D)
+        self.r = Ridge(alpha=10.0).fit(self._phi(X), y)
+        return self
+
+    def _phi(self, X):
+        return np.hstack([np.sqrt(2 / self.D) * np.cos(X @ self.W + self.b), X])
+
+    def predict(self, X):
+        return self.r.predict(self._phi(X))
+
+
+def families() -> dict:
+    """name -> (group, factory, target, row cap)."""
+    from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor
+    from sklearn.linear_model import ElasticNet, HuberRegressor, Lasso, LogisticRegression, Ridge
+    from sklearn.neural_network import MLPRegressor
+
+    hgb = lambda leaves, it, lr: (lambda: HistGradientBoostingRegressor(  # noqa: E731
+        max_leaf_nodes=leaves, max_iter=it, learning_rate=lr, min_samples_leaf=500, l2_regularization=1.0,
+        max_bins=64, early_stopping=False, random_state=0))
+    mlp = lambda h: (lambda: MLPRegressor(hidden_layer_sizes=h, alpha=1e-3, learning_rate_init=1e-3,  # noqa: E731
+                                          max_iter=30, early_stopping=True, random_state=0))
+    return {
+        "sign_ic": ("simple", SignIC, "rank", None),
+        "tstat_ic": ("simple", TstatIC, "rank", None),
+        "best_single": ("simple", BestSingle, "rank", None),
+        "pca5_ridge": ("simple", lambda: PCARidge(5), "rank", None),
+        "pca15_ridge": ("simple", lambda: PCARidge(15), "rank", None),
+        "ridge_1": ("linear", lambda: Ridge(alpha=1.0), "rank", None),
+        "ridge_100": ("linear", lambda: Ridge(alpha=100.0), "rank", None),
+        "ridge_1e4": ("linear", lambda: Ridge(alpha=1e4), "rank", None),
+        "ridge_1e6": ("linear", lambda: Ridge(alpha=1e6), "rank", None),
+        "elastic_net": ("linear", lambda: ElasticNet(alpha=2e-3, l1_ratio=0.5, max_iter=2000), "rank", 300_000),
+        "lasso": ("linear", lambda: Lasso(alpha=1e-3, max_iter=2000), "rank", 300_000),
+        "logistic_weak": ("linear", lambda: LogisticRegression(C=0.01, max_iter=500), "sign", None),
+        "logistic": ("linear", lambda: LogisticRegression(C=1.0, max_iter=500), "sign", None),
+        "huber": ("linear", lambda: HuberRegressor(epsilon=1.35, alpha=1e-3, max_iter=200), "raw", 150_000),
+        "gbm_shallow": ("tree", hgb(8, 200, 0.05), "rank", 300_000),
+        "gbm_deep": ("tree", hgb(31, 300, 0.05), "rank", 300_000),
+        "extra_trees": ("tree", lambda: ExtraTreesRegressor(n_estimators=60, max_depth=8, min_samples_leaf=500,
+                                                            max_features=0.5, n_jobs=-1, random_state=0),
+                        "rank", 150_000),
+        "mlp_16": ("nn", mlp((16,)), "rank", 300_000),
+        "mlp_64": ("nn", mlp((64,)), "rank", 300_000),
+        "mlp_64_32": ("nn", mlp((64, 32)), "rank", 300_000),
+        "kernel_rff": ("nn", lambda: RFFRidge(256), "rank", 300_000),
+    }
+
+
+PROS_CONS = {
+    "sign_ic": ("Nothing to overfit; transparent", "Ignores how strong each signal is and their overlap"),
+    "tstat_ic": ("Weights by proven reliability; robust (Grinold)", "Ignores correlation between signals: double-counts"),
+    "best_single": ("Simplest possible; easy to monitor", "No diversification; chases last period's winner"),
+    "pca5_ridge": ("Strips redundancy between signals", "First components follow variance, not predictive power"),
+    "pca15_ridge": ("Keeps more detail than PCA-5", "Same issue; more components = more noise"),
+    "ridge_1": ("Handles correlated signals jointly", "Nearly unpenalised: noisy weights"),
+    "ridge_100": ("Balanced shrinkage", "Linear only"),
+    "ridge_1e4": ("Heavy shrinkage, stable weights", "Can shrink away real edges"),
+    "ridge_1e6": ("Close to an equal-weighted blend", "Barely learns anything"),
+    "elastic_net": ("Drops useless signals", "Unstable choice among correlated signals"),
+    "lasso": ("Sparse, interpretable", "Arbitrary pick between near-duplicates"),
+    "logistic_weak": ("Only direction matters: robust to outliers", "Throws away magnitude"),
+    "logistic": ("Direction model, less shrinkage", "Same; more overfitting"),
+    "huber": ("Downweights extreme returns", "Slow; similar to ridge in practice"),
+    "gbm_shallow": ("Finds interactions (e.g. reversal x low volume); robust", "Slower; harder to explain"),
+    "gbm_deep": ("Captures complex interactions", "Overfits easily; slow"),
+    "extra_trees": ("Averages many random trees: low variance", "Coarse; slow on big data"),
+    "mlp_16": ("Smooth nonlinearity", "Random initialisation adds noise between refits"),
+    "mlp_64": ("More capacity", "More noise and overfitting risk"),
+    "mlp_64_32": ("Deepest network", "Least stable; needs more data than a few years give"),
+    "kernel_rff": ("Nonlinear at linear cost", "Bandwidth chosen by rule of thumb, not tuned"),
+}
+
+
+def signal_sets(core: list[str], families_of: dict, alt: dict) -> dict[str, list[str]]:
+    rev = [n for n in core if families_of.get(n) == "mean_reversion"] + [n for n in ("peer_gap",) if n in core]
+    fund = [k for k, v in alt.items() if v == "fundamental"]
+    news = [k for k, v in alt.items() if v == "news"]
+    sets = {"reversal": rev, "price": core}
+    if fund:
+        sets["price+fund"] = core + fund
+    if news:
+        sets["all"] = core + fund + news
+    return sets
+
+
+# -----------------------------------------------------------------------------
+# running one group
+# -----------------------------------------------------------------------------
+def _load(cfg):
+    from ..cli import _market
+    from ..features.context import FeatureContext
+    from ..signals import REGISTRY, compute_signals, normalize_signal
+    from .alt_signals import load_alt
+
+    md = _market(cfg)
+    ctx = FeatureContext(md, cfg)
+    sigs = compute_signals(ctx)
+    fam = {n: REGISTRY[n].family for n in sigs}
+    raw, afam = load_alt(md, ctx, cfg.data.cache_dir)
+    for k, v in raw.items():
+        sigs[k] = normalize_signal(v, ctx.tradable)
+    return md, ctx, sigs, fam, afam
+
+
+def _daily_corr(z, y):
+    from .combos import _daily_corr as dc
+
+    return dc(z, y)
+
+
+def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False) -> pd.DataFrame:
+    from .edge import Bench
+
+    if synthetic:
+        from ..data import make_market
+        from ..features.context import FeatureContext
+        from ..signals import REGISTRY, compute_signals
+
+        md, _ = make_market(n_stocks=100, n_days=5800, seed=1, start="2003-01-02")
+        cfg.universe.min_dollar_volume = 0
+        ctx = FeatureContext(md, cfg)
+        sigs = compute_signals(ctx)
+        fam, afam = {n: REGISTRY[n].family for n in sigs}, {}
+    else:
+        md, ctx, sigs, fam, afam = _load(cfg)
+    dates = md.dates
+    o = md.open
+    tr = ctx.tradable
+    fwd = (o.shift(-(1 + horizon)) / o.shift(-1) - 1).where(tr).clip(-0.5, 0.5)
+    y_rank = cs_rank_gauss(fwd).to_numpy()
+    y_raw = fwd.sub(fwd.mean(axis=1), axis=0).to_numpy()
+    y_sign = np.where(np.isfinite(y_rank), (y_rank > 0).astype(float), np.nan)
+    y5 = cs_rank_gauss((o.shift(-6) / o.shift(-1) - 1).where(tr)).to_numpy() if horizon != 5 else y_rank
+    first = np.asarray(dates < SPLIT)
+    years = np.asarray(dates.year)
+    bench = Bench(md, ctx)
+    core = [n for n in sigs if n in fam]
+    sets = signal_sets(core, fam, afam)
+    fams = {k: v for k, v in families().items() if v[0] == group}
+    step = max(5, horizon)
+    rows, samples = [], {}
+    rng = np.random.default_rng(0)
+    yrs = sorted(set(years))
+    start_year = yrs[0] + TRAIN_YEARS + 1
+
+    if group == "simple":                          # single signals at this horizon, for the correlations file
+        for n, z in sigs.items():
+            ic = _daily_corr(z.to_numpy(dtype=np.float32), y_rank)
+            a, b = ic[first & np.isfinite(ic)], ic[~first & np.isfinite(ic)]
+            rows.append({"kind": "signal", "name": n, "family": fam.get(n, afam.get(n, "")), "set": "",
+                         "horizon": horizon, "ic_1st": a.mean(), "ic_2nd": b.mean(),
+                         "t_1st": a.mean() / a.std() * np.sqrt(len(a) / horizon) if len(a) > 50 else np.nan,
+                         "t_2nd": b.mean() / b.std() * np.sqrt(len(b) / horizon) if len(b) > 50 else np.nan,
+                         "years_positive": float((pd.Series(ic).groupby(years).mean().dropna() > 0).mean())})
+
+    for sname, names in sets.items():
+        X = np.stack([sigs[n].to_numpy(dtype=np.float32) for n in names], axis=-1)
+        for fname, (_, make, target, cap) in fams.items():
+            P = np.full(X.shape[:2], np.nan, dtype=np.float32)
+            for yr in [y for y in yrs if y >= start_year]:
+                first_day = int(np.argmax(years == yr))
+                lo = int(np.argmax(years >= yr - TRAIN_YEARS))
+                tr_days = np.arange(lo, first_day - horizon - 2, step)
+                te_days = np.flatnonzero(years == yr)
+                Xt = X[tr_days].reshape(-1, len(names))
+                yt = {"rank": y_rank, "raw": y_raw, "sign": y_sign}[target][tr_days].ravel()
+                dt = np.repeat(tr_days, X.shape[1])
+                ok = np.flatnonzero(np.isfinite(Xt).all(axis=1) & np.isfinite(yt))
+                if len(ok) < 1000:
+                    continue
+                if cap and len(ok) > cap:
+                    ok = np.sort(rng.choice(ok, cap, replace=False))
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    m = make()
+                    m = m.fit(Xt[ok], yt[ok], dt[ok]) if getattr(m, "needs_day", False) else m.fit(Xt[ok], yt[ok])
+                Xe = X[te_days].reshape(-1, len(names))
+                oke = np.isfinite(Xe).all(axis=1)
+                p = np.full(len(Xe), np.nan)
+                if oke.any():
+                    p[oke] = m.predict_proba(Xe[oke])[:, 1] if target == "sign" else m.predict(Xe[oke])
+                P[te_days] = p.reshape(len(te_days), -1)
+            ic_h = _daily_corr(P, y_rank)
+            ic5 = _daily_corr(P, y5)
+            base = {"kind": "model", "name": fname, "family": group, "set": sname, "horizon": horizon}
+            stats = {}
+            for tag, ic in (("", ic_h), ("5d_", ic5)):
+                a, b = ic[first & np.isfinite(ic)], ic[~first & np.isfinite(ic)]
+                hh = horizon if tag == "" else 5
+                stats |= {f"{tag}ic_1st": a.mean() if len(a) else np.nan, f"{tag}ic_2nd": b.mean() if len(b) else np.nan,
+                          f"{tag}t_1st": a.mean() / a.std() * np.sqrt(len(a) / hh) if len(a) > 50 else np.nan,
+                          f"{tag}t_2nd": b.mean() / b.std() * np.sqrt(len(b) / hh) if len(b) > 50 else np.nan}
+            stats["years_positive"] = float((pd.Series(ic_h).groupby(years).mean().dropna() > 0).mean())
+            Pz = pd.DataFrame(P, index=dates, columns=md.tickers)
+            for hl in HALFLIVES:
+                for uni in ("all", "top300"):
+                    st = bench.score(Pz, hl, uni)
+                    rows.append(base | stats | {"halflife": hl, "universe": uni, **st})
+            samples[f"{fname}|{sname}|h{horizon}"] = P[::21].ravel()
+            LOG.info("zoo %s/%s h=%d: IC %.4f / %.4f", fname, sname, horizon, stats["ic_1st"], stats["ic_2nd"])
+    df = pd.DataFrame(rows)
+    out.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out / f"zoo_{group}_h{horizon}.csv", index=False)
+    pd.DataFrame(samples).to_parquet(out / f"zoo_preds_{group}_h{horizon}.parquet")
+    # the targets at the same sampled days, for ensembles in the aggregate step
+    pd.DataFrame({"y": y_rank[::21].ravel(), "day": np.repeat(np.arange(0, len(dates), 21), y_rank.shape[1]),
+                  "first": np.repeat(first[::21], y_rank.shape[1])}).to_parquet(out / f"zoo_target_h{horizon}.parquet")
+    return df
+
+
+# -----------------------------------------------------------------------------
+# aggregation
+# -----------------------------------------------------------------------------
+def _expected_max_sharpe(sharpes: np.ndarray) -> float:
+    """Expected best Sharpe among N strategies with no skill (Bailey & Lopez de Prado)."""
+    from scipy.stats import norm
+
+    s = sharpes[np.isfinite(sharpes)]
+    n = len(s)
+    if n < 2:
+        return np.nan
+    g = 0.5772156649
+    return float(np.std(s) * ((1 - g) * norm.ppf(1 - 1 / n) + g * norm.ppf(1 - 1 / (n * np.e))))
+
+
+def aggregate(in_dir: Path, out: Path, extra_dir: Path | None = None) -> dict:
+    out.mkdir(parents=True, exist_ok=True)
+    parts = [pd.read_csv(p) for p in sorted(in_dir.rglob("zoo_*_h*.csv"))]
+    if not parts:
+        raise SystemExit(f"no zoo results under {in_dir}")
+    allr = pd.concat(parts, ignore_index=True)
+    sig = allr[allr["kind"] == "signal"].drop_duplicates(["name", "horizon"])
+    mod = allr[allr["kind"] == "model"].copy()
+    mod["strategy"] = (mod["name"] + " | " + mod["set"] + " | h" + mod["horizon"].astype(str) + " | hl"
+                       + mod["halflife"].astype(str) + " | " + mod["universe"])
+    mod.to_csv(out / "zoo_all_strategies.csv", index=False)
+    n = len(mod)
+
+    # selection on the first period only
+    mod["rank_1st"] = mod["net_sharpe_1st"].rank(ascending=False)
+    rank_corr = mod[["net_sharpe_1st", "net_sharpe_2nd"]].corr(method="spearman").iloc[0, 1]
+    ic_corr = mod.drop_duplicates(["name", "set", "horizon"])[["ic_1st", "ic_2nd"]].corr(method="spearman").iloc[0, 1]
+    top = mod.sort_values("net_sharpe_1st", ascending=False)
+    sel = {}
+    for k in (1, 10, 50):
+        sel[k] = {"net_sharpe_1st": top.head(k)["net_sharpe_1st"].mean(),
+                  "net_sharpe_2nd": top.head(k)["net_sharpe_2nd"].mean()}
+    hurdle_1st = _expected_max_sharpe(mod["net_sharpe_1st"].to_numpy())
+
+    # robust: good in both periods (still reported with the multiple-testing hurdle)
+    robust = mod[(mod["net_sharpe_1st"] > 0) & (mod["net_sharpe_2nd"] > 0)].copy()
+    robust["min_sharpe"] = robust[["net_sharpe_1st", "net_sharpe_2nd"]].min(axis=1)
+    robust = robust.sort_values("min_sharpe", ascending=False)
+
+    by_family = mod.groupby("name").agg(
+        ic_1st=("ic_1st", "mean"), ic_2nd=("ic_2nd", "mean"), net_sharpe_2nd_best=("net_sharpe_2nd", "max"),
+        net_sharpe_2nd_median=("net_sharpe_2nd", "median"), breakeven_2nd_median=("breakeven_bp_2nd", "median"),
+        years_positive=("years_positive", "mean")).sort_values("ic_2nd", ascending=False)
+    by_family["pros"] = [PROS_CONS.get(k, ("", ""))[0] for k in by_family.index]
+    by_family["cons"] = [PROS_CONS.get(k, ("", ""))[1] for k in by_family.index]
+    by_set = mod.groupby("set")[["ic_1st", "ic_2nd", "net_sharpe_2nd"]].median()
+    by_h = mod.groupby("horizon")[["ic_1st", "ic_2nd", "net_sharpe_1st", "net_sharpe_2nd", "turnover_2nd"]].median()
+    by_trade = mod.groupby(["halflife", "universe"])[["net_sharpe_1st", "net_sharpe_2nd", "breakeven_bp_2nd"]].median()
+
+    # ensemble of the 10 best models chosen on the first period (IC on sampled days)
+    ens = _ensemble(in_dir, mod)
+
+    # the correlations file
+    rows = []
+    for _, r in sig.iterrows():
+        rows.append({"what": "signal", "name": r["name"], "family": r["family"], "horizon_days": r["horizon"],
+                     "ic_2006_14": r["ic_1st"], "ic_2015_26": r["ic_2nd"], "t_2006_14": r["t_1st"],
+                     "t_2015_26": r["t_2nd"], "years_positive": r["years_positive"]})
+    for _, r in mod.drop_duplicates(["name", "set", "horizon"]).iterrows():
+        rows.append({"what": "model", "name": f"{r['name']} on {r['set']}", "family": r["family"],
+                     "horizon_days": r["horizon"], "ic_2006_14": r["ic_1st"], "ic_2015_26": r["ic_2nd"],
+                     "t_2006_14": r["t_1st"], "t_2015_26": r["t_2nd"], "years_positive": r["years_positive"]})
+    if extra_dir is not None and (extra_dir / "combos.csv").exists():
+        cb = pd.read_csv(extra_dir / "combos.csv")
+        for _, r in cb.iterrows():
+            rows.append({"what": "pair", "name": f"{r['a']} {'+' if r['kind'] == 'sum' else 'x'} {r['b']}",
+                         "family": f"{r.get('family_a', '')}/{r.get('family_b', '')}", "horizon_days": 5,
+                         "ic_2006_14": r["ic5_1st"], "ic_2015_26": r["ic5_2nd"], "t_2006_14": r.get("t5_1st", np.nan),
+                         "t_2015_26": np.nan, "years_positive": r["years_positive"]})
+    cor = pd.DataFrame(rows)
+    same = np.sign(cor["ic_2006_14"]) == np.sign(cor["ic_2015_26"])
+    cor["same_sign_both_periods"] = same
+    cor["weaker_period_ic"] = np.where(same, np.minimum(cor["ic_2006_14"].abs(), cor["ic_2015_26"].abs()), 0.0)
+    cor["survivorship_prone"] = cor["name"].apply(lambda s: any(k in s for k in SURVIVORSHIP_PRONE))
+    cor = cor.sort_values("weaker_period_ic", ascending=False)
+    cor.to_csv(out / "best_correlations.csv", index=False)
+    strong = cor[cor["same_sign_both_periods"] & (cor["years_positive"] >= 0.7)]
+
+    pct = lambda x: f"{x:.2f}"  # noqa: E731
+    lines = [
+        "# Model zoo: what forecasts best, and does it last?", "",
+        f"{mod[['name', 'set', 'horizon']].drop_duplicates().shape[0]} fitted models, {n} traded strategies "
+        "(model x signal set x horizon x smoothing x universe), refit yearly on 5 years, costs from measured spreads. "
+        "Period 1 = 2006-2014, period 2 = 2015-2026.", "",
+        "## Does picking the best in period 1 work in period 2?", "",
+        f"* Rank correlation of net Sharpe between the periods: **{rank_corr:.2f}** (IC: {ic_corr:.2f}).",
+        f"* With {n} strategies tried, the best period-1 Sharpe expected from pure luck is up to "
+        f"**{hurdle_1st:.2f}** (deflated-Sharpe hurdle; an upper bound, since the strategies overlap heavily).",
+    ]
+    for k, v in sel.items():
+        lines.append(f"* Top {k} by period 1: Sharpe {v['net_sharpe_1st']:.2f} in period 1 -> "
+                     f"**{v['net_sharpe_2nd']:.2f}** in period 2.")
+    if ens:
+        lines.append(f"* Ensemble of the 10 best period-1 models (equal weight): IC {ens['ic_1st']:.4f} -> "
+                     f"**{ens['ic_2nd']:.4f}**; best single of them in period 2: {ens['best_member_2nd']:.4f}.")
+    lines += ["", "## Model families: results, pros and cons", "",
+              by_family.round(4).to_markdown(), "",
+              "## Signal sets", "", by_set.round(4).to_markdown(), "",
+              "## Forecast horizon", "", by_h.round(4).to_markdown(), "",
+              "## How to trade a forecast (median over models)", "", by_trade.round(3).to_markdown(), "",
+              "## Strategies positive in both periods (ranked by the weaker period)", "",
+              robust.head(25)[["strategy", "ic_1st", "ic_2nd", "net_sharpe_1st", "net_sharpe_2nd", "breakeven_bp_2nd",
+                               "turnover_2nd"]].round(3).to_markdown(index=False) if len(robust) else "(none)", "",
+              "## Strongest and most consistent correlations with future returns", "",
+              "Full list: `best_correlations.csv`. Ranked by the IC in the *weaker* of the two periods; only "
+              "entries with the same sign in both periods and a positive IC in at least 70% of years. "
+              "Survivorship-prone = small/illiquid tilts that a universe of today's survivors flatters.", "",
+              strong.head(40)[["what", "name", "horizon_days", "ic_2006_14", "ic_2015_26", "t_2006_14", "t_2015_26",
+                               "years_positive", "survivorship_prone"]].round(4).to_markdown(index=False), ""]
+    (out / "README.md").write_text("\n".join(lines) + "\n")
+    summary = {"strategies": n, "rank_corr_sharpe": float(rank_corr), "luck_hurdle_sharpe": hurdle_1st,
+               "top10_period2_sharpe": float(sel[10]["net_sharpe_2nd"]), "robust_count": int(len(robust))}
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
+    return summary
+
+
+def _ensemble(in_dir: Path, mod: pd.DataFrame) -> dict | None:
+    preds = {}
+    for p in sorted(in_dir.rglob("zoo_preds_*_h5.parquet")):
+        preds.update(pd.read_parquet(p).to_dict(orient="series"))
+    tfiles = sorted(in_dir.rglob("zoo_target_h5.parquet"))
+    if not preds or not tfiles:
+        return None
+    t = pd.read_parquet(tfiles[0])
+    m5 = mod[(mod["horizon"] == 5)].drop_duplicates(["name", "set"]).sort_values("ic_1st", ascending=False)
+    keys = [f"{r['name']}|{r['set']}|h5" for _, r in m5.head(10).iterrows() if f"{r['name']}|{r['set']}|h5" in preds]
+    if not keys:
+        return None
+    day = t["day"].to_numpy()
+
+    def ic(p, mask):
+        out = []
+        for d in np.unique(day[mask]):
+            sel = mask & (day == d)
+            a, b = p[sel], t["y"].to_numpy()[sel]
+            ok = np.isfinite(a) & np.isfinite(b)
+            if ok.sum() > 30:
+                out.append(np.corrcoef(a[ok], b[ok])[0, 1])
+        return float(np.mean(out)) if out else np.nan
+
+    Z = []
+    for k in keys:
+        p = preds[k].to_numpy()
+        z = pd.Series(p).groupby(day).transform(lambda s: (s - s.mean()) / (s.std() + 1e-12)).to_numpy()
+        Z.append(z)
+    ens = np.nanmean(np.stack(Z), axis=0)
+    first = t["first"].to_numpy().astype(bool)
+    return {"members": keys, "ic_1st": ic(ens, first), "ic_2nd": ic(ens, ~first),
+            "best_member_2nd": max(ic(z, ~first) for z in Z)}
+
+
+def main(argv=None):
+    from ..config import Config
+
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn"])
+    ap.add_argument("--horizon", type=int, default=5)
+    ap.add_argument("--out", default="reports/zoo")
+    ap.add_argument("--aggregate", help="directory with group results to merge")
+    ap.add_argument("--extra", help="directory with combos.csv for the correlations file")
+    ap.add_argument("--synthetic", action="store_true")
+    args = ap.parse_args(argv)
+    setup_logging()
+    if args.aggregate:
+        print(json.dumps(aggregate(Path(args.aggregate), Path(args.out),
+                                   Path(args.extra) if args.extra else None), indent=1))
+    else:
+        run_group(Config(), args.group, args.horizon, Path(args.out), args.synthetic)
+
+
+if __name__ == "__main__":
+    main()

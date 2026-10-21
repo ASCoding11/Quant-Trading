@@ -1,0 +1,122 @@
+name: model-zoo
+
+# Hundreds of forecasting models on real data (qtrade/research/zoo.py), run as
+# 12 parallel jobs (4 model groups x 3 horizons) and merged into a report and
+# best_correlations.csv under research/zoo/ on the "results" branch.
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: ["qtrade/research/zoo.py", ".github/workflows/zoo.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zoo-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  DATA_KEY: ${{ secrets.DATA_KEY }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore price cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: prices-1000-15-2000-01-01-zoo-${{ github.run_id }}
+          restore-keys: prices-1000-15-2000-01-01-
+      - name: Prices, universe, fundamentals and news
+        run: |
+          [ -f data/universe.csv ] || python -m qtrade universe
+          python -m qtrade download
+          source scripts/datastore.sh
+          fetch_dataset fundamentals fundamentals || echo "no fundamentals"
+          fetch_dataset news news || echo "no news"
+          du -sh data/*
+      - name: Save data for the model jobs
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: zoo-data-${{ github.run_id }}
+
+  models:
+    needs: prep
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [simple, linear, tree, nn]
+        horizon: [1, 5, 21]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: zoo-data-${{ github.run_id }}
+          fail-on-cache-miss: true
+      - name: Fit and score
+        run: python -m qtrade.research.zoo --group ${{ matrix.group }} --horizon ${{ matrix.horizon }} --out zoo_part
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zoo-${{ matrix.group }}-h${{ matrix.horizon }}
+          path: zoo_part
+
+  aggregate:
+    needs: models
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: zoo-*
+          path: zoo_parts
+      - name: Merge
+        run: |
+          mkdir -p extra
+          git fetch -q --depth 1 origin results && git show origin/results:research/latest/combos.csv > extra/combos.csv 2>/dev/null || rm -f extra/combos.csv
+          python -m qtrade.research.zoo --aggregate zoo_parts --extra extra --out reports/zoo
+          cat reports/zoo/README.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish to the results branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RES=$(mktemp -d)
+          for attempt in 1 2 3 4 5; do
+            rm -rf "$RES"; mkdir -p "$RES"; cd "$RES"; git init -q
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+            if git fetch -q --depth 1 origin results; then git checkout -q -B results FETCH_HEAD; else git checkout -q --orphan results; fi
+            rm -rf research/zoo && mkdir -p research && cp -r "$GITHUB_WORKSPACE/reports/zoo" research/zoo
+            git add -A && git commit -q -m "Model zoo (run ${{ github.run_id }})"
+            if git push -q origin results; then echo published; break; fi
+            sleep $((attempt * 15))
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zoo-report
+          path: reports/zoo

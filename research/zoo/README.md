@@ -1,117 +1,122 @@
 # Model zoo: what forecasts best, and does it last?
 
-568 fitted models, 3408 traded strategies (model x signal set x horizon x smoothing x universe), refit yearly on 5 years, costs from measured spreads. Period 1 = 2006-2014, period 2 = 2015-2026.
+648 fitted models, 3888 traded strategies (model x signal set x horizon x smoothing x universe), refit yearly on 5 years, costs from measured spreads. Period 1 = 2006-2014, period 2 = 2015-2026.
 
 ## Does picking the best in period 1 work in period 2?
 
-* Rank correlation of net Sharpe between the periods: **0.62** (IC: -0.12).
-* With 3408 strategies tried, the best period-1 Sharpe expected from pure luck is up to **2.15** (deflated-Sharpe hurdle; an upper bound, since the strategies overlap heavily).
+* Rank correlation of net Sharpe between the periods: **0.62** (IC: -0.13).
+* With 3888 strategies tried, the best period-1 Sharpe expected from pure luck is up to **2.21** (deflated-Sharpe hurdle; an upper bound, since the strategies overlap heavily).
 * Top 1 by period 1: Sharpe 0.42 in period 1 -> **0.11** in period 2.
 * Top 10 by period 1: Sharpe 0.35 in period 1 -> **0.14** in period 2.
 * Top 50 by period 1: Sharpe 0.24 in period 1 -> **0.04** in period 2.
 
 ## Model families: results, pros and cons
 
-| name             |   ic_1st |   ic_2nd |   net_sharpe_2nd_best |   net_sharpe_2nd_median |   breakeven_2nd_median |   years_positive | pros                                                    | cons                                                   |
-|:-----------------|---------:|---------:|----------------------:|------------------------:|-----------------------:|-----------------:|:--------------------------------------------------------|:-------------------------------------------------------|
-| regime_ridge     |  -0.0042 |   0.0143 |                0.4875 |                  0.0345 |                 5.9087 |           0.6607 | Different weights in calm vs stressed markets           | Doubles parameters; HMM noise feeds in                 |
-| gbm_engineered   |   0.0014 |   0.0135 |                0.3797 |                 -0.01   |                 4.5219 |           0.7381 |                                                         |                                                        |
-| lasso_then_gbm   |   0.0012 |   0.0128 |                0.3001 |                 -0.0286 |                 3.5965 |           0.7083 |                                                         |                                                        |
-| gbm_shallow      |   0.0024 |   0.0105 |                0.4596 |                 -0.1281 |                 2.9248 |           0.7173 | Finds interactions (e.g. reversal x low volume); robust | Slower; harder to explain                              |
-| stack_avg        |  -0.0016 |   0.0101 |                0.3107 |                 -0.1033 |                 2.5313 |           0.6696 | Diversifies across model types                          | Three times the cost; inherits each model's flaws      |
-| random_forest    |   0.0013 |   0.0099 |                0.3296 |                 -0.0692 |                 2.9689 |           0.744  | Bagging: low variance, hard to overfit                  | Coarse step functions; slow                            |
-| extra_trees      |   0.0019 |   0.0097 |                0.2823 |                 -0.0313 |                 3.7929 |           0.7173 | Averages many random trees: low variance                | Coarse; slow on big data                               |
-| gbm_deep         |   0.0039 |   0.0094 |                0.4632 |                 -0.1797 |                 3.0899 |           0.7113 | Captures complex interactions                           | Overfits easily; slow                                  |
-| tstat_ic         |   0.0071 |   0.0092 |                0.5828 |                 -0.1626 |                 2.4314 |           0.7496 | Weights by proven reliability; robust (Grinold)         | Ignores correlation between signals: double-counts     |
-| sign_ic          |   0.0072 |   0.0088 |                0.5222 |                 -0.1234 |                 3.149  |           0.7347 | Nothing to overfit; transparent                         | Ignores how strong each signal is and their overlap    |
-| gbm_early_stop   |   0.0033 |   0.0087 |                0.394  |                 -0.1553 |                 1.8014 |           0.7024 | Picks its own complexity on held-out data               | Random validation split leaks across days              |
-| ridge_engineered |  -0.005  |   0.0086 |                0.3442 |                 -0.0889 |                 2.4764 |           0.6726 |                                                         |                                                        |
-| gbm_l1           |   0.0018 |   0.0083 |                0.1537 |                 -0.1785 |                 1.6582 |           0.7113 | Boosting that ignores outsized moves                    | Loses information in large moves                       |
-| kernel_rff       |  -0.0005 |   0.008  |                0.3861 |                 -0.1344 |                 2.8671 |           0.6935 | Nonlinear at linear cost                                | Bandwidth chosen by rule of thumb, not tuned           |
-| lasso            |  -0.0053 |   0.0079 |                0.158  |                 -0.1194 |                 2.4133 |           0.6548 | Sparse, interpretable                                   | Arbitrary pick between near-duplicates                 |
-| elastic_net      |  -0.0054 |   0.0079 |                0.1583 |                 -0.1187 |                 2.4353 |           0.6548 | Drops useless signals                                   | Unstable choice among correlated signals               |
-| ridge_expanding  |   0.0018 |   0.0079 |                0.138  |                 -0.1872 |                 1.9877 |           0.6786 | Uses all history: most stable weights                   | Slow to adapt to decaying signals                      |
-| pca15_ridge      |  -0.0008 |   0.0077 |                0.2746 |                 -0.0723 |                 2.9592 |           0.6577 | Keeps more detail than PCA-5                            | Same issue; more components = more noise               |
-| mlp_64           |   0.0015 |   0.0076 |                0.4033 |                 -0.1878 |                 2.2831 |           0.6845 | More capacity                                           | More noise and overfitting risk                        |
-| logistic         |  -0.0036 |   0.0076 |                0.1041 |                 -0.1987 |                 1.6191 |           0.6458 | Direction model, less shrinkage                         | Same; more overfitting                                 |
-| pls_3            |  -0.0041 |   0.0075 |                0.1629 |                 -0.1755 |                 1.4084 |           0.6488 | Components chosen for predictive power, not variance    | Few components may miss edges                          |
-| ridge_100        |  -0.005  |   0.0075 |                0.2074 |                 -0.1264 |                 2.5478 |           0.6548 | Balanced shrinkage                                      | Linear only                                            |
-| logistic_weak    |  -0.0037 |   0.0074 |                0.0967 |                 -0.1911 |                 1.4169 |           0.6429 | Only direction matters: robust to outliers              | Throws away magnitude                                  |
-| ridge_1          |  -0.0052 |   0.0074 |                0.2109 |                 -0.1499 |                 2.517  |           0.6548 | Handles correlated signals jointly                      | Nearly unpenalised: noisy weights                      |
-| rff_wide         |  -0.0021 |   0.0072 |                0.322  |                 -0.1697 |                 2.3939 |           0.6756 | Smooth nonlinearity, close to linear                    | Little gain over ridge                                 |
-| bayesian_ridge   |  -0.0057 |   0.0071 |                0.1537 |                 -0.1294 |                 1.8192 |           0.6518 | Learns its own penalty from the data                    | Assumes Gaussian noise; linear                         |
-| best_single      |   0.0064 |   0.007  |                0.1984 |                 -0.2206 |                 2.4197 |           0.7143 | Simplest possible; easy to monitor                      | No diversification; chases last period's winner        |
-| rff_narrow       |  -0.0017 |   0.0069 |                0.2902 |                 -0.1777 |                 2.0578 |           0.6786 | Captures sharp nonlinear effects                        | Overfits noise easily                                  |
-| mlp_16           |  -0.0006 |   0.0068 |                0.4635 |                 -0.2089 |                 1.836  |           0.6637 | Smooth nonlinearity                                     | Random initialisation adds noise between refits        |
-| pls_8            |  -0.0055 |   0.0067 |                0.1106 |                 -0.1441 |                 1.5742 |           0.6548 | More detail than PLS-3                                  | Closer to plain regression; more noise                 |
-| ridge_1e4        |  -0.0044 |   0.0066 |                0.1449 |                 -0.1475 |                 1.3995 |           0.6488 | Heavy shrinkage, stable weights                         | Can shrink away real edges                             |
-| ridge_1e6        |  -0.0015 |   0.0063 |                0.2244 |                 -0.091  |                 2.8466 |           0.6786 | Close to an equal-weighted blend                        | Barely learns anything                                 |
-| linear_svr       |  -0.0045 |   0.0062 |                0.1591 |                 -0.2171 |                 1.1375 |           0.6488 | Margin-based loss: robust                               | Sensitive to its C setting; linear                     |
-| mlp_64_32        |   0.0005 |   0.0059 |                0.3404 |                 -0.3144 |                 1.3577 |           0.6696 | Deepest network                                         | Least stable; needs more data than a few years give    |
-| huber            |  -0.004  |   0.0058 |                0.1732 |                 -0.191  |                 1.4193 |           0.6429 | Downweights extreme returns                             | Slow; similar to ridge in practice                     |
-| ridge_decay      |  -0.0077 |   0.0054 |                0.1953 |                 -0.0916 |                 2.4602 |           0.6339 | Adapts as signals strengthen or fade                    | Noisier: effectively less data                         |
-| pca5_ridge       |  -0.0025 |   0.0045 |                0.2903 |                 -0.0507 |                 3.8394 |           0.6577 | Strips redundancy between signals                       | First components follow variance, not predictive power |
+| name                   |   ic_1st |   ic_2nd |   net_sharpe_2nd_best |   net_sharpe_2nd_median |   breakeven_2nd_median |   years_positive | pros                                                                  | cons                                                   |
+|:-----------------------|---------:|---------:|----------------------:|------------------------:|-----------------------:|-----------------:|:----------------------------------------------------------------------|:-------------------------------------------------------|
+| regime_ridge           |  -0.0042 |   0.0143 |                0.4875 |                  0.0345 |                 5.9087 |           0.6607 | Different weights in calm vs stressed markets                         | Doubles parameters; HMM noise feeds in                 |
+| gbm_engineered         |   0.0014 |   0.0135 |                0.3797 |                 -0.01   |                 4.5219 |           0.7381 |                                                                       |                                                        |
+| lasso_then_gbm         |   0.0012 |   0.0128 |                0.3001 |                 -0.0286 |                 3.5965 |           0.7083 |                                                                       |                                                        |
+| gbm_shallow            |   0.0024 |   0.0105 |                0.4596 |                 -0.1281 |                 2.9248 |           0.7173 | Finds interactions (e.g. reversal x low volume); robust               | Slower; harder to explain                              |
+| stack_avg              |  -0.0016 |   0.0101 |                0.3107 |                 -0.1033 |                 2.5313 |           0.6696 | Diversifies across model types                                        | Three times the cost; inherits each model's flaws      |
+| random_forest          |   0.0013 |   0.0099 |                0.3296 |                 -0.0692 |                 2.9689 |           0.744  | Bagging: low variance, hard to overfit                                | Coarse step functions; slow                            |
+| extra_trees            |   0.0019 |   0.0097 |                0.2823 |                 -0.0313 |                 3.7929 |           0.7173 | Averages many random trees: low variance                              | Coarse; slow on big data                               |
+| gbm_deep               |   0.0039 |   0.0094 |                0.4632 |                 -0.1797 |                 3.0899 |           0.7113 | Captures complex interactions                                         | Overfits easily; slow                                  |
+| tstat_ic               |   0.0071 |   0.0092 |                0.5828 |                 -0.1626 |                 2.4314 |           0.7496 | Weights by proven reliability; robust (Grinold)                       | Ignores correlation between signals: double-counts     |
+| sign_ic                |   0.0072 |   0.0088 |                0.5222 |                 -0.1234 |                 3.149  |           0.7347 | Nothing to overfit; transparent                                       | Ignores how strong each signal is and their overlap    |
+| gbm_early_stop         |   0.0033 |   0.0087 |                0.394  |                 -0.1553 |                 1.8014 |           0.7024 | Picks its own complexity on held-out data                             | Random validation split leaks across days              |
+| ridge_engineered       |  -0.005  |   0.0086 |                0.3442 |                 -0.0889 |                 2.4764 |           0.6726 |                                                                       |                                                        |
+| gbm_l1                 |   0.0018 |   0.0083 |                0.1537 |                 -0.1785 |                 1.6582 |           0.7113 | Boosting that ignores outsized moves                                  | Loses information in large moves                       |
+| kernel_rff             |  -0.0005 |   0.008  |                0.3861 |                 -0.1344 |                 2.8671 |           0.6935 | Nonlinear at linear cost                                              | Bandwidth chosen by rule of thumb, not tuned           |
+| lasso                  |  -0.0053 |   0.0079 |                0.158  |                 -0.1194 |                 2.4133 |           0.6548 | Sparse, interpretable                                                 | Arbitrary pick between near-duplicates                 |
+| elastic_net            |  -0.0054 |   0.0079 |                0.1583 |                 -0.1187 |                 2.4353 |           0.6548 | Drops useless signals                                                 | Unstable choice among correlated signals               |
+| ridge_expanding        |   0.0018 |   0.0079 |                0.138  |                 -0.1872 |                 1.9877 |           0.6786 | Uses all history: most stable weights                                 | Slow to adapt to decaying signals                      |
+| pca15_ridge            |  -0.0008 |   0.0077 |                0.2746 |                 -0.0723 |                 2.9592 |           0.6577 | Keeps more detail than PCA-5                                          | Same issue; more components = more noise               |
+| mlp_64                 |   0.0015 |   0.0076 |                0.4033 |                 -0.1878 |                 2.2831 |           0.6845 | More capacity                                                         | More noise and overfitting risk                        |
+| logistic               |  -0.0036 |   0.0076 |                0.1041 |                 -0.1987 |                 1.6191 |           0.6458 | Direction model, less shrinkage                                       | Same; more overfitting                                 |
+| pls_3                  |  -0.0041 |   0.0075 |                0.1629 |                 -0.1755 |                 1.4084 |           0.6488 | Components chosen for predictive power, not variance                  | Few components may miss edges                          |
+| ridge_100              |  -0.005  |   0.0075 |                0.2074 |                 -0.1264 |                 2.5478 |           0.6548 | Balanced shrinkage                                                    | Linear only                                            |
+| logistic_decile_target |  -0.0061 |   0.0074 |                0.2089 |                 -0.1248 |                 2.5263 |           0.5833 | Only learns what separates the extremes (top vs bottom 10%)           | Ignores the middle 80% of stocks                       |
+| logistic_weak          |  -0.0037 |   0.0074 |                0.0967 |                 -0.1911 |                 1.4169 |           0.6429 | Only direction matters: robust to outliers                            | Throws away magnitude                                  |
+| ridge_1                |  -0.0052 |   0.0074 |                0.2109 |                 -0.1499 |                 2.517  |           0.6548 | Handles correlated signals jointly                                    | Nearly unpenalised: noisy weights                      |
+| rff_wide               |  -0.0021 |   0.0072 |                0.322  |                 -0.1697 |                 2.3939 |           0.6756 | Smooth nonlinearity, close to linear                                  | Little gain over ridge                                 |
+| bayesian_ridge         |  -0.0057 |   0.0071 |                0.1537 |                 -0.1294 |                 1.8192 |           0.6518 | Learns its own penalty from the data                                  | Assumes Gaussian noise; linear                         |
+| best_single            |   0.0064 |   0.007  |                0.1984 |                 -0.2206 |                 2.4197 |           0.7143 | Simplest possible; easy to monitor                                    | No diversification; chases last period's winner        |
+| rff_narrow             |  -0.0017 |   0.0069 |                0.2902 |                 -0.1777 |                 2.0578 |           0.6786 | Captures sharp nonlinear effects                                      | Overfits noise easily                                  |
+| mlp_16                 |  -0.0006 |   0.0068 |                0.4635 |                 -0.2089 |                 1.836  |           0.6637 | Smooth nonlinearity                                                   | Random initialisation adds noise between refits        |
+| pls_8                  |  -0.0055 |   0.0067 |                0.1106 |                 -0.1441 |                 1.5742 |           0.6548 | More detail than PLS-3                                                | Closer to plain regression; more noise                 |
+| ridge_1e4              |  -0.0044 |   0.0066 |                0.1449 |                 -0.1475 |                 1.3995 |           0.6488 | Heavy shrinkage, stable weights                                       | Can shrink away real edges                             |
+| ridge_1e6              |  -0.0015 |   0.0063 |                0.2244 |                 -0.091  |                 2.8466 |           0.6786 | Close to an equal-weighted blend                                      | Barely learns anything                                 |
+| linear_svr             |  -0.0045 |   0.0062 |                0.1591 |                 -0.2171 |                 1.1375 |           0.6488 | Margin-based loss: robust                                             | Sensitive to its C setting; linear                     |
+| mlp_64_32              |   0.0005 |   0.0059 |                0.3404 |                 -0.3144 |                 1.3577 |           0.6696 | Deepest network                                                       | Least stable; needs more data than a few years give    |
+| huber                  |  -0.004  |   0.0058 |                0.1732 |                 -0.191  |                 1.4193 |           0.6429 | Downweights extreme returns                                           | Slow; similar to ridge in practice                     |
+| ridge_decay            |  -0.0077 |   0.0054 |                0.1953 |                 -0.0916 |                 2.4602 |           0.6339 | Adapts as signals strengthen or fade                                  | Noisier: effectively less data                         |
+| gbm_volscaled_target   |   0.004  |   0.0051 |                0.1736 |                 -0.2839 |                 0.2239 |           0.6607 | Nonlinear, risk-scaled target                                         | Same                                                   |
+| pca5_ridge             |  -0.0025 |   0.0045 |                0.2903 |                 -0.0507 |                 3.8394 |           0.6577 | Strips redundancy between signals                                     | First components follow variance, not predictive power |
+| gbm_resid_target       |   0.006  |   0.0044 |                0.1377 |                 -0.3627 |                 0.4634 |           0.6548 | Nonlinear, on factor-neutral returns                                  | Same; slower                                           |
+| ridge_volscaled_target |  -0.0034 |   0.004  |                0.0933 |                 -0.3404 |                -1.0834 |           0.6161 | Every stock's return in units of its own risk                         | Down-weights big movers that may carry the edge        |
+| ridge_resid_target     |   0.0015 |   0.0015 |                0.3367 |                 -0.4474 |                -0.4419 |           0.5327 | Learns only the stock-specific part of returns (factor moves removed) | Residuals are estimated, so noisier labels             |
 
 ## Signal sets
 
 | set               |   ic_1st |   ic_2nd |   net_sharpe_2nd |
 |:------------------|---------:|---------:|-----------------:|
-| all               |   0.0054 |   0.0075 |          -0.1419 |
-| price             |   0.0055 |   0.0081 |          -0.1265 |
-| price+fund        |   0.005  |   0.0074 |          -0.1401 |
+| all               |   0.0052 |   0.0072 |          -0.1604 |
+| price             |   0.0055 |   0.0078 |          -0.1554 |
+| price+fund        |   0.0049 |   0.007  |          -0.1695 |
 | price+pairs       |   0.0033 |   0.0108 |          -0.0674 |
 | price+pairs+ideas |   0.0028 |   0.0115 |          -0.0432 |
-| reversal          |   0.0076 |   0.0069 |          -0.1888 |
+| reversal          |   0.0061 |   0.0066 |          -0.2007 |
 
 ## Forecast horizon
 
 |   horizon |   ic_1st |   ic_2nd |   net_sharpe_1st |   net_sharpe_2nd |   turnover_2nd |
 |----------:|---------:|---------:|-----------------:|-----------------:|---------------:|
-|         1 |   0.0109 |   0.0071 |          -0.3977 |          -0.0841 |         0.1582 |
-|         5 |   0.0094 |   0.0063 |          -0.3787 |          -0.1122 |         0.1721 |
-|        21 |  -0.0109 |   0.009  |          -0.5855 |          -0.1868 |         0.1631 |
-|        63 |  -0.0152 |   0.008  |          -0.489  |          -0.2058 |         0.147  |
+|         1 |   0.0109 |   0.0069 |          -0.4008 |          -0.1124 |         0.1578 |
+|         5 |   0.0088 |   0.0062 |          -0.3785 |          -0.1319 |         0.1677 |
+|        21 |  -0.0106 |   0.0086 |          -0.5847 |          -0.1949 |         0.1613 |
+|        63 |  -0.0141 |   0.0078 |          -0.4884 |          -0.2102 |         0.1462 |
 
 ## How to trade a forecast (median over models)
 
 |                  |   net_sharpe_1st |   net_sharpe_2nd |   breakeven_bp_2nd |
 |:-----------------|-----------------:|-----------------:|-------------------:|
-| (0.0, 'all')     |           -1.4   |           -1.454 |              1.173 |
-| (0.0, 'top300')  |           -0.557 |           -0.622 |              0.979 |
-| (5.0, 'all')     |           -0.454 |           -0.199 |              3.266 |
-| (5.0, 'top300')  |           -0.317 |           -0.066 |              2.485 |
-| (20.0, 'all')    |           -0.421 |            0.04  |              8.547 |
-| (20.0, 'top300') |           -0.377 |            0.006 |              4.064 |
+| (0.0, 'all')     |           -1.419 |           -1.488 |              1.096 |
+| (0.0, 'top300')  |           -0.576 |           -0.641 |              0.878 |
+| (5.0, 'all')     |           -0.46  |           -0.208 |              3.164 |
+| (5.0, 'top300')  |           -0.318 |           -0.078 |              2.225 |
+| (20.0, 'all')    |           -0.419 |            0.021 |              8.06  |
+| (20.0, 'top300') |           -0.371 |           -0.001 |              3.842 |
 
 ## Strategies positive in both periods (ranked by the weaker period)
 
-| strategy                                        |   ic_1st |   ic_2nd |   net_sharpe_1st |   net_sharpe_2nd |   breakeven_bp_2nd |   turnover_2nd |
-|:------------------------------------------------|---------:|---------:|-----------------:|-----------------:|-------------------:|---------------:|
-| tstat_ic | reversal | h1 | hl5.0 | top300       |    0.01  |    0.01  |            0.308 |            0.583 |             22.469 |          0.171 |
-| tstat_ic | reversal | h1 | hl20.0 | all         |    0.01  |    0.01  |            0.262 |            0.32  |             19.799 |          0.115 |
-| ridge_1e6 | reversal | h1 | hl5.0 | top300      |    0.012 |    0.012 |            0.321 |            0.224 |              7.132 |          0.236 |
-| sign_ic | reversal | h1 | hl5.0 | top300        |    0.01  |    0.01  |            0.219 |            0.522 |             25.482 |          0.136 |
-| ridge_1e6 | reversal | h1 | hl20.0 | all        |    0.012 |    0.012 |            0.235 |            0.213 |             12.93  |          0.11  |
-| ridge_1e6 | reversal | h1 | hl20.0 | top300     |    0.012 |    0.012 |            0.213 |            0.205 |              9.683 |          0.124 |
-| best_single | price | h5 | hl20.0 | top300      |    0.007 |    0.007 |            0.232 |            0.198 |              7.486 |          0.154 |
-| best_single | reversal | h5 | hl20.0 | top300   |    0.008 |    0.007 |            0.38  |            0.198 |              7.486 |          0.154 |
-| best_single | reversal | h1 | hl20.0 | top300   |    0.01  |    0.008 |            0.375 |            0.18  |              5.813 |          0.239 |
-| ridge_1e6 | reversal | h5 | hl20.0 | all        |    0.015 |    0.012 |            0.267 |            0.168 |             12.381 |          0.096 |
-| ridge_1e6 | reversal | h5 | hl20.0 | top300     |    0.015 |    0.012 |            0.167 |            0.169 |              9.299 |          0.11  |
-| tstat_ic | reversal | h1 | hl20.0 | top300      |    0.01  |    0.01  |            0.152 |            0.537 |             33.697 |          0.097 |
-| best_single | price+fund | h5 | hl20.0 | top300 |    0.007 |    0.007 |            0.232 |            0.129 |              6.631 |          0.129 |
-| sign_ic | reversal | h1 | hl20.0 | all          |    0.01  |    0.01  |            0.115 |            0.295 |             20.352 |          0.099 |
-| best_single | reversal | h5 | hl5.0 | top300    |    0.008 |    0.007 |            0.416 |            0.108 |              4.691 |          0.292 |
-| best_single | price | h5 | hl5.0 | top300       |    0.007 |    0.007 |            0.202 |            0.108 |              4.691 |          0.292 |
-| sign_ic | reversal | h1 | hl20.0 | top300       |    0.01  |    0.01  |            0.096 |            0.508 |             37.566 |          0.082 |
-| ridge_1e6 | reversal | h5 | hl5.0 | top300      |    0.015 |    0.012 |            0.327 |            0.09  |              5.251 |          0.213 |
-| ridge_expanding | reversal | h5 | hl20.0 | all  |    0.019 |    0.012 |            0.104 |            0.079 |              9.725 |          0.109 |
-| best_single | price+fund | h5 | hl5.0 | top300  |    0.007 |    0.007 |            0.202 |            0.074 |              4.489 |          0.239 |
-| best_single | price | h1 | hl20.0 | top300      |    0.01  |    0.004 |            0.262 |            0.074 |              4.761 |          0.191 |
-| best_single | reversal | h5 | hl20.0 | all      |    0.008 |    0.007 |            0.318 |            0.071 |              8.115 |          0.14  |
-| best_single | price | h5 | hl20.0 | all         |    0.007 |    0.007 |            0.269 |            0.071 |              8.113 |          0.14  |
-| pca5_ridge | reversal | h5 | hl5.0 | top300     |    0.01  |    0.008 |            0.283 |            0.054 |              4.576 |          0.237 |
-| best_single | all | h1 | hl20.0 | top300        |    0.01  |    0.003 |            0.185 |            0.046 |              4.529 |          0.148 |
+| strategy                                                 |   ic_1st |   ic_2nd |   net_sharpe_1st |   net_sharpe_2nd |   breakeven_bp_2nd |   turnover_2nd |
+|:---------------------------------------------------------|---------:|---------:|-----------------:|-----------------:|-------------------:|---------------:|
+| tstat_ic | reversal | h1 | hl5.0 | top300                |    0.01  |    0.01  |            0.308 |            0.583 |             22.469 |          0.171 |
+| tstat_ic | reversal | h1 | hl20.0 | all                  |    0.01  |    0.01  |            0.262 |            0.32  |             19.799 |          0.115 |
+| ridge_1e6 | reversal | h1 | hl5.0 | top300               |    0.012 |    0.012 |            0.321 |            0.224 |              7.132 |          0.236 |
+| sign_ic | reversal | h1 | hl5.0 | top300                 |    0.01  |    0.01  |            0.219 |            0.522 |             25.482 |          0.136 |
+| ridge_1e6 | reversal | h1 | hl20.0 | all                 |    0.012 |    0.012 |            0.235 |            0.213 |             12.93  |          0.11  |
+| ridge_1e6 | reversal | h1 | hl20.0 | top300              |    0.012 |    0.012 |            0.213 |            0.205 |              9.683 |          0.124 |
+| best_single | price | h5 | hl20.0 | top300               |    0.007 |    0.007 |            0.232 |            0.198 |              7.486 |          0.154 |
+| best_single | reversal | h5 | hl20.0 | top300            |    0.008 |    0.007 |            0.38  |            0.198 |              7.486 |          0.154 |
+| best_single | reversal | h1 | hl20.0 | top300            |    0.01  |    0.008 |            0.375 |            0.18  |              5.813 |          0.239 |
+| ridge_1e6 | reversal | h5 | hl20.0 | all                 |    0.015 |    0.012 |            0.267 |            0.168 |             12.381 |          0.096 |
+| ridge_1e6 | reversal | h5 | hl20.0 | top300              |    0.015 |    0.012 |            0.167 |            0.169 |              9.299 |          0.11  |
+| tstat_ic | reversal | h1 | hl20.0 | top300               |    0.01  |    0.01  |            0.152 |            0.537 |             33.697 |          0.097 |
+| best_single | price+fund | h5 | hl20.0 | top300          |    0.007 |    0.007 |            0.232 |            0.129 |              6.631 |          0.129 |
+| sign_ic | reversal | h1 | hl20.0 | all                   |    0.01  |    0.01  |            0.115 |            0.295 |             20.352 |          0.099 |
+| best_single | price | h5 | hl5.0 | top300                |    0.007 |    0.007 |            0.202 |            0.108 |              4.691 |          0.292 |
+| best_single | reversal | h5 | hl5.0 | top300             |    0.008 |    0.007 |            0.416 |            0.108 |              4.691 |          0.292 |
+| sign_ic | reversal | h1 | hl20.0 | top300                |    0.01  |    0.01  |            0.096 |            0.508 |             37.566 |          0.082 |
+| ridge_1e6 | reversal | h5 | hl5.0 | top300               |    0.015 |    0.012 |            0.327 |            0.09  |              5.251 |          0.213 |
+| ridge_resid_target | reversal | h5 | hl20.0 | all        |    0.008 |    0.008 |            0.081 |            0.219 |             12.988 |          0.092 |
+| ridge_expanding | reversal | h5 | hl20.0 | all           |    0.019 |    0.012 |            0.104 |            0.079 |              9.725 |          0.109 |
+| best_single | price+fund | h5 | hl5.0 | top300           |    0.007 |    0.007 |            0.202 |            0.074 |              4.489 |          0.239 |
+| best_single | price | h1 | hl20.0 | top300               |    0.01  |    0.004 |            0.262 |            0.074 |              4.761 |          0.191 |
+| best_single | reversal | h5 | hl20.0 | all               |    0.008 |    0.007 |            0.318 |            0.071 |              8.115 |          0.14  |
+| best_single | price | h5 | hl20.0 | all                  |    0.007 |    0.007 |            0.269 |            0.071 |              8.113 |          0.14  |
+| ridge_volscaled_target | reversal | h5 | hl20.0 | top300 |    0.008 |    0.001 |            0.139 |            0.071 |              5.902 |          0.119 |
 
 ## Strongest and most consistent correlations with future returns
 
@@ -124,11 +129,13 @@ Full list: `best_correlations.csv`. Ranked by the IC in the *weaker* of the two 
 | pair   | rev_5d + downside_beta         |              5 |       0.0205 |       0.0181 |      3.7463 |    nan      |           0.8519 | False                |
 | signal | size_proxy                     |             63 |       0.0409 |       0.018  |      3.2682 |      1.1384 |           0.7407 | True                 |
 | pair   | low_volume_rev + downside_beta |              5 |       0.0216 |       0.0174 |      3.898  |    nan      |           0.8519 | True                 |
+| signal | bollinger_plus_resid_mom       |             21 |       0.0176 |       0.0173 |      2.3364 |      1.8723 |           0.8462 | False                |
 | pair   | rev_1d + rev_21d               |              5 |       0.0178 |       0.0168 |      3.4318 |    nan      |           0.8889 | False                |
 | signal | bollinger_z                    |             21 |       0.0212 |       0.0164 |      2.4608 |      1.537  |           0.7778 | False                |
 | pair   | rev_5d + rev_21d               |              5 |       0.0189 |       0.0161 |      3.5792 |    nan      |           0.8519 | False                |
 | pair   | rev_5d + resid_mom             |              5 |       0.0199 |       0.016  |      4.2746 |    nan      |           0.8148 | False                |
 | pair   | bollinger_z + resid_mom        |              5 |       0.016  |       0.016  |      3.9971 |    nan      |           0.8889 | False                |
+| signal | rev5_plus_resid_mom            |              5 |       0.0189 |       0.0159 |      4.1603 |      2.6998 |           0.8846 | False                |
 | pair   | rsi_14 + downside_beta         |              5 |       0.0159 |       0.0168 |      2.9933 |    nan      |           0.8148 | False                |
 | pair   | rev_21d + low_volume_rev       |              5 |       0.0199 |       0.0159 |      3.7147 |    nan      |           0.8519 | True                 |
 | signal | rev_21d                        |             21 |       0.0158 |       0.0174 |      1.4932 |      1.4738 |           0.7037 | False                |
@@ -138,6 +145,7 @@ Full list: `best_correlations.csv`. Ranked by the IC in the *weaker* of the two 
 | pair   | low_volume_rev + resid_mom     |              5 |       0.0209 |       0.0155 |      4.3951 |    nan      |           0.8519 | True                 |
 | pair   | rev_21d + intraday_rev         |              5 |       0.0163 |       0.0154 |      3.182  |    nan      |           0.8519 | False                |
 | pair   | low_volume_rev + cluster_mom   |              5 |       0.017  |       0.0154 |      2.775  |    nan      |           0.8519 | True                 |
+| signal | bollinger_plus_resid_mom       |              5 |       0.0153 |       0.0159 |      3.8284 |      2.9369 |           0.9231 | False                |
 | pair   | rev_1d + resid_mom             |              5 |       0.0163 |       0.0153 |      3.5449 |    nan      |           0.8519 | False                |
 | pair   | bollinger_z + downside_beta    |              5 |       0.0152 |       0.018  |      3.1003 |    nan      |           0.8519 | False                |
 | pair   | rev_21d + peer_gap             |              5 |       0.0153 |       0.0151 |      3.3381 |    nan      |           0.8519 | False                |
@@ -156,7 +164,4 @@ Full list: `best_correlations.csv`. Ranked by the IC in the *weaker* of the two 
 | pair   | rev_5d + bollinger_z           |              5 |       0.0208 |       0.0146 |      4.3755 |    nan      |           0.8889 | False                |
 | pair   | resid_mom + peer_gap           |              5 |       0.0147 |       0.0144 |      4.0457 |    nan      |           0.8148 | False                |
 | pair   | rev_1d + rsi_14                |              5 |       0.0207 |       0.0144 |      4.2981 |    nan      |           0.8889 | False                |
-| pair   | rev_1d + mom_12_1              |              5 |       0.02   |       0.0144 |      3.4161 |    nan      |           0.8148 | False                |
-| pair   | rev_1d + low_volume_rev        |              5 |       0.023  |       0.0144 |      4.5366 |    nan      |           0.9259 | True                 |
-| pair   | bollinger_z + mom_accel        |              5 |       0.0165 |       0.0144 |      3.3357 |    nan      |           0.8519 | False                |
 

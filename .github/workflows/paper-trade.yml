@@ -31,8 +31,8 @@ concurrency:
 
 jobs:
   trade:
-    # the intraday strategy owns the account unless TRADING_MODE = daily (intraday is the default)
-    if: github.event_name != 'schedule' || (vars.TRADING_MODE || 'intraday') != 'intraday'
+    # one trader owns the account: TRADING_MODE = daily runs this one (auction is the default)
+    if: github.event_name != 'schedule' || (vars.TRADING_MODE || 'auction') == 'daily'
     runs-on: ubuntu-latest
     timeout-minutes: 70
     env:

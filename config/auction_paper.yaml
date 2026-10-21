@@ -1,0 +1,10 @@
+# The auction trader (python -m qtrade auction-paper): the whole paper account,
+# long/short top / bottom fifth of the 500 most liquid stocks at 2x gross,
+# market-on-close in, market-on-open out (as backtested by qtrade.intraday.slice_sim).
+live:
+  capital_fraction: 1.0
+  max_capital: null
+auction:
+  gross: 2.0
+  frac: 0.2
+  min_order_value: 25

@@ -12,7 +12,7 @@ Each cycle, a few seconds after a bar closes:
    everything, so nothing is held overnight.
 
 This mode owns the whole paper account: don't run it alongside the daily
-strategy (intraday is the default; TRADING_MODE = daily switches to the daily book).
+strategy (the TRADING_MODE variable picks one: auction (default), intraday or daily).
 A GitHub job can run for at most 6 hours, so the loop stops at ``deadline``
 and reports that a follow-up run is needed; positions live at Alpaca, so the
 next run carries on where this one stopped.

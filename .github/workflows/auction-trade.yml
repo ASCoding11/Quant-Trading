@@ -1,0 +1,96 @@
+name: auction-trade
+
+# The auction trader on Alpaca paper (qtrade/intraday/auction_live.py):
+#   close phase  ~15:45 New York: market-on-close orders for the overnight book
+#   open phase   before 9:28:     market-on-open orders that close everything
+#                (a late run after the open closes them with regular market orders)
+# Each phase first reports the previous auction's fills against the official
+# open / close (the real cost; the backtest assumes 0 bp).
+#
+# It owns the paper account overnight, so only one trader runs on schedule:
+# this one by default, or the others when the repository variable
+# TRADING_MODE is "daily" (paper-trade) or "intraday" (intraday-trade).
+#
+# GitHub's scheduler can start runs late, so each phase is scheduled early and
+# twice (summer and winter time); the job waits for the right moment and skips
+# itself outside its window.
+
+on:
+  schedule:
+    - cron: "15 19 * * 1-5"   # 15:15 New York in summer (14:15 in winter: the job waits)
+    - cron: "15 20 * * 1-5"   # 15:15 New York in winter
+    - cron: "40 12 * * 1-5"   # 8:40 New York in summer
+    - cron: "40 13 * * 1-5"   # 8:40 New York in winter
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "close (market-on-close book), open (market-on-open exit) or report"
+        default: "report"
+      send:
+        description: "Send orders to the paper account (false = dry run)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: paper-account
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    if: github.event_name != 'schedule' || (vars.TRADING_MODE || 'auction') == 'auction'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      QTRADE_CONFIG: ${{ vars.AUCTION_CONFIG || 'config/auction_paper.yaml' }}
+    steps:
+      - name: Which phase?
+        id: phase
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "phase=${{ inputs.phase }}" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          NOW=$(TZ=America/New_York date +%H%M)
+          if [ "$NOW" -ge 1400 ] && [ "$NOW" -lt 1549 ]; then echo "phase=close" >> "$GITHUB_OUTPUT"
+          elif [ "$NOW" -ge 700 ] && [ "$NOW" -lt 1100 ]; then echo "phase=open" >> "$GITHUB_OUTPUT"
+          else echo "phase=none" >> "$GITHUB_OUTPUT"; echo "New York time $NOW is outside both windows"; fi
+      - name: Wait for the close phase's start (scheduled an hour early in winter)
+        if: steps.phase.outputs.phase == 'close' && github.event_name == 'schedule'
+        run: |
+          NOW=$(TZ=America/New_York date +%H%M)
+          if [ "$NOW" -lt 1500 ]; then
+            # the other (winter/summer) schedule will run in time; this one stands aside
+            echo "too early ($NOW) - the later schedule handles today"; echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.phase.outputs.phase != 'none' && env.SKIP != '1'
+      - uses: actions/setup-python@v5
+        if: steps.phase.outputs.phase != 'none' && env.SKIP != '1'
+        with:
+          python-version: "3.11"
+          cache: pip
+      - if: steps.phase.outputs.phase != 'none' && env.SKIP != '1'
+        run: pip install -r requirements.txt
+      - name: Universe and strategy directions
+        if: steps.phase.outputs.phase != 'none' && env.SKIP != '1'
+        run: |
+          git fetch -q --depth 1 origin results
+          mkdir -p data
+          git show origin/results:intraday/latest/model.json > data/auction_tickers.json
+          git show origin/results:intraday/edge/signs.json > data/auction_signs.json 2>/dev/null \
+            || { echo "no signs.json yet - using the default directions"; rm -f data/auction_signs.json; }
+          cat data/auction_signs.json 2>/dev/null || true
+      - name: Trade
+        if: steps.phase.outputs.phase != 'none' && env.SKIP != '1'
+        run: |
+          SEND=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then SEND="--send"; fi
+          python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} auction-paper \
+            --phase "${{ steps.phase.outputs.phase }}" $SEND --out logs
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.phase.outputs.phase != 'none' && env.SKIP != '1'
+        with:
+          name: auction-${{ steps.phase.outputs.phase }}-${{ github.run_id }}
+          path: logs
+          retention-days: 30

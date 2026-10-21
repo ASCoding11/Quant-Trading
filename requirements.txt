@@ -10,3 +10,4 @@ lxml>=4.9
 alpaca-py>=0.30
 pytest>=7
 tabulate>=0.9
+openpyxl>=3.1

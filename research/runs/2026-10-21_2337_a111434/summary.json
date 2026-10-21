@@ -1,0 +1,13 @@
+{
+  "consumer": {
+    "events": 30535,
+    "consumer_events": 4490,
+    "coverage": {
+      "wiki_attention": 0.33941378745701656,
+      "wiki_yoy": 0.3325036842967087,
+      "trends_yoy": 0.013787457016538399,
+      "runup_20d": 1.0,
+      "last_reaction": 0.9703618798100541
+    }
+  }
+}

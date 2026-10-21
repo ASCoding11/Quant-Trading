@@ -1,0 +1,57 @@
+23:29:27 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+23:29:28 INFO    qtrade | research task: consumer
+23:29:53 INFO    qtrade | SEC submissions: 100/1000 tickers, 7987 earnings filings
+23:30:28 INFO    qtrade | SEC submissions: 200/1000 tickers, 16107 earnings filings
+23:30:57 INFO    qtrade | SEC submissions: 300/1000 tickers, 24518 earnings filings
+23:31:23 INFO    qtrade | SEC submissions: 400/1000 tickers, 32493 earnings filings
+23:32:03 INFO    qtrade | SEC submissions: 500/1000 tickers, 40611 earnings filings
+23:32:28 INFO    qtrade | SEC submissions: 600/1000 tickers, 48976 earnings filings
+23:32:58 INFO    qtrade | SEC submissions: 700/1000 tickers, 56623 earnings filings
+23:33:22 INFO    qtrade | SEC submissions: 800/1000 tickers, 64562 earnings filings
+23:33:44 INFO    qtrade | SEC submissions: 900/1000 tickers, 72366 earnings filings
+23:34:10 INFO    qtrade | SEC submissions: 1000/1000 tickers, 80267 earnings filings
+23:34:11 INFO    qtrade | SEC: 1000 profiles (157 consumer), 80267 earnings filings
+23:34:17 INFO    qtrade | Wikidata: 3517 tickers with an English Wikipedia article
+23:35:43 WARNING qtrade | Wikipedia INCY: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Incyte/daily/20150701/20261020
+23:35:43 WARNING qtrade | Wikipedia INDB: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Rockland_Trust/daily/20150701/20261020
+23:35:43 WARNING qtrade | Wikipedia INGR: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Ingredion/daily/20150701/20261020
+23:35:43 WARNING qtrade | Wikipedia INTC: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intel/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia INTU: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intuit/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IOSP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Innospec/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/International_Paper/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IPGP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/IPG_Photonics/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IRDM: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Iridium_Communications/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IRM: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Iron_Mountain_%28company%29/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ISRG: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intuitive_Surgical/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Gartner/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ITRI: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Itron/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ITT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/ITT_Inc./daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ITW: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Illinois_Tool_Works/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IVZ: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Invesco/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia J: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jacobs_Solutions/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia JAZZ: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jazz_Pharmaceuticals/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia JBHT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/J._B._Hunt/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia JBL: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jabil/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia: stopped after 486 tickers
+23:35:45 INFO    qtrade | Wikipedia page views: 4130 days x 398 tickers
+23:35:45 WARNING qtrade | Google Trends AAL: The request failed: Google returned a response with code 429
+23:35:55 WARNING qtrade | Google Trends AAP: The request failed: Google returned a response with code 429
+23:36:07 WARNING qtrade | Google Trends ADM: The request failed: Google returned a response with code 429
+23:36:24 WARNING qtrade | Google Trends ALV: The request failed: Google returned a response with code 429
+23:37:23 WARNING qtrade | Google Trends COLM: The request failed: Google returned a response with code 429
+23:37:33 WARNING qtrade | Google Trends: throttled - stopping with 28 terms
+23:37:33 INFO    qtrade | Google Trends: 28 terms
+23:37:53 INFO    qtrade | consumer earnings: 30535 events
+{
+ "consumer": {
+  "events": 30535,
+  "consumer_events": 4490,
+  "coverage": {
+   "wiki_attention": 0.33941378745701656,
+   "wiki_yoy": 0.3325036842967087,
+   "trends_yoy": 0.013787457016538399,
+   "runup_20d": 1.0,
+   "last_reaction": 0.9703618798100541
+  }
+ }
+}

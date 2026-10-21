@@ -1,140 +1,57 @@
-23:16:53 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-23:16:53 INFO    qtrade | research task: edge
-23:17:24 INFO    qtrade | factor model: 309 refits, 15 factors
-23:18:32 INFO    qtrade | computed 44 signals
-23:18:37 INFO    qtrade | edge: rev_1d done
-23:18:42 INFO    qtrade | edge: rev_5d done
-23:18:47 INFO    qtrade | edge: rev_21d done
-23:18:51 INFO    qtrade | edge: resid_rev_1d done
-23:18:56 INFO    qtrade | edge: resid_rev_5d done
-23:19:01 INFO    qtrade | edge: ou_sscore done
-23:19:06 INFO    qtrade | edge: bollinger_z done
-23:19:11 INFO    qtrade | edge: rsi_14 done
-23:19:15 INFO    qtrade | edge: overnight_rev done
-23:19:20 INFO    qtrade | edge: intraday_rev done
-23:19:25 INFO    qtrade | edge: low_volume_rev done
-23:19:30 INFO    qtrade | edge: mom_12_1 done
-23:19:34 INFO    qtrade | edge: mom_6_1 done
-23:19:39 INFO    qtrade | edge: resid_mom done
-23:19:44 INFO    qtrade | edge: high_52w done
-23:19:49 INFO    qtrade | edge: trend_quality done
-23:19:53 INFO    qtrade | edge: mom_accel done
-23:19:58 INFO    qtrade | edge: overnight_mom done
-23:20:03 INFO    qtrade | edge: intraday_rev_21 done
-23:20:08 INFO    qtrade | edge: cluster_mom done
-23:20:12 INFO    qtrade | edge: abn_volume done
-23:20:17 INFO    qtrade | edge: amihud done
-23:20:22 INFO    qtrade | edge: turnover_trend done
-23:20:27 INFO    qtrade | edge: vol_price_corr done
-23:20:31 INFO    qtrade | edge: size_proxy done
-23:20:36 INFO    qtrade | edge: low_vol done
-23:20:41 INFO    qtrade | edge: idio_vol done
-23:20:46 INFO    qtrade | edge: max_effect done
-23:20:50 INFO    qtrade | edge: neg_skew done
-23:20:55 INFO    qtrade | edge: bab done
-23:20:59 INFO    qtrade | edge: downside_beta done
-23:21:04 INFO    qtrade | edge: vol_of_vol done
-23:21:09 INFO    qtrade | edge: range_vol_ratio done
-23:21:13 INFO    qtrade | edge: close_location done
-23:21:18 INFO    qtrade | edge: cs_spread done
-23:21:23 INFO    qtrade | edge: gk_ratio done
-23:21:28 INFO    qtrade | edge: same_month done
-23:21:32 INFO    qtrade | edge: weekday_seasonality done
-23:21:37 INFO    qtrade | edge: turn_of_month done
-23:21:42 INFO    qtrade | edge: peer_gap done
-23:21:46 INFO    qtrade | edge: peer_lead done
-23:21:51 INFO    qtrade | edge: kalman_trend done
-23:21:56 INFO    qtrade | edge: autocorr_signal done
-23:22:01 INFO    qtrade | edge: market_corr done
+23:29:27 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+23:29:28 INFO    qtrade | research task: consumer
+23:29:53 INFO    qtrade | SEC submissions: 100/1000 tickers, 7987 earnings filings
+23:30:28 INFO    qtrade | SEC submissions: 200/1000 tickers, 16107 earnings filings
+23:30:57 INFO    qtrade | SEC submissions: 300/1000 tickers, 24518 earnings filings
+23:31:23 INFO    qtrade | SEC submissions: 400/1000 tickers, 32493 earnings filings
+23:32:03 INFO    qtrade | SEC submissions: 500/1000 tickers, 40611 earnings filings
+23:32:28 INFO    qtrade | SEC submissions: 600/1000 tickers, 48976 earnings filings
+23:32:58 INFO    qtrade | SEC submissions: 700/1000 tickers, 56623 earnings filings
+23:33:22 INFO    qtrade | SEC submissions: 800/1000 tickers, 64562 earnings filings
+23:33:44 INFO    qtrade | SEC submissions: 900/1000 tickers, 72366 earnings filings
+23:34:10 INFO    qtrade | SEC submissions: 1000/1000 tickers, 80267 earnings filings
+23:34:11 INFO    qtrade | SEC: 1000 profiles (157 consumer), 80267 earnings filings
+23:34:17 INFO    qtrade | Wikidata: 3517 tickers with an English Wikipedia article
+23:35:43 WARNING qtrade | Wikipedia INCY: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Incyte/daily/20150701/20261020
+23:35:43 WARNING qtrade | Wikipedia INDB: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Rockland_Trust/daily/20150701/20261020
+23:35:43 WARNING qtrade | Wikipedia INGR: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Ingredion/daily/20150701/20261020
+23:35:43 WARNING qtrade | Wikipedia INTC: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intel/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia INTU: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intuit/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IOSP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Innospec/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/International_Paper/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IPGP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/IPG_Photonics/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IRDM: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Iridium_Communications/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IRM: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Iron_Mountain_%28company%29/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ISRG: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intuitive_Surgical/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Gartner/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ITRI: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Itron/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ITT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/ITT_Inc./daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia ITW: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Illinois_Tool_Works/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia IVZ: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Invesco/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia J: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jacobs_Solutions/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia JAZZ: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jazz_Pharmaceuticals/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia JBHT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/J._B._Hunt/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia JBL: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jabil/daily/20150701/20261020
+23:35:44 WARNING qtrade | Wikipedia: stopped after 486 tickers
+23:35:45 INFO    qtrade | Wikipedia page views: 4130 days x 398 tickers
+23:35:45 WARNING qtrade | Google Trends AAL: The request failed: Google returned a response with code 429
+23:35:55 WARNING qtrade | Google Trends AAP: The request failed: Google returned a response with code 429
+23:36:07 WARNING qtrade | Google Trends ADM: The request failed: Google returned a response with code 429
+23:36:24 WARNING qtrade | Google Trends ALV: The request failed: Google returned a response with code 429
+23:37:23 WARNING qtrade | Google Trends COLM: The request failed: Google returned a response with code 429
+23:37:33 WARNING qtrade | Google Trends: throttled - stopping with 28 terms
+23:37:33 INFO    qtrade | Google Trends: 28 terms
+23:37:53 INFO    qtrade | consumer earnings: 30535 events
 {
- "edge": {
-  "n_signals": 44,
-  "n_survivors_5bp": 50,
-  "composite": [
-   {
-    "halflife": 0,
-    "universe": "all",
-    "gross_ret_1st": 0.095,
-    "gross_sharpe_1st": 1.847,
-    "turnover_1st": 1.028,
-    "breakeven_bp_1st": 3.682,
-    "net_sharpe_1st": -2.172,
-    "gross_ret_2nd": 0.06,
-    "gross_sharpe_2nd": 1.008,
-    "turnover_2nd": 1.03,
-    "breakeven_bp_2nd": 2.299,
-    "net_sharpe_2nd": -2.061
-   },
-   {
-    "halflife": 0,
-    "universe": "top300",
-    "gross_ret_1st": 0.103,
-    "gross_sharpe_1st": 1.648,
-    "turnover_1st": 1.049,
-    "breakeven_bp_1st": 3.899,
-    "net_sharpe_1st": -0.357,
-    "gross_ret_2nd": 0.053,
-    "gross_sharpe_2nd": 0.779,
-    "turnover_2nd": 1.039,
-    "breakeven_bp_2nd": 2.032,
-    "net_sharpe_2nd": -0.625
-   },
-   {
-    "halflife": 5,
-    "universe": "all",
-    "gross_ret_1st": 0.061,
-    "gross_sharpe_1st": 1.207,
-    "turnover_1st": 0.242,
-    "breakeven_bp_1st": 10.047,
-    "net_sharpe_1st": 0.233,
-    "gross_ret_2nd": 0.045,
-    "gross_sharpe_2nd": 0.696,
-    "turnover_2nd": 0.239,
-    "breakeven_bp_2nd": 7.461,
-    "net_sharpe_2nd": 0.039
-   },
-   {
-    "halflife": 5,
-    "universe": "top300",
-    "gross_ret_1st": 0.062,
-    "gross_sharpe_1st": 1.005,
-    "turnover_1st": 0.253,
-    "breakeven_bp_1st": 9.756,
-    "net_sharpe_1st": 0.504,
-    "gross_ret_2nd": 0.033,
-    "gross_sharpe_2nd": 0.449,
-    "turnover_2nd": 0.248,
-    "breakeven_bp_2nd": 5.334,
-    "net_sharpe_2nd": 0.137
-   },
-   {
-    "halflife": 20,
-    "universe": "all",
-    "gross_ret_1st": 0.046,
-    "gross_sharpe_1st": 0.934,
-    "turnover_1st": 0.122,
-    "breakeven_bp_1st": 14.896,
-    "net_sharpe_1st": 0.415,
-    "gross_ret_2nd": 0.034,
-    "gross_sharpe_2nd": 0.591,
-    "turnover_2nd": 0.116,
-    "breakeven_bp_2nd": 11.713,
-    "net_sharpe_2nd": 0.233
-   },
-   {
-    "halflife": 20,
-    "universe": "top300",
-    "gross_ret_1st": 0.035,
-    "gross_sharpe_1st": 0.57,
-    "turnover_1st": 0.13,
-    "breakeven_bp_1st": 10.614,
-    "net_sharpe_1st": 0.301,
-    "gross_ret_2nd": 0.024,
-    "gross_sharpe_2nd": 0.339,
-    "turnover_2nd": 0.128,
-    "breakeven_bp_2nd": 7.344,
-    "net_sharpe_2nd": 0.165
-   }
-  ]
+ "consumer": {
+  "events": 30535,
+  "consumer_events": 4490,
+  "coverage": {
+   "wiki_attention": 0.33941378745701656,
+   "wiki_yoy": 0.3325036842967087,
+   "trends_yoy": 0.013787457016538399,
+   "runup_20d": 1.0,
+   "last_reaction": 0.9703618798100541
+  }
  }
 }

@@ -67,9 +67,12 @@ def load_fred(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
         return pd.read_parquet(path)
     s = _session()
     cols = {}
+    fails = 0
     for name, (sid, lag) in FRED_SERIES.items():
+        if fails >= 2:                                                # FRED often times out from cloud runners
+            break
         try:
-            r = s.get(FRED_URL.format(sid=sid), timeout=60)
+            r = s.get(FRED_URL.format(sid=sid), timeout=20)
             r.raise_for_status()
             df = pd.read_csv(io.StringIO(r.text))
             df.columns = ["date", "value"]
@@ -79,13 +82,45 @@ def load_fred(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
             cols[name] = x
             LOG.info("FRED %s: %d values", sid, len(x))
         except Exception as exc:
+            fails += 1
             LOG.warning("FRED %s failed: %s", sid, exc)
+    if not cols:
+        cols = _macro_from_yahoo()
     if not cols:
         return pd.DataFrame()
     out = pd.DataFrame(cols).sort_index()
     out = out.resample("D").last().ffill()
     out.to_parquet(path)
     return out
+
+
+def _macro_from_yahoo() -> dict:
+    """Market-traded stand-ins for the FRED series, from Yahoo, each lagged a day."""
+    import yfinance as yf
+
+    syms = ["^TNX", "^IRX", "^FVX", "^VIX", "DX-Y.NYB", "CL=F", "HYG", "LQD", "TIP", "IEF"]
+    try:
+        px = yf.download(syms, start="2000-01-01", auto_adjust=True, progress=False)["Close"]
+    except Exception as exc:
+        LOG.warning("Yahoo macro fallback failed: %s", exc)
+        return {}
+    px = px.dropna(how="all")
+    if px.empty:
+        return {}
+    px.index = pd.to_datetime(px.index).tz_localize(None) + pd.Timedelta(days=1)
+    g = lambda c: px[c] if c in px else pd.Series(dtype=float)
+    cols = {
+        "term_spread_10y3m": g("^TNX") - g("^IRX"),
+        "term_spread_10y5y": g("^TNX") - g("^FVX"),
+        "credit_spread_hyg_lqd": -np.log(g("HYG") / g("LQD")),      # rises when high yield lags
+        "breakeven_tip_ief": np.log(g("TIP") / g("IEF")),
+        "dollar_index": g("DX-Y.NYB"),
+        "oil_wti": g("CL=F").where(g("CL=F") > 0),
+        "vix": g("^VIX"),
+    }
+    cols = {k: v.dropna() for k, v in cols.items() if v.notna().sum() > 500}
+    LOG.info("macro from Yahoo: %s", list(cols))
+    return cols
 
 
 # -----------------------------------------------------------------------------

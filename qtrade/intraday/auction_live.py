@@ -144,8 +144,11 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
         if close_time.hour < 16:
             LOG.info("early close today (%s): market-on-close timing differs - skipping", close_time)
             return {"status": "early close"}
-        _wait_until(now.normalize() + pd.Timedelta(hours=15, minutes=45, seconds=20))
-        if _now() > cutoff:
+        if dry_run:
+            LOG.info("dry run during the session: building the book from prices so far")
+        else:
+            _wait_until(now.normalize() + pd.Timedelta(hours=15, minutes=45, seconds=20))
+        if not dry_run and _now() > cutoff:
             LOG.warning("too late for market-on-close orders (%s) - skipping today", _now().strftime("%H:%M"))
             return {"status": "missed cutoff"}
     elif not dry_run:

@@ -243,7 +243,9 @@ def load_all_stocks_daily(root: str | Path = "data", start: str = "2016-01-01",
         r.raise_for_status()
         syms += [a["symbol"] for a in r.json() if a.get("exchange") in ("NYSE", "NASDAQ", "AMEX", "ARCA", "BATS")
                  and "/" not in a["symbol"]]
-    syms = sorted(set(syms))
+    import re
+
+    syms = sorted({x for x in syms if re.fullmatch(r"[A-Z]{1,5}(\.[A-Z])?", x)})   # real tickers only
     LOG.info("all stocks: %d symbols (active + delisted)", len(syms))
     client = AlpacaBars(feed="sip")
     end = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(hours=1)).isoformat()
@@ -253,7 +255,18 @@ def load_all_stocks_daily(root: str | Path = "data", start: str = "2016-01-01",
         if (time.time() - t0) / 60 > budget_min:
             LOG.warning("all stocks: time budget reached at %d/%d", i, len(syms))
             break
-        got = client.bars(syms[i:i + 100], "1Day", start, end)
+        batch = syms[i:i + 100]
+        got = {}
+        for _ in range(10):                     # drop symbols the API rejects and retry the rest
+            try:
+                got = client.bars(batch, "1Day", start, end)
+                break
+            except RuntimeError as exc:
+                bad = re.search(r"invalid symbol: ([^\"\s]+)", str(exc))
+                if not bad or bad.group(1) not in batch:
+                    LOG.warning("all stocks batch %d failed: %s", i, exc)
+                    break
+                batch = [x for x in batch if x != bad.group(1)]
         for s_, rows in got.items():
             if not rows:
                 continue

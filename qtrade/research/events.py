@@ -51,13 +51,21 @@ def _usable_day(dates: pd.DatetimeIndex, ts: pd.Series) -> np.ndarray:
     return pos
 
 
-def _car(ar: np.ndarray, rows: np.ndarray, cols: np.ndarray, h: int) -> np.ndarray:
-    """Cumulative abnormal return over days [row, row + h) for each event."""
+def _car(ar: np.ndarray, rows: np.ndarray, cols: np.ndarray, h: int, first: np.ndarray | None = None) -> np.ndarray:
+    """Cumulative abnormal return over days [row, row + h) for each event.
+
+    ``first``: the abnormal return to use for the first day instead of ``ar``
+    (e.g. open-to-close, so a gap at the open - which happened before anyone
+    could trade on the news - is not counted)."""
     cs = np.vstack([np.zeros((1, ar.shape[1])), np.nancumsum(np.nan_to_num(ar), axis=0)])
     end = np.minimum(rows + h, len(ar))
     ok = rows < len(ar)
     out = np.full(len(rows), np.nan)
-    out[ok] = cs[end[ok], cols[ok]] - cs[rows[ok], cols[ok]]
+    if first is None:
+        out[ok] = cs[end[ok], cols[ok]] - cs[rows[ok], cols[ok]]
+    else:
+        nxt = np.minimum(rows[ok] + 1, len(ar))
+        out[ok] = np.nan_to_num(first[rows[ok], cols[ok]]) + cs[end[ok], cols[ok]] - cs[nxt, cols[ok]]
     return out
 
 
@@ -80,6 +88,8 @@ def news_events(md, ctx, news: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
     x["col"] = x["ticker"].map(tick)
     hl = x["headline"].fillna("").str.lower()
     ar = ctx.ret.sub(ctx.market_ret, axis=0).clip(-0.5, 0.5).to_numpy()
+    intra = ctx.intraday.clip(-0.5, 0.5)
+    ar_open = intra.sub(intra.mean(axis=1), axis=0).to_numpy()      # day 1 counts from the open we can trade at
     rows = []
     for name, pat in EVENT_RULES.items():
         m = hl.str.contains(pat, regex=True)
@@ -89,7 +99,7 @@ def news_events(md, ctx, news: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
         r, c = ev["row"].to_numpy(), ev["col"].to_numpy()
         row = {"event": name, "events": len(ev)}
         for h in (1, 5, 21):
-            mean, t, n = _date_clustered(_car(ar, r, c, h), r)
+            mean, t, n = _date_clustered(_car(ar, r, c, h, ar_open), r)
             row[f"car_{h}d_bp"] = mean * 1e4 if np.isfinite(mean) else np.nan
             row[f"t_{h}d"] = t
         rows.append(row)
@@ -112,12 +122,15 @@ def news_events(md, ctx, news: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
     day = x.groupby(["row", "col"])["novelty"].max().reset_index()
     # the stock's move on the day the news became usable, then what follows
     r, c = day["row"].to_numpy(), day["col"].to_numpy()
-    move = np.sign(_car(ar, np.maximum(r - 1, 0), c, 1))       # reaction up to the open we can trade at
+    # reaction up to the open we can trade at: previous close -> this open, market-relative
+    gap = ctx.overnight.clip(-0.5, 0.5)
+    gap = gap.sub(gap.mean(axis=1), axis=0).to_numpy()
+    move = np.sign(np.nan_to_num(gap[np.minimum(r, len(gap) - 1), c]))
     nrows = []
     for label, sel in (("novel (overlap < 30%)", day["novelty"] > 0.7), ("stale (overlap > 70%)", day["novelty"] < 0.3)):
         sel = sel.to_numpy()
         for h in (1, 5, 21):
-            mean, t, n = _date_clustered(move[sel] * _car(ar, r[sel], c[sel], h), r[sel])
+            mean, t, n = _date_clustered(move[sel] * _car(ar, r[sel], c[sel], h, ar_open), r[sel])
             nrows.append({"news": label, "horizon": h, "continuation_bp": mean * 1e4 if np.isfinite(mean) else np.nan,
                           "t": t, "days": n})
     return tab, pd.DataFrame(nrows)

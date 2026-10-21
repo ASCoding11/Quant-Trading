@@ -57,6 +57,13 @@ def main(argv=None):
             if task == "quality":
                 from .data_quality import run
                 summary[task] = run(md, ctx, out, cfg.data.cache_dir)
+            elif task == "multi":
+                import pandas as pd
+
+                from .multi import run
+                rpath = Path(cfg.data.cache_dir) / "reversal_daily.csv"
+                rev = pd.read_csv(rpath, index_col=0, parse_dates=True)["ret"] if rpath.exists() else None
+                summary[task] = run(md, ctx, out, cfg, rev)
             elif task == "intraday":
                 from .intraday_strats import run
                 summary[task] = run(md, ctx, out, cfg)

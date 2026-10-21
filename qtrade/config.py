@@ -121,6 +121,20 @@ class LiveConfig:
 
 
 @dataclass
+class MultiConfig:
+    """ETF sleeves (``qtrade.portfolio.sleeves``) traded alongside the stock book."""
+    enabled: bool = False
+    etf_fraction: float = 0.5        # share of deployed capital for the ETF sleeves; the rest is the stock book
+    sleeves: list = field(default_factory=lambda: ["spy_vol_managed", "cross_asset_mom", "spy_ma200",
+                                                   "risk_parity", "spy_tsmom_12m", "broad_trend_12m",
+                                                   "spy_turn_of_month", "multi_asset_trend"])
+    target_vol: float = 0.10         # annualised volatility target for the ETF book
+    max_gross: float = 1.5           # ETF book gross exposure cap (multiple of its capital)
+    vol_window: int = 756            # days of sleeve returns behind the 1 / volatility weights
+    history_start: str = "2004-01-01"
+
+
+@dataclass
 class IntradayConfig:
     """Intraday reversal strategy on N-minute bars (``qtrade.intraday``)."""
     store: str = "data/intraday/5min"  # per-symbol bar files (see `qtrade intraday`)
@@ -160,6 +174,7 @@ class Config:
     costs: CostConfig = field(default_factory=CostConfig)
     live: LiveConfig = field(default_factory=LiveConfig)
     intraday: IntradayConfig = field(default_factory=IntradayConfig)
+    multi: MultiConfig = field(default_factory=MultiConfig)
     report_dir: str = "reports"
     diagnostics: bool = True         # also backtest portfolio-construction variants
 

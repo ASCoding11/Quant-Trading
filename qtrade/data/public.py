@@ -62,12 +62,17 @@ def _cache(root: str | Path) -> Path:
 # -----------------------------------------------------------------------------
 def load_fred(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
     """Daily frame of macro series, each shifted by its publication lag."""
+    import os
+
     path = _cache(root) / "fred.parquet"
     if path.exists() and not refresh:
-        return pd.read_parquet(path)
+        cached = pd.read_parquet(path)
+        # a cache built from the Yahoo stand-ins is replaced once a FRED key is available
+        if "jobless_claims" in cached.columns or not os.environ.get("FRED_API_KEY"):
+            return cached
     s = _session()
-    cols = {}
-    fails = 0
+    cols = _fred_api(s)                                               # with a free key: reliable from CI
+    fails = 0 if not cols else 99
     for name, (sid, lag) in FRED_SERIES.items():
         if fails >= 2:                                                # FRED often times out from cloud runners
             break
@@ -92,6 +97,31 @@ def load_fred(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
     out = out.resample("D").last().ffill()
     out.to_parquet(path)
     return out
+
+
+def _fred_api(s) -> dict:
+    """FRED's JSON API (needs FRED_API_KEY, free at fred.stlouisfed.org/docs/api/api_key.html).
+    The keyless CSV endpoint times out from GitHub's runners."""
+    import os
+
+    key = os.environ.get("FRED_API_KEY")
+    if not key:
+        return {}
+    cols = {}
+    for name, (sid, lag) in FRED_SERIES.items():
+        try:
+            r = s.get("https://api.stlouisfed.org/fred/series/observations",
+                      params={"series_id": sid, "api_key": key, "file_type": "json"}, timeout=30)
+            r.raise_for_status()
+            obs = pd.DataFrame(r.json()["observations"])
+            x = pd.Series(pd.to_numeric(obs["value"], errors="coerce").to_numpy(),
+                          index=pd.to_datetime(obs["date"])).dropna()
+            x.index = x.index + pd.Timedelta(days=lag)
+            cols[name] = x
+            LOG.info("FRED API %s: %d values", sid, len(x))
+        except Exception as exc:
+            LOG.warning("FRED API %s failed: %s", sid, exc.__class__.__name__)   # never log the key
+    return cols
 
 
 def _macro_from_yahoo() -> dict:

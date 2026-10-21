@@ -132,6 +132,16 @@ def _submit(client, orders, tif: str) -> list[str]:
     return ids
 
 
+def _sent_today(client, tif: str) -> bool:
+    """True if orders with this time-in-force were submitted since midnight New York time."""
+    midnight = _now().normalize().isoformat()
+    for status in ("open", "closed"):
+        orders = client.get("/orders", {"status": status, "after": midnight, "limit": 500})
+        if any(o.get("time_in_force") == tif for o in orders):
+            return True
+    return False
+
+
 def _wait_until(target: pd.Timestamp) -> None:
     while (left := (target - _now()).total_seconds()) > 0:
         time.sleep(min(left, 60))
@@ -150,6 +160,9 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
     today = now.tz_localize(None).normalize()
     live = clock is not None and clock.is_open
     cutoff = now.normalize() + pd.Timedelta(hours=CLOSE_CUTOFF[0], minutes=CLOSE_CUTOFF[1])
+    if live and not dry_run and _sent_today(client, "cls"):
+        LOG.info("market-on-close orders were already sent today (an earlier run) - nothing to do")
+        return {"status": "already sent"}
     if live:
         close_time = pd.Timestamp(clock.next_close).tz_convert(NY)
         if close_time.hour < 16:
@@ -159,6 +172,9 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
             LOG.info("dry run during the session: building the book from prices so far")
         else:
             _wait_until(now.normalize() + pd.Timedelta(hours=15, minutes=45, seconds=20))
+        if not dry_run and _sent_today(client, "cls"):      # another run got there while this one waited
+            LOG.info("market-on-close orders were sent by another run - nothing to do")
+            return {"status": "already sent"}
         if not dry_run and _now() > cutoff:
             LOG.warning("too late for market-on-close orders (%s) - skipping today", _now().strftime("%H:%M"))
             return {"status": "missed cutoff"}

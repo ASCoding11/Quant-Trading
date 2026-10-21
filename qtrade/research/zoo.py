@@ -179,6 +179,39 @@ class PLS:
         return self.m.predict(X).ravel()
 
 
+class LassoGBM:
+    """Two stages: a lasso picks the signals that matter, boosting models only those."""
+    needs_day = False
+
+    def fit(self, X, y):
+        from sklearn.ensemble import HistGradientBoostingRegressor
+        from sklearn.linear_model import Lasso
+
+        coef = Lasso(alpha=1e-3, max_iter=2000).fit(X, y).coef_
+        keep = np.flatnonzero(coef != 0)
+        if len(keep) < 5:
+            keep = np.argsort(-np.abs(coef))[:5]
+        self.keep = np.sort(keep)
+        self.m = HistGradientBoostingRegressor(max_leaf_nodes=8, max_iter=200, learning_rate=0.05,
+                                               min_samples_leaf=500, l2_regularization=1.0, max_bins=64,
+                                               random_state=0).fit(X[:, self.keep], y)
+        return self
+
+    def predict(self, X):
+        return self.m.predict(X[:, self.keep])
+
+
+# pairs of signals that kept working together in the combos study, fed to models as products
+STICKY_PAIRS = [("mom_12_1", "high_52w"), ("rev_5d", "mom_12_1"), ("rev_21d", "resid_mom"),
+                ("bollinger_z", "resid_mom"), ("rev_5d", "low_volume_rev"), ("resid_rev_1d", "abn_volume"),
+                ("rev_5d", "idio_vol"), ("cluster_mom", "peer_gap"), ("mom_12_1", "low_vol"),
+                ("rev_1d", "close_location")]
+
+
+def pair_features(sigs: dict) -> dict[str, pd.DataFrame]:
+    return {f"{a}*{b}": cs_rank_gauss(sigs[a] * sigs[b]) for a, b in STICKY_PAIRS if a in sigs and b in sigs}
+
+
 def families() -> dict:
     """name -> (group, factory, target, row cap[, options]). Options: train_years
     (window override), regime (add signal x HMM-stress interactions)."""
@@ -240,7 +273,10 @@ def families() -> dict:
         "stack_avg": ("extra", StackAvg, "rank", 300_000),
         # sequence models: learn from raw return / volume histories instead of hand-made signals
         "lag_ridge": ("seq", lambda: Ridge(alpha=100.0), "rank", None),
-        "lag_gbm": ("seq", hgb(15, 300, 0.05), "rank", 300_000),
+        "ridge_engineered": ("Interactions that stuck, as explicit inputs", "Pairs were picked using the whole sample (mild look-ahead)"),
+    "gbm_engineered": ("Boosting with interactions and extra ideas", "More inputs, more ways to overfit"),
+    "lasso_then_gbm": ("Lasso drops the noise, boosting finds the shape", "Selection is unstable between refits"),
+    "lag_gbm": ("seq", hgb(15, 300, 0.05), "rank", 300_000),
         "lag_mlp": ("seq", mlp((64, 32)), "rank", 300_000),
         # other training targets (same inputs: the price signals)
         "ridge_resid_target": ("targets", lambda: Ridge(alpha=100.0), "resid", None),
@@ -248,6 +284,10 @@ def families() -> dict:
         "ridge_volscaled_target": ("targets", lambda: Ridge(alpha=100.0), "volscaled", None),
         "gbm_volscaled_target": ("targets", hgb(8, 200, 0.05), "volscaled", 300_000),
         "logistic_decile_target": ("targets", lambda: LogisticRegression(C=0.05, max_iter=500), "decile", None),
+        # engineered inputs: sticky pairs as products, the best ideas; lasso selection then boosting
+        "ridge_engineered": ("features", lambda: Ridge(alpha=100.0), "rank", None),
+        "gbm_engineered": ("features", hgb(8, 200, 0.05), "rank", 300_000),
+        "lasso_then_gbm": ("features", LassoGBM, "rank", 300_000),
     }
 
 
@@ -525,6 +565,22 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
         lags = lag_features(ctx, md)
         sigs = {**sigs, **lags}
         sets = {"lags": list(lags), "lags+price": list(lags) + core} if group == "seq" else {"price": core}
+    if group == "features":
+        pf = pair_features(sigs)
+        from .ideas import compute_ideas
+
+        ideas, _ = compute_ideas(md, ctx, cfg.data.cache_dir)
+        # the 20 ideas with the strongest 2006-2014 IC at this horizon (period 2 never used)
+        t1 = {}
+        for n, z in ideas.items():
+            ic = _daily_corr(z.to_numpy(dtype=np.float32), y_rank)[first]
+            ic = ic[np.isfinite(ic)]
+            if len(ic) > 250:
+                t1[n] = abs(ic.mean() / ic.std())
+        top = sorted(t1, key=t1.get, reverse=True)[:20]
+        sigs = {**sigs, **pf, **{f"idea:{n}": ideas[n] for n in top}}
+        sets = {"price+pairs": core + list(pf), "price+pairs+ideas": core + list(pf) + [f"idea:{n}" for n in top]}
+        LOG.info("features: %d pair products, ideas %s", len(pf), top)
     if group == "online":
         rows = run_online(md, ctx, sigs, sets["price"], horizon, y_rank, y5, first, years, bench, cfg)
         df = pd.DataFrame(rows)
@@ -786,7 +842,7 @@ def main(argv=None):
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
     ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra", "ideas", "seq", "online",
-                                        "targets"])
+                                        "targets", "features"])
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--out", default="reports/zoo")
     ap.add_argument("--aggregate", help="directory with group results to merge")

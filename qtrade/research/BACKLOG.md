@@ -28,7 +28,7 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
   stacking) and a 63-day horizon for all
 - [x] Other targets: factor-residual returns, volatility-scaled returns,
   top/bottom-decile classification
-- [ ] Feature engineering: sticky pairs and the best ideas as inputs; two-stage
+- [x] Feature engineering: sticky pairs and the best ideas as inputs; two-stage
   lasso-selection then boosting
 
 ## Strategies (`qtrade/research/strategies.py`)

@@ -101,6 +101,7 @@ Full list: `best_correlations.csv`. Ranked by the IC in the *weaker* of the two 
 
 | what   | name                           |   horizon_days |   ic_2006_14 |   ic_2015_26 |   t_2006_14 |   t_2015_26 |   years_positive | survivorship_prone   |
 |:-------|:-------------------------------|---------------:|-------------:|-------------:|------------:|------------:|-----------------:|:---------------------|
+| signal | rd_intensity                   |             63 |       0.0214 |       0.0255 |      1.2998 |      2.0428 |           0.8333 | False                |
 | pair   | rev_5d + downside_beta         |              5 |       0.0205 |       0.0181 |      3.7463 |    nan      |           0.8519 | False                |
 | pair   | low_volume_rev + downside_beta |              5 |       0.0216 |       0.0174 |      3.898  |    nan      |           0.8519 | True                 |
 | pair   | rev_1d + rev_21d               |              5 |       0.0178 |       0.0168 |      3.4318 |    nan      |           0.8889 | False                |
@@ -140,5 +141,4 @@ Full list: `best_correlations.csv`. Ranked by the IC in the *weaker* of the two 
 | pair   | bollinger_z + mom_accel        |              5 |       0.0165 |       0.0144 |      3.3357 |    nan      |           0.8519 | False                |
 | pair   | rev_5d + overnight_mom         |              5 |       0.0171 |       0.0143 |      3.9451 |    nan      |           0.8889 | False                |
 | pair   | low_volume_rev + mom_12_1      |              5 |       0.0234 |       0.0142 |      3.9283 |    nan      |           0.8148 | True                 |
-| pair   | bollinger_z + low_volume_rev   |              5 |       0.0215 |       0.0142 |      4.4896 |    nan      |           0.9259 | True                 |
 

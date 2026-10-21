@@ -93,13 +93,24 @@ def build_book(today_5min: dict[str, pd.DataFrame], daily: dict[str, pd.DataFram
            "overnight_persistence": signs.get("overnight_persistence", 1.0) * overnight_signal(opens, prev_closes)}
     ok = np.isfinite(p1545) & (p1545 > 0)
     w = np.zeros(N)
-    used = [s for s in acfg.strategies if s in sig]
+    used = []
+    for s in acfg.strategies:
+        if s not in sig:
+            continue
+        x = sig[s][ok]
+        informative = np.isfinite(x) & (np.abs(x) > 1e-12)
+        # a flat or missing signal (prices not printed yet, a data gap) would rank ties at random
+        if len(x) == 0 or informative.mean() < 0.5:
+            LOG.warning("%s: only %d of %d stocks have a signal today - leaving it out", s,
+                        int(informative.sum()), len(x))
+            continue
+        used.append(s)
     for s in used:
         w += _weights(sig[s], ok & np.isfinite(sig[s]), acfg.frac) * acfg.gross / max(len(used), 1)
     if shortable is not None:
         w[(w < 0) & ~np.array([t in shortable for t in tickers])] = 0.0
     return {"weights": dict(zip(tickers, w)), "prices": dict(zip(tickers, p1545)), "signals": sig,
-            "n_priced": int(ok.sum())}
+            "n_priced": int(ok.sum()), "strategies": used}
 
 
 def _submit(client, orders, tif: str) -> list[str]:

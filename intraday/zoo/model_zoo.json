@@ -1,0 +1,36 @@
+{
+  "format":"qtrade-intraday-zoo\/1",
+  "model_name":"gbm",
+  "horizon":1,
+  "signals":[
+    "rev_1",
+    "rev_2",
+    "rev_3",
+    "rev_6",
+    "rev_12",
+    "rev_24",
+    "day_ret",
+    "gap",
+    "vwap_dev",
+    "abn_vol",
+    "abn_vol_1",
+    "vol_share",
+    "rv_ratio",
+    "rev3_lowvol",
+    "rev1_x_vol",
+    "rev3_x_mkt",
+    "prev_day_ret",
+    "prev_last30",
+    "gap_x_day",
+    "vwap_x_vol"
+  ],
+  "trained_through":"2026-10-19",
+  "ic":0.0147003399,
+  "zoo":{
+    "model":"gbm",
+    "horizon":"1",
+    "ic_oos":0.0147003399,
+    "gross_sharpe_2016_20":15.4970023661,
+    "gross_sharpe_2021_26":10.7472037868
+  }
+}

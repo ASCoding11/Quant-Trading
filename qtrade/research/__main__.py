@@ -28,7 +28,7 @@ def main(argv=None):
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default="quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,"
-                                       "events,survivorship,hmm")
+                                       "events,survivorship,intraday,hmm")
     ap.add_argument("--out", default="reports/research")
     ap.add_argument("--config")
     ap.add_argument("--synthetic", action="store_true", help="offline smoke test on a simulated market")
@@ -57,6 +57,9 @@ def main(argv=None):
             if task == "quality":
                 from .data_quality import run
                 summary[task] = run(md, ctx, out, cfg.data.cache_dir)
+            elif task == "intraday":
+                from .intraday_strats import run
+                summary[task] = run(md, ctx, out, cfg)
             elif task == "spreads":
                 from .spreads import run
                 summary[task] = run(md, ctx, out)

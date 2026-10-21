@@ -57,6 +57,12 @@ jobs:
           git fetch -q --depth 1 origin results || true
           RUN=$(git ls-tree --name-only origin/results runs/ 2>/dev/null | grep clean-data | tail -1)
           [ -n "$RUN" ] && git show "origin/results:$RUN/daily.csv" > data/reversal_daily.csv || true
+          # daily statistics from the 5-minute bars (built once, then kept in the data cache)
+          if [ ! -f data/public/intraday_stats.parquet ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+            fetch_dataset intraday_5min intraday/5min && python -m qtrade.research.intraday_stats data/intraday/5min || echo "no intraday stats"
+            rm -rf data/intraday
+          fi
       - name: Run studies
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
@@ -68,7 +74,7 @@ jobs:
           if [ -z "$TASKS" ]; then
             TASKS=$(printf '%s' "$COMMIT_MSG" | grep -o '\[research: [a-z,]*\]' | sed 's/\[research: //; s/\]//' | head -1)
           fi
-          TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,hmm}
+          TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,intraday,hmm}
           echo "tasks: $TASKS"
           python -m qtrade.research --tasks "$TASKS" --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
@@ -88,7 +94,7 @@ jobs:
             # a partial run (some tasks only) adds its files to latest instead of replacing it
           mkdir -p research/latest && cp -r "$GITHUB_WORKSPACE/reports/research/." research/latest/
           { echo "# Research results"; echo
-            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies events survivorship hmm; do
+            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies events survivorship intraday hmm; do
               [ -f "research/latest/$f.md" ] && { cat "research/latest/$f.md"; echo; }
             done; } > research/latest/README.md
             git add -A && git commit -q -m "Research run ${GITHUB_SHA::7} (run ${{ github.run_id }})"

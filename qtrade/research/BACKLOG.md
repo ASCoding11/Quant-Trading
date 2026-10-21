@@ -38,7 +38,7 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 - [x] Momentum crash protection (vol-scaled, macro-timed); sector- and beta-neutral and
   vol-scaled factor books; ETF pair trades; a risk-parity blend of the
   momentum and reversal books
-- [ ] Intraday (5-minute data): opening drive, last-half-hour momentum,
+- [x] Intraday (5-minute data): opening drive, last-half-hour momentum,
   overnight-intraday reversal
 
 ## Not yet covered (added after review)

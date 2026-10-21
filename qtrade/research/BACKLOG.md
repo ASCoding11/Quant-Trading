@@ -11,10 +11,11 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
   peer-relative, time-series), trend shape (MA gap, MACD, distance from high),
   volatility change, skewness, co-skewness, illiquidity change, OBV divergence,
   fundamentals (earnings/revenue growth, ROE, leverage, net issuance, R&D, cash)
-- [ ] **Wave 2**: seasonality (stock's same-calendar-month return over 1-10
+- [x] **Wave 2**: seasonality (stock's same-calendar-month return over 1-10
   years, weekday, pre-holiday), overnight momentum (overnight returns persist),
   52-week low, nominal price level, volume-spike continuation vs reversal,
-  earnings-surprise revisions (change in SUE), sector leader -> follower lead-lag
+  earnings-surprise revisions (change in SUE), network (correlation-neighbour) momentum;
+  public data: FINRA short volume, SEC insider buying (net and cluster), filing delays
 - [ ] **Wave 3**: interactions found to stick (momentum x 52-week high,
   reversal x momentum, reversal x HMM stress) as single signals; rank and
   nonlinear transforms of the best signals; signal decay-adjusted blends
@@ -39,3 +40,16 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
   momentum and reversal books
 - [ ] Intraday (5-minute data): opening drive, last-half-hour momentum,
   overnight-intraday reversal
+
+## Not yet covered (added after review)
+
+- [x] Free public data loaders: FRED macro, S&P 500 changes, FINRA short volume, SEC insider trades, all US stocks incl. delisted (Alpaca)
+- [ ] Survivorship-free universe study: signal ICs on a point-in-time top-1000 (with delisted stocks) vs today's survivors, 2017-2026
+- [ ] Intraday-derived daily signals: realized skew/kurtosis, jump share, first/last half-hour moves
+- [ ] News text: novelty, event types (M&A, FDA, guidance, lawsuit, offering, analyst), event study by type
+- [ ] Index events: S&P 500 additions/removals around the effective date
+- [ ] Macro: FRED states for market timing and momentum-crash protection
+- [ ] Broad trend following (~30 ETFs: commodities, currencies, rates, countries), volatility premium (VIX term structure), sector seasonality
+- [ ] Ledoit-Wolf covariance and mean-variance across strategies; capacity vs AUM; open- vs close-auction execution
+- [ ] Sequence models on raw return histories; online model weighting; sizing by model disagreement
+- [ ] Not possible with free data: options (implied vol, skew), analyst revisions, borrow fees, supply chains, 13F (large)

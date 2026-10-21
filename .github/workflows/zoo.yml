@@ -29,7 +29,7 @@ env:
 jobs:
   prep:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 240
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
       prev: ${{ steps.plan.outputs.prev }}
@@ -64,7 +64,9 @@ jobs:
         with:
           path: data
           key: prices-1000-15-2000-01-01-zoo-${{ github.run_id }}
-          restore-keys: prices-1000-15-2000-01-01-
+          restore-keys: |
+            zoo-data-
+            prices-1000-15-2000-01-01-
       - name: Prices, universe, fundamentals and news
         run: |
           [ -f data/universe.csv ] || python -m qtrade universe
@@ -72,6 +74,8 @@ jobs:
           source scripts/datastore.sh
           fetch_dataset fundamentals fundamentals || echo "no fundamentals"
           fetch_dataset news news || echo "no news"
+          # free public data (macro, index changes, insider trades, short volume); cached between runs
+          python -m qtrade.research.fetch_public || echo "public data partly unavailable"
           du -sh data/*
       - name: Save data for the model jobs
         uses: actions/cache/save@v4

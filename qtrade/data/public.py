@@ -1,0 +1,264 @@
+"""Free public datasets beyond prices: macro series, index changes, short
+volume, insider trades, and a survivorship-free stock universe.
+
+Every loader caches what it downloads under ``data/public/`` and returns
+point-in-time data: each value carries the date it became public.
+
+* FRED macro series (St. Louis Fed; no key needed)
+* S&P 500 additions and removals (Wikipedia's change table)
+* FINRA Reg SHO daily short-sale volume (off-exchange; consolidated file since Aug 2018)
+* SEC insider transactions (Forms 3/4/5 data sets, quarterly since 2006)
+* Alpaca daily bars for every US stock, including delisted ones, since 2016
+"""
+from __future__ import annotations
+
+import io
+import time
+import zipfile
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from ..utils import LOG
+
+FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
+# series: (FRED id, days of publication lag to apply)
+FRED_SERIES = {
+    "term_spread_10y2y": ("T10Y2Y", 1),
+    "term_spread_10y3m": ("T10Y3M", 1),
+    "credit_spread_baa": ("BAA10Y", 1),
+    "real_rate_10y": ("DFII10", 1),
+    "dollar_index": ("DTWEXBGS", 1),
+    "oil_wti": ("DCOILWTICO", 1),
+    "vix": ("VIXCLS", 1),
+    "fin_conditions": ("NFCI", 7),          # weekly, published the following Wednesday
+    "jobless_claims": ("ICSA", 7),          # weekly, published the following Thursday
+}
+SP500_WIKI = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+REGSHO_URL = "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{d:%Y%m%d}.txt"
+INSIDER_URL = "https://www.sec.gov/files/structureddata/data/insider-transactions-data-sets/{y}q{q}_form345.zip"
+
+
+def _session(sec: bool = False):
+    import os
+
+    import requests
+
+    s = requests.Session()
+    ua = os.environ.get("SEC_USER_AGENT") or "qtrade-research (github.com/ASCoding11/Quant-Trading)"
+    s.headers.update({"User-Agent": ua if sec else "Mozilla/5.0 (qtrade research)"})
+    return s
+
+
+def _cache(root: str | Path) -> Path:
+    p = Path(root) / "public"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+# -----------------------------------------------------------------------------
+# FRED
+# -----------------------------------------------------------------------------
+def load_fred(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
+    """Daily frame of macro series, each shifted by its publication lag."""
+    path = _cache(root) / "fred.parquet"
+    if path.exists() and not refresh:
+        return pd.read_parquet(path)
+    s = _session()
+    cols = {}
+    for name, (sid, lag) in FRED_SERIES.items():
+        try:
+            r = s.get(FRED_URL.format(sid=sid), timeout=60)
+            r.raise_for_status()
+            df = pd.read_csv(io.StringIO(r.text))
+            df.columns = ["date", "value"]
+            x = pd.Series(pd.to_numeric(df["value"], errors="coerce").to_numpy(),
+                          index=pd.to_datetime(df["date"])).dropna()
+            x.index = x.index + pd.Timedelta(days=lag)                # when it was known
+            cols[name] = x
+            LOG.info("FRED %s: %d values", sid, len(x))
+        except Exception as exc:
+            LOG.warning("FRED %s failed: %s", sid, exc)
+    out = pd.DataFrame(cols).sort_index()
+    out = out.resample("D").last().ffill()
+    out.to_parquet(path)
+    return out
+
+
+# -----------------------------------------------------------------------------
+# S&P 500 changes
+# -----------------------------------------------------------------------------
+def load_sp500_changes(root: str | Path = "data", refresh: bool = False) -> pd.DataFrame:
+    """date, added, removed (effective dates of index changes)."""
+    path = _cache(root) / "sp500_changes.parquet"
+    if path.exists() and not refresh:
+        return pd.read_parquet(path)
+    html = _session().get(SP500_WIKI, timeout=60).text
+    tables = pd.read_html(io.StringIO(html))
+    ch = next(t for t in tables if isinstance(t.columns, pd.MultiIndex) and any("Added" in str(c) for c in t.columns))
+    ch.columns = ["_".join(str(x) for x in c).strip() for c in ch.columns]
+    date_col = next(c for c in ch.columns if c.lower().startswith("effective date") or c.lower().startswith("date"))
+    add_col = next(c for c in ch.columns if "Added" in c and "Ticker" in c)
+    rem_col = next(c for c in ch.columns if "Removed" in c and "Ticker" in c)
+    out = pd.DataFrame({"date": pd.to_datetime(ch[date_col], errors="coerce"),
+                        "added": ch[add_col].astype(str).str.strip().str.replace(".", "-", regex=False),
+                        "removed": ch[rem_col].astype(str).str.strip().str.replace(".", "-", regex=False)})
+    out = out.dropna(subset=["date"]).replace({"nan": np.nan})
+    out.to_parquet(path)
+    return out
+
+
+# -----------------------------------------------------------------------------
+# FINRA short volume
+# -----------------------------------------------------------------------------
+def load_short_volume(dates: pd.DatetimeIndex, tickers: list[str], root: str | Path = "data",
+                      budget_min: float = 60) -> pd.DataFrame:
+    """Daily short-volume ratio (short volume / total off-exchange volume) per stock."""
+    from .loader import to_yahoo
+
+    cache = _cache(root) / "regsho"
+    cache.mkdir(exist_ok=True)
+    s = _session()
+    t0 = time.time()
+    want = set(tickers)
+    frames = []
+    failures = 0
+    for d in dates[dates >= "2018-08-01"]:
+        f = cache / f"{d:%Y%m%d}.parquet"
+        if not f.exists():
+            if (time.time() - t0) / 60 > budget_min or failures >= 10:
+                if failures >= 10:
+                    LOG.warning("Reg SHO: 10 failures in a row - giving up on downloads")
+                break
+            try:
+                r = s.get(REGSHO_URL.format(d=d), timeout=30)
+                if r.status_code != 200:
+                    failures += 1 if r.status_code != 404 else 0       # 404 = holiday, not a failure
+                    continue
+                failures = 0
+                df = pd.read_csv(io.StringIO(r.text), sep="|")
+                df = df[df["Symbol"].notna() & (df["TotalVolume"] > 0)]
+                df["ticker"] = df["Symbol"].astype(str).map(to_yahoo)
+                df = df[df["ticker"].isin(want)]
+                df = df.groupby("ticker")[["ShortVolume", "TotalVolume"]].sum().reset_index()
+                df["date"] = d
+                df.to_parquet(f)
+            except Exception as exc:
+                LOG.warning("Reg SHO %s: %s", d.date(), exc)
+                failures += 1
+                continue
+        frames.append(pd.read_parquet(f))
+    if not frames:
+        return pd.DataFrame(index=dates, columns=tickers, dtype=float)
+    x = pd.concat(frames)
+    ratio = (x["ShortVolume"] / x["TotalVolume"]).to_numpy()
+    out = pd.Series(ratio, index=pd.MultiIndex.from_arrays([x["date"], x["ticker"]])).unstack()
+    LOG.info("short volume: %d days", len(out))
+    return out.reindex(index=dates, columns=tickers)
+
+
+# -----------------------------------------------------------------------------
+# SEC insider transactions
+# -----------------------------------------------------------------------------
+def load_insider(root: str | Path = "data", start_year: int = 2006, budget_min: float = 90) -> pd.DataFrame:
+    """Open-market insider purchases (P) and sales (S): one row per transaction with
+    ticker, filing date, insider id, signed dollar value."""
+    cache = _cache(root) / "insider"
+    cache.mkdir(exist_ok=True)
+    s = _session(sec=True)
+    t0 = time.time()
+    now = pd.Timestamp.today()
+    frames = []
+    failures = 0
+    for y in range(start_year, now.year + 1):
+        for q in range(1, 5):
+            if pd.Timestamp(year=y, month=3 * q, day=1) > now:
+                continue
+            f = cache / f"{y}q{q}.parquet"
+            if not f.exists():
+                if (time.time() - t0) / 60 > budget_min or failures >= 4:
+                    break
+                try:
+                    r = s.get(INSIDER_URL.format(y=y, q=q), timeout=300)
+                    if r.status_code != 200:
+                        LOG.warning("insider %dq%d: HTTP %d", y, q, r.status_code)
+                        failures += 1
+                        continue
+                    z = zipfile.ZipFile(io.BytesIO(r.content))
+                    sub = pd.read_csv(z.open("SUBMISSION.tsv"), sep="\t", dtype=str,
+                                      usecols=["ACCESSION_NUMBER", "FILING_DATE", "ISSUERTRADINGSYMBOL"])
+                    tr = pd.read_csv(z.open("NONDERIV_TRANS.tsv"), sep="\t", dtype=str,
+                                     usecols=["ACCESSION_NUMBER", "TRANS_CODE", "TRANS_SHARES",
+                                              "TRANS_PRICEPERSHARE", "TRANS_ACQUIRED_DISP_CD"])
+                    own = pd.read_csv(z.open("REPORTINGOWNER.tsv"), sep="\t", dtype=str,
+                                      usecols=["ACCESSION_NUMBER", "RPTOWNERCIK"])
+                    tr = tr[tr["TRANS_CODE"].isin(["P", "S"])]
+                    df = tr.merge(sub, on="ACCESSION_NUMBER").merge(
+                        own.drop_duplicates("ACCESSION_NUMBER"), on="ACCESSION_NUMBER")
+                    val = pd.to_numeric(df["TRANS_SHARES"], errors="coerce") * pd.to_numeric(
+                        df["TRANS_PRICEPERSHARE"], errors="coerce")
+                    out = pd.DataFrame({
+                        "ticker": df["ISSUERTRADINGSYMBOL"].str.upper().str.strip().str.replace(".", "-", regex=False),
+                        "filed": pd.to_datetime(df["FILING_DATE"], format="%d-%b-%Y", errors="coerce"),
+                        "insider": df["RPTOWNERCIK"],
+                        "value": np.where(df["TRANS_CODE"] == "P", 1, -1) * val})
+                    out.dropna(subset=["ticker", "filed", "value"]).to_parquet(f)
+                    LOG.info("insider %dq%d: %d transactions", y, q, len(out))
+                except Exception as exc:
+                    LOG.warning("insider %dq%d failed: %s", y, q, exc)
+                    failures += 1
+                    continue
+            frames.append(pd.read_parquet(f))
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
+        columns=["ticker", "filed", "insider", "value"])
+
+
+# -----------------------------------------------------------------------------
+# survivorship-free universe from Alpaca (includes delisted stocks)
+# -----------------------------------------------------------------------------
+def load_all_stocks_daily(root: str | Path = "data", start: str = "2016-01-01",
+                          budget_min: float = 120) -> dict[str, pd.DataFrame]:
+    """Daily close and volume for every US equity Alpaca knows, active or not.
+    Returns {'close': DataFrame, 'volume': DataFrame} (dates x symbols)."""
+    import os
+
+    from .intraday import AlpacaBars
+    from .loader import to_yahoo
+
+    cache = _cache(root) / "all_daily"
+    cache.mkdir(exist_ok=True)
+    if (cache / "close.parquet").exists():
+        return {f: pd.read_parquet(cache / f"{f}.parquet") for f in ("close", "volume")}
+    import requests
+
+    key, sec = os.environ.get("ALPACA_API_KEY"), os.environ.get("ALPACA_SECRET_KEY")
+    hdr = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": sec}
+    syms = []
+    for status in ("active", "inactive"):
+        r = requests.get("https://paper-api.alpaca.markets/v2/assets", headers=hdr,
+                         params={"status": status, "asset_class": "us_equity"}, timeout=120)
+        r.raise_for_status()
+        syms += [a["symbol"] for a in r.json() if a.get("exchange") in ("NYSE", "NASDAQ", "AMEX", "ARCA", "BATS")
+                 and "/" not in a["symbol"]]
+    syms = sorted(set(syms))
+    LOG.info("all stocks: %d symbols (active + delisted)", len(syms))
+    client = AlpacaBars(feed="sip")
+    end = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(hours=1)).isoformat()
+    closes, vols = {}, {}
+    t0 = time.time()
+    for i in range(0, len(syms), 100):
+        if (time.time() - t0) / 60 > budget_min:
+            LOG.warning("all stocks: time budget reached at %d/%d", i, len(syms))
+            break
+        got = client.bars(syms[i:i + 100], "1Day", start, end)
+        for s_, rows in got.items():
+            if not rows:
+                continue
+            idx = pd.to_datetime([b["t"] for b in rows]).tz_convert("America/New_York").tz_localize(None).normalize()
+            closes[to_yahoo(s_)] = pd.Series([b["c"] for b in rows], index=idx)
+            vols[to_yahoo(s_)] = pd.Series([b["v"] for b in rows], index=idx)
+    out = {"close": pd.DataFrame(closes).sort_index(), "volume": pd.DataFrame(vols).sort_index()}
+    for f, df in out.items():
+        df.astype("float32").to_parquet(cache / f"{f}.parquet")
+    return out

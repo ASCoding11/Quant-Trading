@@ -239,3 +239,162 @@ def compute_ideas(md, ctx, data_dir: str = "data", waves: set[int] | None = None
         out[name] = normalize_signal(raw, ctx.tradable)
         themes[name] = f"idea:{theme} (wave {wave})"
     return out, themes
+
+
+# =============================================================================
+# wave 2: public data (short volume, insider trades, filing timing)
+# =============================================================================
+def _root(ctx):
+    return ctx.cfg.data.cache_dir
+
+
+@idea("public data", 2)
+def short_vol_abn(md, ctx, facts):
+    """Minus abnormal off-exchange short volume ratio (5 days vs 60): short sellers are informed."""
+    from ..data.public import load_short_volume
+
+    sv = load_short_volume(md.dates, md.tickers, _root(ctx))
+    if sv.notna().sum().sum() == 0:
+        return None
+    return -(sv.rolling(5, min_periods=3).mean() - sv.rolling(60, min_periods=30).mean())
+
+
+@idea("public data", 2)
+def short_vol_level(md, ctx, facts):
+    """Minus the 20-day average short volume ratio."""
+    from ..data.public import load_short_volume
+
+    sv = load_short_volume(md.dates, md.tickers, _root(ctx))
+    if sv.notna().sum().sum() == 0:
+        return None
+    return -sv.rolling(20, min_periods=10).mean()
+
+
+def _insider_panels(md, ctx):
+    from ..data.public import load_insider
+
+    ins = load_insider(_root(ctx))
+    if ins.empty:
+        return None, None
+    ins = ins[ins["ticker"].isin(set(md.tickers))]
+    # usable the trading day after the filing
+    pos = md.dates.searchsorted(ins["filed"].to_numpy(), side="right")
+    ok = pos < len(md.dates)
+    ins = ins[ok].assign(day=md.dates[pos[ok]])
+    buy_val = ins[ins["value"] > 0].groupby(["day", "ticker"])["value"].sum().unstack()
+    sell_val = -ins[ins["value"] < 0].groupby(["day", "ticker"])["value"].sum().unstack()
+    buyers = ins[ins["value"] > 0].groupby(["day", "ticker"])["insider"].nunique().unstack()
+    f = lambda x: x.reindex(index=md.dates, columns=md.tickers).fillna(0.0)  # noqa: E731
+    return (f(buy_val), f(sell_val)), f(buyers)
+
+
+@idea("public data", 2)
+def insider_net_buy(md, ctx, facts):
+    """Insider open-market buys minus sells over 90 days, scaled by dollar volume."""
+    vals, _ = _insider_panels(md, ctx)
+    if vals is None:
+        return None
+    b, s = vals
+    net = (b - s).rolling(63, min_periods=1).sum()
+    return net / (ctx.adv * 63)
+
+
+@idea("public data", 2)
+def insider_cluster_buy(md, ctx, facts):
+    """Number of distinct insiders buying over 90 days (cluster buying)."""
+    _, buyers = _insider_panels(md, ctx)
+    if buyers is None:
+        return None
+    return buyers.rolling(63, min_periods=1).sum()
+
+
+@idea("public data", 2)
+def filing_delay(md, ctx, facts):
+    """Minus how late the latest 10-Q/10-K came vs. the company's usual delay (late filers underperform)."""
+    if facts is None:
+        return None
+    f = facts[facts["form"].isin(["10-Q", "10-K"]) & facts["filed"].notna() & facts["end"].notna()]
+    f = f.drop_duplicates(["ticker", "accn"])[["ticker", "end", "filed"]].copy()
+    f["delay"] = (f["filed"] - f["end"]).dt.days
+    f = f[(f["delay"] > 0) & (f["delay"] < 200)].sort_values(["ticker", "filed"])
+    f["usual"] = f.groupby("ticker")["delay"].transform(lambda x: x.shift(1).rolling(8, min_periods=3).median())
+    f["late"] = f["delay"] - f["usual"]
+    out = pd.DataFrame(np.nan, index=md.dates, columns=md.tickers)
+    for t, g in f.dropna(subset=["late"]).groupby("ticker"):
+        if t in out.columns:
+            s = pd.Series(g["late"].to_numpy(), index=g["filed"] + pd.Timedelta(days=1))
+            out[t] = s[~s.index.duplicated(keep="last")].reindex(md.dates, method="ffill", limit=63).to_numpy()
+    return -out
+
+
+# =============================================================================
+# wave 2: price-based
+# =============================================================================
+@idea("network", 2)
+def network_mom(md, ctx, facts):
+    """Correlation-weighted average of other stocks' last-month return (the stock's
+    most similar peers by 1-year return correlation; information diffuses slowly)."""
+    r = ctx.ret
+    r21 = ctx.log_ret.rolling(21, min_periods=15).sum()
+    out = pd.DataFrame(np.nan, index=r.index, columns=r.columns)
+    month_ends = r.index[pd.Series(r.index.month, index=r.index).diff().fillna(1).ne(0).to_numpy()]
+    for i, d in enumerate(month_ends):
+        hist = r.loc[:d].iloc[-252:]
+        ok = hist.notna().mean() > 0.9
+        if ok.sum() < 50:
+            continue
+        c = np.nan_to_num(np.corrcoef(hist.loc[:, ok].fillna(0).to_numpy().T))
+        np.fill_diagonal(c, 0)
+        c[c < 0.3] = 0                                          # keep real neighbours only
+        w = c / (c.sum(axis=1, keepdims=True) + 1e-12)
+        nxt = month_ends[i + 1] if i + 1 < len(month_ends) else r.index[-1] + pd.Timedelta(days=1)
+        block = r21.loc[(r21.index > d) & (r21.index <= nxt), ok]
+        out.loc[block.index, block.columns] = np.nan_to_num(block.to_numpy()) @ w.T
+    return out - r21                                             # peers up, stock not (yet)
+
+
+@idea("seasonality", 2)
+def calendar_month_seasonality(md, ctx, facts):
+    """The stock's average return in this calendar month over the past 1-10 years (Heston-Sadka)."""
+    m = ctx.log_ret.resample("ME").sum()
+    seas = sum(m.shift(12 * k) for k in range(1, 11)) / 10
+    seas = seas.shift(-1)                                        # next month's seasonal average, known now
+    return seas.reindex(ctx.ret.index, method="ffill")
+
+
+@idea("momentum", 2)
+def overnight_momentum(md, ctx, facts):
+    """Average overnight return over a year: overnight returns persist (Lou-Polk-Skouras)."""
+    return ctx.overnight.rolling(252, min_periods=200).mean()
+
+
+@idea("trend", 2)
+def near_52w_low(md, ctx, facts):
+    """Minus distance above the 52-week low (stocks near their lows keep falling?)."""
+    return -(md.close / md.close.rolling(252, min_periods=200).min() - 1)
+
+
+@idea("price level", 2)
+def low_nominal_price(md, ctx, facts):
+    """Minus log of the as-traded share price (low-priced stocks behave differently)."""
+    return -np.log(md.traded_close)
+
+
+@idea("volume", 2)
+def volume_spike_continuation(md, ctx, facts):
+    """Last 5 days' return when volume spiked (> 2x normal): high-volume moves continue."""
+    spike = md.volume.rolling(5).mean() / md.volume.rolling(63).mean() > 2
+    return ctx.log_ret.rolling(5).sum().where(spike, 0.0)
+
+
+@idea("fundamental", 2)
+def sue_revision(md, ctx, facts):
+    """Change in earnings surprise between the last two quarters (improving surprises)."""
+    if facts is None:
+        return None
+    from .alt_signals import fundamental_signals
+
+    sue = fundamental_signals(md, ctx, facts).get("sue")
+    if sue is None:
+        return None
+    return sue - sue.shift(63)

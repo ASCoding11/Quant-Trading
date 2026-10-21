@@ -97,7 +97,7 @@ jobs:
             # a partial run (some tasks only) adds its files to latest instead of replacing it
           mkdir -p research/latest && cp -r "$GITHUB_WORKSPACE/reports/research/." research/latest/
           { echo "# Research results"; echo
-            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies multi events survivorship intraday hmm; do
+            for f in data_quality spreads edge alt poisson conditional combos garch glm strategies multi flip events survivorship intraday hmm; do
               [ -f "research/latest/$f.md" ] && { cat "research/latest/$f.md"; echo; }
             done; } > research/latest/README.md
             git add -A && git commit -q -m "Research run ${GITHUB_SHA::7} (run ${{ github.run_id }})"

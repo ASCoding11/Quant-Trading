@@ -246,7 +246,7 @@ def run(md, ctx, out: Path, news_counts: pd.DataFrame | None = None) -> tuple[di
         P, pll, last = walk_forward_poisson_hmm(N, k)
         row = {"states": k, "rates (jumps/day)": np.round(last.rates, 1).tolist(),
                "expected_days_in_state": np.round(1 / (1 - np.diag(last.A)), 1).tolist()}
-        for per, m in (("1st", idx < SPLIT), ("2nd", idx >= SPLIT)):
+        for per, m in (("1st", (idx >= "2006-01-01") & (idx < SPLIT)), ("2nd", idx >= SPLIT)):
             m = m & P.notna().all(axis=1).to_numpy()
             Pm = P[m].to_numpy()
             row[f"pred_ll_{per}"] = float(np.nanmean(pll[m]))
@@ -286,7 +286,7 @@ def run(md, ctx, out: Path, news_counts: pd.DataFrame | None = None) -> tuple[di
         if has_news is not None:
             groups += [("with news", (ev == 1) & has_news), ("no news", (ev == 1) & ~has_news)]
         for g, m in groups:
-            for per, sel in (("1st", ar.index < SPLIT), ("2nd", ar.index >= SPLIT)):
+            for per, sel in (("1st", (ar.index >= "2006-01-01") & (ar.index < SPLIT)), ("2nd", ar.index >= SPLIT)):
                 mm = m[sel]
                 row = {"event": name, "news": g, "period": per, "events": int(mm.sum().sum())}
                 for h, c in car.items():

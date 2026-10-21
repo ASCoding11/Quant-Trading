@@ -396,7 +396,7 @@ def run_ideas(cfg, horizon: int, out: Path, synthetic: bool = False) -> pd.DataF
     sigs, themes = compute_ideas(md, ctx, cfg.data.cache_dir)
     o = md.open
     y = cs_rank_gauss((o.shift(-(1 + horizon)) / o.shift(-1) - 1).where(ctx.tradable)).to_numpy()
-    first = np.asarray(md.dates < SPLIT)
+    first = np.asarray((md.dates >= "2006-01-01") & (md.dates < SPLIT))
     years = np.asarray(md.dates.year)
     bench = Bench(md, ctx)
     rows = []
@@ -560,7 +560,7 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
         dec = np.where(pct >= 0.9, 1.0, np.where(pct <= 0.1, 0.0, np.nan))
         y_extra["decile"] = np.where(fwd.notna().to_numpy(), dec, np.nan)
     y5 = cs_rank_gauss((o.shift(-6) / o.shift(-1) - 1).where(tr)).to_numpy() if horizon != 5 else y_rank
-    first = np.asarray(dates < SPLIT)
+    first = np.asarray((dates >= "2006-01-01") & (dates < SPLIT))
     years = np.asarray(dates.year)
     bench = Bench(md, ctx)
     core = [n for n in sigs if n in fam]

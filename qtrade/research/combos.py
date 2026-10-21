@@ -57,7 +57,7 @@ def run(md, ctx, out: Path, sigs: dict[str, pd.DataFrame], families: dict[str, s
     o = md.open
     tr = ctx.tradable
     y = {h: cs_rank_gauss((o.shift(-(1 + h)) / o.shift(-1) - 1).where(tr)).to_numpy() for h in (1, 5, 21)}
-    first = np.asarray(dates < SPLIT)
+    first = np.asarray((dates >= "2006-01-01") & (dates < SPLIT))
     years = np.asarray(dates.year)
     names = list(sigs)
     Z = {n: sigs[n].to_numpy(dtype=np.float32) for n in names}

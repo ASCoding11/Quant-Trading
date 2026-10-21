@@ -202,8 +202,8 @@ def summarize(daily: pd.DataFrame, capital: float) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
-def write(out: Path, daily, signs, fills, capital, include_trades: bool) -> None:
-    summ = summarize(daily, capital)
+def write(out: Path, daily, signs, fills, capital, include_trades: bool, scenarios: pd.DataFrame | None = None) -> None:
+    summ = summarize(daily, capital) if scenarios is None else scenarios
     blend = daily[(daily["plan"] == "IBKR Lite") & (daily["strategy"] == "blend")].drop(columns=["plan", "strategy"])
     monthly = blend.assign(month=blend["date"].dt.to_period("M").astype(str)).groupby("month").agg(
         start_value=("start_value", "first"), end_value=("end_value", "last"), trading_pnl=("trading_pnl", "sum"),
@@ -212,7 +212,8 @@ def write(out: Path, daily, signs, fills, capital, include_trades: bool) -> None
     assum = pd.DataFrame([{"item": "direction (from 2016-2020 only)", "value": str(signs)},
                           {"item": "book", "value": "top / bottom fifth of 500 most liquid stocks, equal weight, "
                                                     "whole shares, gross 2x, blend = equal capital per strategy"},
-                          {"item": "auction orders (MOO / MOC)", "value": "auction price + 1 bp slippage, no spread"},
+                          {"item": "auction orders (MOO / MOC)", "value": "auction price + 1 bp slippage, no spread (Summary "
+                           "also shows 0 and 0.5 bp; other sheets use 1 bp)"},
                           {"item": "9:35 / 10:00 entries", "value": "half-spread by liquidity tier + 0.5 bp slippage"},
                           {"item": "IBKR Lite", "value": "no commission, exchange or clearing fees; SEC fee and "
                                                          "FINRA TAF on sales; orders routed to market makers"},
@@ -257,11 +258,17 @@ def main(argv=None):
         bars = load_store(args.store, args.symbols)
     log_from = str((bars.days[-1] - pd.DateOffset(months=args.trade_months)).date())
     daily, signs, fills = simulate(bars, args.capital, trade_log_from=log_from)
+    # sensitivity: what an auction fill costs beyond the official open / close price
+    scen = [summarize(daily, args.capital).assign(auction_slippage_bp=1.0)]
+    for slip in (0.0, 0.5):
+        d2, _, _ = simulate(bars, args.capital, auction_slippage_bp=slip)
+        scen.append(summarize(d2, args.capital).assign(auction_slippage_bp=slip))
+    summ = pd.concat(scen, ignore_index=True)
+    summ = summ[["auction_slippage_bp"] + [c for c in summ.columns if c != "auction_slippage_bp"]]
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    write(out, daily, signs, fills, args.capital, include_trades=True)
-    write(out, daily, signs, fills, args.capital, include_trades=False)
-    summ = summarize(daily, args.capital)
+    write(out, daily, signs, fills, args.capital, include_trades=True, scenarios=summ)
+    write(out, daily, signs, fills, args.capital, include_trades=False, scenarios=summ)
     summ.to_csv(out / "summary.csv", index=False)
     print(summ.round(3).to_string())
 

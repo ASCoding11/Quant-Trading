@@ -901,3 +901,4 @@ pred_ll: average log-likelihood of tomorrow's symptoms given today's regime beli
 | daily      |        3 |      0.5 |        4.0603 |        5.046  |            0.0005 |           -0.0006 |                  -0.234  |                  -0.0396 |                0.8758 |            0.0037 |                0.0146 |
 | daily      |        3 |      0.2 |        2.6837 |        3.2971 |            0.0122 |            0.0073 |                  -0.3464 |                  -0.028  |                0.8839 |            0.04   |                0.0573 |
 
+

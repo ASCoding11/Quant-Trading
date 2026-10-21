@@ -1,0 +1,20 @@
+{
+  "alt": {
+    "signals": [
+      "earnings_yield",
+      "book_to_market",
+      "gross_prof",
+      "asset_growth",
+      "accruals",
+      "sue",
+      "ear",
+      "news_volume",
+      "news_tone",
+      "no_news_rev",
+      "news_mom"
+    ]
+  },
+  "strategies": {
+    "error": "TypeError: cannot subtract DatetimeArray from ndarray[float64]"
+  }
+}

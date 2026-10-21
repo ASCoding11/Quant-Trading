@@ -1,0 +1,81 @@
+02:33:11 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+02:33:11 INFO    qtrade | research task: alt
+02:33:51 INFO    qtrade | fundamental signals: ['earnings_yield', 'book_to_market', 'gross_prof', 'asset_growth', 'accruals', 'sue', 'ear']
+02:33:58 INFO    qtrade | news signals: 1164220 articles mapped to the universe
+02:34:17 INFO    qtrade | edge: earnings_yield done
+02:34:22 INFO    qtrade | edge: book_to_market done
+02:34:28 INFO    qtrade | edge: gross_prof done
+02:34:33 INFO    qtrade | edge: asset_growth done
+02:34:39 INFO    qtrade | edge: accruals done
+02:34:44 INFO    qtrade | edge: sue done
+02:34:49 INFO    qtrade | edge: ear done
+02:34:54 INFO    qtrade | edge: news_volume done
+02:34:59 INFO    qtrade | edge: news_tone done
+02:35:04 INFO    qtrade | edge: no_news_rev done
+02:35:09 INFO    qtrade | edge: news_mom done
+02:35:09 INFO    qtrade | research task: strategies
+02:35:13 INFO    qtrade | downloaded 18 / 18 tickers
+02:35:25 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+02:35:52 INFO    qtrade | factor model: 309 refits, 15 factors
+02:36:00 ERROR   qtrade | task strategies failed
+Traceback (most recent call last):
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 158, in main
+    summary[task] = run(md, ctx, out, cfg, alt_raw, rev)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/strategies.py", line 291, in run
+    ep = earnings_premium(md, ctx, load_fundamentals(fpath.parent))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/strategies.py", line 249, in earnings_premium
+    days_to = (nxt - pd.DataFrame(np.repeat(dates.values[:, None], nxt.shape[1], 1), index=dates,
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/ops/common.py", line 85, in new_method
+    return method(self, other)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/arraylike.py", line 198, in __sub__
+    return self._arith_method(other, operator.sub)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 9153, in _arith_method
+    new_data = self._dispatch_frame_op(other, op, axis=axis)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 9196, in _dispatch_frame_op
+    bm = self._mgr.operate_blockwise(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/internals/managers.py", line 1704, in operate_blockwise
+    return operate_blockwise(self, other, array_op)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/internals/ops.py", line 65, in operate_blockwise
+    res_values = array_op(lvals, rvals)
+                 ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/ops/array_ops.py", line 279, in arithmetic_op
+    res_values = op(left, right)
+                 ^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/arrays/datetimelike.py", line 2094, in __array_ufunc__
+    return super().__array_ufunc__(ufunc, method, *inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/arrays/base.py", line 2705, in __array_ufunc__
+    result = arraylike.maybe_dispatch_ufunc_to_dunder_op(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pandas/_libs/ops_dispatch.pyx", line 113, in pandas._libs.ops_dispatch.maybe_dispatch_ufunc_to_dunder_op
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/pandas/core/arrays/datetimelike.py", line 1541, in __rsub__
+    raise TypeError(
+TypeError: cannot subtract DatetimeArray from ndarray[float64]
+{
+ "alt": {
+  "signals": [
+   "earnings_yield",
+   "book_to_market",
+   "gross_prof",
+   "asset_growth",
+   "accruals",
+   "sue",
+   "ear",
+   "news_volume",
+   "news_tone",
+   "no_news_rev",
+   "news_mom"
+  ]
+ },
+ "strategies": {
+  "error": "TypeError: cannot subtract DatetimeArray from ndarray[float64]"
+ }
+}

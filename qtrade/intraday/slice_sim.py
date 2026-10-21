@@ -10,7 +10,7 @@ slice of the day, so it needs only two orders per stock per day:
                         (marketable order in, market-on-close out)
   overnight_persistence past month's overnight return, close -> next open
                         (market-on-close in, market-on-open out)
-  last30_fade           against the 15:20-15:50 move, close -> next open
+  last30_fade           against the 15:15-15:45 move, close -> next open
 
 Every signal uses only prices printed before its order is sent. (The research
 version of the gap trade entered at the official open, which already defines
@@ -32,6 +32,7 @@ or IBKR Pro Tiered (``ibkr_sim.IBKR``).
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -77,7 +78,7 @@ def signals(bars: DayBars):
     * gap: previous close -> today's open, traded at 9:35 (the open defines the gap, so an
       order sent before the open could not know it);
     * first half hour: open -> close of the 9:55 bar, traded at the 10:00 open;
-    * last half hour: 15:20 -> 15:50, so a market-on-close order makes the 15:50 cutoff;
+    * last half hour: 15:15 -> 15:45, so a market-on-close order makes the 15:50 cutoff;
     * overnight: the past 21 sessions' close -> open returns, traded at today's close.
     """
     Q0, q935, q10, qc = day_prices(bars)
@@ -86,12 +87,28 @@ def signals(bars: DayBars):
     with np.errstate(invalid="ignore", divide="ignore"):
         gap = Q0 / prev_c - 1
         first30 = px[:, 5, :] / Q0 - 1
-        last30 = px[:, 75, :] / px[:, 69, :] - 1
         on = np.log(Q0 / prev_c)
     on21 = pd.DataFrame(on).rolling(21, min_periods=15).sum().to_numpy()
     dm = lambda x: x - np.nanmean(x, axis=1, keepdims=True)  # noqa: E731
     return {"gap_reversal": -dm(gap), "opening_fade": -dm(first30),
-            "overnight_persistence": dm(on21), "last30_fade": -dm(last30)}
+            "overnight_persistence": dm(on21), "last30_fade": last30_signal(px[:, 68, :], px[:, 74, :])}
+
+
+def last30_signal(p_1515: np.ndarray, p_1545: np.ndarray) -> np.ndarray:
+    """Against the 15:15 -> 15:45 move, relative to the cross-section (last axis = stocks).
+    Shared with the live auction trader."""
+    with np.errstate(invalid="ignore", divide="ignore"):
+        r = p_1545 / p_1515 - 1
+    return -(r - np.nanmean(r, axis=-1, keepdims=True))
+
+
+def overnight_signal(opens: np.ndarray, prev_closes: np.ndarray, min_days: int = 15) -> np.ndarray:
+    """Sum of the last 21 sessions' close -> open log returns (rows = sessions, oldest
+    first, the last row = today), relative to the cross-section. Shared with the live trader."""
+    with np.errstate(invalid="ignore", divide="ignore"):
+        lr = np.log(opens[-21:] / prev_closes[-21:])
+    s = np.where(np.isfinite(lr).sum(axis=0) >= min_days, np.nansum(lr, axis=0), np.nan)
+    return s - np.nanmean(s)
 
 
 def legs(bars: DayBars):
@@ -270,6 +287,7 @@ def main(argv=None):
     write(out, daily, signs, fills, args.capital, include_trades=True, scenarios=summ)
     write(out, daily, signs, fills, args.capital, include_trades=False, scenarios=summ)
     summ.to_csv(out / "summary.csv", index=False)
+    (out / "signs.json").write_text(json.dumps(signs, indent=2))   # read by the live auction trader
     print(summ.round(3).to_string())
 
 

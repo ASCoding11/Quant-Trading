@@ -14,8 +14,8 @@ def _bump(bars, d, from_bar):
 def test_signals_do_not_see_prices_after_their_order():
     d = 30
     # (strategy, first bar that must not matter): gap trade at 9:35 (bar 1), opening fade at 10:00 (bar 6),
-    # last-half-hour fade decided at 15:50 (bar 76)
-    for name, cut in (("gap_reversal", 1), ("opening_fade", 6), ("last30_fade", 76)):
+    # last-half-hour fade decided at 15:45 (bar 75)
+    for name, cut in (("gap_reversal", 1), ("opening_fade", 6), ("last30_fade", 75)):
         bars = make_intraday(n_stocks=30, n_days=40, seed=5)
         base = S.signals(bars)[name][d].copy()
         _bump(bars, d, cut)
@@ -29,3 +29,13 @@ def test_lite_charges_no_commission_but_regulatory_fees_on_sales():
     f = order_fees(np.array([10.0, 10.0]), np.array([100.0, 100.0]), np.array([False, True]), S.IBKR_LITE)
     assert f["commission"].sum() == 0 and f["exchange_fee"].sum() == 0
     assert f["sec_fee"][1] > 0 and f["sec_fee"][0] == 0
+
+
+def test_overnight_signal_matches_the_panel_version():
+    bars = make_intraday(n_stocks=30, n_days=60, seed=6)
+    panel = S.signals(bars)["overnight_persistence"]
+    Q0, _, _, qc = S.day_prices(bars)
+    prev_c = np.vstack([np.full((1, Q0.shape[1]), np.nan), qc[:-1]])
+    d = 45
+    live = S.overnight_signal(Q0[d - 20:d + 1], prev_c[d - 20:d + 1])
+    assert np.allclose(live, panel[d], equal_nan=True)

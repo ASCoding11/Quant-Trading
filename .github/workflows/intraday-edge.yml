@@ -67,7 +67,7 @@ jobs:
             git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
             git fetch -q --depth 1 origin results && git checkout -q -B results FETCH_HEAD
             rm -rf intraday/edge && mkdir -p intraday/edge
-            cp "$GITHUB_WORKSPACE"/reports/edge/{intraday_edge_ibkr_no_trades.xlsx,summary.csv} intraday/edge/
+            cp "$GITHUB_WORKSPACE"/reports/edge/{intraday_edge_ibkr_no_trades.xlsx,summary.csv,signs.json} intraday/edge/
             git add -A && git commit -q -m "Intraday edge strategies on IBKR (run ${{ github.run_id }})"
             if git push -q origin results; then echo "published intraday/edge"; break; fi
             sleep $((attempt * 15))

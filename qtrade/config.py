@@ -135,6 +135,17 @@ class MultiConfig:
 
 
 @dataclass
+class AuctionConfig:
+    """The auction trader (``qtrade.intraday.auction_live``): market-on-close in, market-on-open out."""
+    strategies: list = field(default_factory=lambda: ["last30_fade", "overnight_persistence"])
+    gross: float = 2.0               # long + short as a multiple of capital
+    frac: float = 0.2                # long the top fifth, short the bottom fifth
+    capital: float | None = None     # dollars to trade (default: live.capital_fraction / live.max_capital)
+    min_order_value: float = 25.0
+    feed: str = "iex"                # today's 5-minute bars on the free plan
+
+
+@dataclass
 class IntradayConfig:
     """Intraday reversal strategy on N-minute bars (``qtrade.intraday``)."""
     store: str = "data/intraday/5min"  # per-symbol bar files (see `qtrade intraday`)
@@ -175,6 +186,7 @@ class Config:
     live: LiveConfig = field(default_factory=LiveConfig)
     intraday: IntradayConfig = field(default_factory=IntradayConfig)
     multi: MultiConfig = field(default_factory=MultiConfig)
+    auction: AuctionConfig = field(default_factory=AuctionConfig)
     report_dir: str = "reports"
     diagnostics: bool = True         # also backtest portfolio-construction variants
 

@@ -333,11 +333,22 @@ idea (short-term reversal) at a much faster clock, on the 5-minute bars in the
 `python -m qtrade intraday-backtest --store data/intraday/5min`, or
 `--synthetic` for an offline check.
 
-**Paper trading:** Actions -> **intraday-trade** -> Run workflow (dry run by
-default). **It is the scheduled trader by default**: every trading day it
-runs and the daily paper-trade workflow stands aside, because both strategies
-would otherwise fight over the same account. Set a repository **variable**
-`TRADING_MODE` = `daily` to trade the daily book instead. It uses the intraday
+**Which trader runs.** Only one strategy may own the paper account, chosen by
+the repository **variable** `TRADING_MODE`:
+
+| `TRADING_MODE` | Workflow | What it does |
+|---|---|---|
+| `auction` (default) | **auction-trade** | market-on-close book at ~15:45 (fade the 15:15-15:45 move + past month's overnight returns), closed with market-on-open orders the next morning; logs every fill against the official open / close |
+| `intraday` | **intraday-trade** | rebalances every 5 minutes, flat by 15:45 |
+| `daily` | **paper-trade** | the daily stock book + ETF sleeves, market-on-open |
+
+The auction trader is the default because auction orders pay no spread: of
+everything tested, its two strategies are the only intraday-style trades whose
+edge survives costs (`research_data/ibkr/intraday_edge_ibkr_no_trades.xlsx`),
+and only if auction fills cost close to 0 bp, which its fill log measures.
+
+**Paper trading (intraday):** Actions -> **intraday-trade** -> Run workflow (dry run by
+default), or set `TRADING_MODE` = `intraday` to run it every day. It uses the intraday
 model zoo's winner (`intraday/zoo/model_zoo.joblib`, retrained monthly) when
 one exists, otherwise the production ridge. It waits
 for the open, rebalances a few seconds after every 5-minute bar using

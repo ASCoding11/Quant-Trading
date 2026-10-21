@@ -1,8 +1,60 @@
 {
-  "quality": {
-    "bad_prints_masked": 0,
-    "max_abs_close-to-close": 257.3333245152623,
-    "max_abs_overnight": 225.24998169143745,
-    "max_abs_intraday": 5.249999960001184
+  "alt": {
+    "signals": [
+      "earnings_yield",
+      "book_to_market",
+      "gross_prof",
+      "asset_growth",
+      "accruals",
+      "sue",
+      "ear",
+      "news_volume",
+      "news_tone",
+      "no_news_rev",
+      "news_mom"
+    ]
+  },
+  "strategies": {
+    "strategies": 33,
+    "chosen_for_diversified_book": [
+      "accruals",
+      "spy_tsmom_12m",
+      "spy_ma200",
+      "spy_vol_managed",
+      "spy_hmm_timing",
+      "spy_turn_of_month",
+      "multi_asset_trend",
+      "risk_parity",
+      "cross_asset_mom",
+      "broad_trend_3m",
+      "broad_trend_12m",
+      "broad_trend_blend",
+      "short_vol_contango",
+      "short_vol_always",
+      "pairs",
+      "REVERSAL BOOK (current system)"
+    ],
+    "diversified": [
+      {
+        "portfolio": "diversified (16 strategies chosen on 2006-2014)",
+        "sharpe_1st": 1.29,
+        "ret_1st": 0.129,
+        "max_dd_1st": -0.096,
+        "sharpe_2nd": 0.853,
+        "ret_2nd": 0.095,
+        "max_dd_2nd": -0.174,
+        "vol": 0.106
+      },
+      {
+        "portfolio": "reversal book alone (10% vol)",
+        "sharpe_1st": 0.436,
+        "ret_1st": 0.044,
+        "max_dd_1st": -0.23,
+        "sharpe_2nd": 0.156,
+        "ret_2nd": 0.014,
+        "max_dd_2nd": -0.284,
+        "vol": 0.093
+      }
+    ]
   }
 }

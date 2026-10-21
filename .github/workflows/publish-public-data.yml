@@ -10,6 +10,9 @@ name: publish-public-data
 
 on:
   workflow_dispatch:
+  push:                    # also when this file changes on a working branch (before it reaches main)
+    branches: ["claude/**"]
+    paths: [".github/workflows/publish-public-data.yml"]
   schedule:
     - cron: "0 14 3 * *"   # monthly, the day after fundamentals-data refreshes
 

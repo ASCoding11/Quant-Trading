@@ -32,3 +32,6 @@ Findings so far:
 - Reversal IC is 2-3x larger in HMM-stressed markets, but trading only then doesn't add net profit.
 - GARCH beats the rolling window for stock volatility (146/150 stocks), but scaling the whole book by volatility hurts.
 - Jumps cluster (variance/mean 24); jump storms are predictable (7-day half-life); no-news up-jumps reverse twice as much as news-driven ones.
+
+## 04:00 UTC
+- Pushed ideas wave 4 (combination signals: momentum + 52w high, reversal + residual momentum, momentum trio, reversal within winners) and a zoo `targets` group (ridge/GBM on factor-residual and vol-scaled targets, top/bottom-decile logistic). Synthetic runs clean; real-data run triggered via `[zoo: ...]` tag.

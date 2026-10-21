@@ -242,6 +242,12 @@ def families() -> dict:
         "lag_ridge": ("seq", lambda: Ridge(alpha=100.0), "rank", None),
         "lag_gbm": ("seq", hgb(15, 300, 0.05), "rank", 300_000),
         "lag_mlp": ("seq", mlp((64, 32)), "rank", 300_000),
+        # other training targets (same inputs: the price signals)
+        "ridge_resid_target": ("targets", lambda: Ridge(alpha=100.0), "resid", None),
+        "gbm_resid_target": ("targets", hgb(8, 200, 0.05), "resid", 300_000),
+        "ridge_volscaled_target": ("targets", lambda: Ridge(alpha=100.0), "volscaled", None),
+        "gbm_volscaled_target": ("targets", hgb(8, 200, 0.05), "volscaled", 300_000),
+        "logistic_decile_target": ("targets", lambda: LogisticRegression(C=0.05, max_iter=500), "decile", None),
     }
 
 
@@ -281,6 +287,11 @@ PROS_CONS = {
     "regime_ridge": ("Different weights in calm vs stressed markets", "Doubles parameters; HMM noise feeds in"),
     "stack_avg": ("Diversifies across model types", "Three times the cost; inherits each model's flaws"),
     "lag_ridge": ("Learns its own reversal/momentum weights from raw lags", "Linear in past returns"),
+    "ridge_resid_target": ("Learns only the stock-specific part of returns (factor moves removed)", "Residuals are estimated, so noisier labels"),
+    "gbm_resid_target": ("Nonlinear, on factor-neutral returns", "Same; slower"),
+    "ridge_volscaled_target": ("Every stock's return in units of its own risk", "Down-weights big movers that may carry the edge"),
+    "gbm_volscaled_target": ("Nonlinear, risk-scaled target", "Same"),
+    "logistic_decile_target": ("Only learns what separates the extremes (top vs bottom 10%)", "Ignores the middle 80% of stocks"),
     "lag_gbm": ("Finds nonlinear patterns in raw histories", "Needs lots of data; easy to overfit"),
     "lag_mlp": ("Sequence model: no hand-made features at all", "Noisiest; random initialisation"),
     "online_weighted": ("Shifts weight to whichever model works lately", "Chases noise if ICs are noisy"),
@@ -493,6 +504,17 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
     y_rank = cs_rank_gauss(fwd).to_numpy()
     y_raw = fwd.sub(fwd.mean(axis=1), axis=0).to_numpy()
     y_sign = np.where(np.isfinite(y_rank), (y_rank > 0).astype(float), np.nan)
+    y_extra = {}
+    if group == "targets":
+        # factor-residual forward return: sum of the next h days' PCA residuals
+        res = ctx.resid
+        y_extra["resid"] = cs_rank_gauss(res[::-1].rolling(horizon, min_periods=1).sum()[::-1]
+                                         .shift(-2).where(tr)).to_numpy()
+        vol = ctx.vol_63.where(ctx.vol_63 > 0)
+        y_extra["volscaled"] = (fwd / vol).sub((fwd / vol).mean(axis=1), axis=0).clip(-10, 10).to_numpy()
+        pct = fwd.rank(axis=1, pct=True)
+        dec = np.where(pct >= 0.9, 1.0, np.where(pct <= 0.1, 0.0, np.nan))
+        y_extra["decile"] = np.where(fwd.notna().to_numpy(), dec, np.nan)
     y5 = cs_rank_gauss((o.shift(-6) / o.shift(-1) - 1).where(tr)).to_numpy() if horizon != 5 else y_rank
     first = np.asarray(dates < SPLIT)
     years = np.asarray(dates.year)
@@ -547,7 +569,7 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
                 tr_days = np.arange(lo, first_day - horizon - 2, step)
                 te_days = np.flatnonzero(years == yr)
                 Xt = Xf[tr_days].reshape(-1, nf)
-                yt = {"rank": y_rank, "raw": y_raw, "sign": y_sign}[target][tr_days].ravel()
+                yt = ({"rank": y_rank, "raw": y_raw, "sign": y_sign} | y_extra)[target][tr_days].ravel()
                 dt = np.repeat(tr_days, X.shape[1])
                 ok = np.flatnonzero(np.isfinite(Xt).all(axis=1) & np.isfinite(yt))
                 if len(ok) < 1000:
@@ -562,7 +584,8 @@ def run_group(cfg, group: str, horizon: int, out: Path, synthetic: bool = False)
                 oke = np.isfinite(Xe).all(axis=1)
                 p = np.full(len(Xe), np.nan)
                 if oke.any():
-                    p[oke] = m.predict_proba(Xe[oke])[:, 1] if target == "sign" else m.predict(Xe[oke])
+                    p[oke] = (m.predict_proba(Xe[oke])[:, 1] if target in ("sign", "decile")
+                              else m.predict(Xe[oke]))
                 P[te_days] = p.reshape(len(te_days), -1)
             ic_h = _daily_corr(P, y_rank)
             ic5 = _daily_corr(P, y5)
@@ -762,7 +785,8 @@ def main(argv=None):
 
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra", "ideas", "seq", "online"])
+    ap.add_argument("--group", choices=["simple", "linear", "tree", "nn", "extra", "ideas", "seq", "online",
+                                        "targets"])
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--out", default="reports/zoo")
     ap.add_argument("--aggregate", help="directory with group results to merge")

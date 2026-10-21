@@ -16,7 +16,7 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
   52-week low, nominal price level, volume-spike continuation vs reversal,
   earnings-surprise revisions (change in SUE), network (correlation-neighbour) momentum;
   public data: FINRA short volume, SEC insider buying (net and cluster), filing delays
-- [ ] **Wave 3**: interactions found to stick (momentum x 52-week high,
+- [x] **Wave 3-4**: interactions found to stick (momentum x 52-week high,
   reversal x momentum, reversal x HMM stress) as single signals; rank and
   nonlinear transforms of the best signals; signal decay-adjusted blends
 
@@ -26,7 +26,7 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 - [x] 13 more families (random forest, robust/early-stopped boosting, PLS,
   Bayesian ridge, SVR, kernel bandwidths, decayed/expanding/regime ridge,
   stacking) and a 63-day horizon for all
-- [ ] Other targets: factor-residual returns, volatility-scaled returns,
+- [x] Other targets: factor-residual returns, volatility-scaled returns,
   top/bottom-decile classification
 - [ ] Feature engineering: sticky pairs and the best ideas as inputs; two-stage
   lasso-selection then boosting

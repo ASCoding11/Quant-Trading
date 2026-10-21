@@ -451,3 +451,59 @@ def realized_vol_ratio(md, ctx, facts):
     """Minus intraday realized vol over the last 5 days vs. the last 63 (vol spikes mean-revert)."""
     x = _intra(md, ctx, "rv")
     return None if x is None else -np.log(x.rolling(5, min_periods=3).mean() / x.rolling(63, min_periods=40).mean())
+
+
+# =============================================================================
+# wave 4: combinations that stuck in the pair study, as single signals
+# =============================================================================
+def _z(ctx, raw):
+    from ..utils import cs_zscore
+
+    return cs_zscore(raw.where(ctx.tradable)).clip(-4, 4)
+
+
+def _reg(ctx, name):
+    from ..signals import REGISTRY
+
+    return _z(ctx, REGISTRY[name].fn(ctx))
+
+
+@idea("combination", 4)
+def mom_plus_52w_high(md, ctx, facts):
+    """12-1 momentum + nearness to the 52-week high (the strongest sticky pair)."""
+    return _reg(ctx, "mom_12_1") + _reg(ctx, "high_52w")
+
+
+@idea("combination", 4)
+def rev5_plus_resid_mom(md, ctx, facts):
+    """Short-term reversal among medium-term (residual) winners."""
+    return _reg(ctx, "rev_5d") + _reg(ctx, "resid_mom")
+
+
+@idea("combination", 4)
+def rev21_plus_resid_mom(md, ctx, facts):
+    return _reg(ctx, "rev_21d") + _reg(ctx, "resid_mom")
+
+
+@idea("combination", 4)
+def bollinger_plus_resid_mom(md, ctx, facts):
+    return _reg(ctx, "bollinger_z") + _reg(ctx, "resid_mom")
+
+
+@idea("combination", 4)
+def cluster_mom_plus_peer_gap(md, ctx, facts):
+    return _reg(ctx, "cluster_mom") + _reg(ctx, "peer_gap")
+
+
+@idea("combination", 4)
+def momentum_trio(md, ctx, facts):
+    """Momentum + 52-week high + volatility-scaled momentum + overnight momentum."""
+    return (_reg(ctx, "mom_12_1") + _reg(ctx, "high_52w") + _z(ctx, sharpe_mom(md, ctx, facts))
+            + _z(ctx, overnight_momentum(md, ctx, facts)))
+
+
+@idea("combination", 4)
+def reversal_in_winners(md, ctx, facts):
+    """Product: 5-day reversal, only counted for stocks with positive 12-1 momentum."""
+    mom = _reg(ctx, "mom_12_1")
+    return _reg(ctx, "rev_5d").where(mom > 0, 0.0)

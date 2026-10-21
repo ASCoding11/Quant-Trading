@@ -1,74 +1,10 @@
-02:42:56 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-02:42:56 INFO    qtrade | research task: alt
-02:43:45 INFO    qtrade | fundamental signals: ['earnings_yield', 'book_to_market', 'gross_prof', 'asset_growth', 'accruals', 'sue', 'ear']
-02:43:52 INFO    qtrade | news signals: 1164220 articles mapped to the universe
-02:44:09 INFO    qtrade | edge: earnings_yield done
-02:44:13 INFO    qtrade | edge: book_to_market done
-02:44:17 INFO    qtrade | edge: gross_prof done
-02:44:21 INFO    qtrade | edge: asset_growth done
-02:44:25 INFO    qtrade | edge: accruals done
-02:44:29 INFO    qtrade | edge: sue done
-02:44:34 INFO    qtrade | edge: ear done
-02:44:38 INFO    qtrade | edge: news_volume done
-02:44:42 INFO    qtrade | edge: news_tone done
-02:44:46 INFO    qtrade | edge: no_news_rev done
-02:44:50 INFO    qtrade | edge: news_mom done
-02:44:50 INFO    qtrade | research task: strategies
-02:44:52 INFO    qtrade | downloaded 18 / 18 tickers
-02:45:10 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
-02:45:37 INFO    qtrade | factor model: 309 refits, 15 factors
+02:53:42 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+02:53:42 INFO    qtrade | research task: quality
 {
- "alt": {
-  "signals": [
-   "earnings_yield",
-   "book_to_market",
-   "gross_prof",
-   "asset_growth",
-   "accruals",
-   "sue",
-   "ear",
-   "news_volume",
-   "news_tone",
-   "no_news_rev",
-   "news_mom"
-  ]
- },
- "strategies": {
-  "strategies": 25,
-  "chosen_for_diversified_book": [
-   "spy_tsmom_12m",
-   "spy_ma200",
-   "spy_vol_managed",
-   "spy_hmm_timing",
-   "spy_turn_of_month",
-   "multi_asset_trend",
-   "risk_parity",
-   "cross_asset_mom",
-   "accruals",
-   "pairs",
-   "REVERSAL BOOK (current system)"
-  ],
-  "diversified": [
-   {
-    "portfolio": "diversified (11 strategies chosen on 2006-2014)",
-    "sharpe_1st": 1.256,
-    "ret_1st": 0.126,
-    "max_dd_1st": -0.099,
-    "sharpe_2nd": 0.919,
-    "ret_2nd": 0.099,
-    "max_dd_2nd": -0.157,
-    "vol": 0.104
-   },
-   {
-    "portfolio": "reversal book alone (10% vol)",
-    "sharpe_1st": 0.436,
-    "ret_1st": 0.044,
-    "max_dd_1st": -0.23,
-    "sharpe_2nd": 0.156,
-    "ret_2nd": 0.014,
-    "max_dd_2nd": -0.284,
-    "vol": 0.093
-   }
-  ]
+ "quality": {
+  "bad_prints_masked": 0,
+  "max_abs_close-to-close": 257.3333245152623,
+  "max_abs_overnight": 225.24998169143745,
+  "max_abs_intraday": 5.249999960001184
  }
 }

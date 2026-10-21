@@ -1,0 +1,294 @@
+01:18:27 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+01:18:57 INFO    qtrade | factor model: 309 refits, 15 factors
+01:20:06 INFO    qtrade | signal tensor: 6739 days x 1000 stocks x 44 signals
+01:20:23 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+01:20:23 INFO    qtrade |   kept 24/44 stable signals
+01:20:33 INFO    qtrade | walk-forward refit 1/92 at 2003-12-18: 324495 training rows
+01:20:33 INFO    qtrade |   kept 24/44 stable signals
+01:20:44 INFO    qtrade | walk-forward refit 2/92 at 2004-03-22: 357899 training rows
+01:20:44 INFO    qtrade |   kept 25/44 stable signals
+01:20:55 INFO    qtrade | walk-forward refit 3/92 at 2004-06-22: 392211 training rows
+01:20:55 INFO    qtrade |   kept 23/44 stable signals
+01:21:07 INFO    qtrade | walk-forward refit 4/92 at 2004-09-21: 425808 training rows
+01:21:07 INFO    qtrade |   kept 26/44 stable signals
+01:21:18 INFO    qtrade | walk-forward refit 5/92 at 2004-12-20: 460275 training rows
+01:21:18 INFO    qtrade |   kept 25/44 stable signals
+01:21:29 INFO    qtrade | walk-forward refit 6/92 at 2005-03-22: 496496 training rows
+01:21:29 INFO    qtrade |   kept 22/44 stable signals
+01:21:41 INFO    qtrade | walk-forward refit 7/92 at 2005-06-21: 533358 training rows
+01:21:41 INFO    qtrade |   kept 19/44 stable signals
+01:21:53 INFO    qtrade | walk-forward refit 8/92 at 2005-09-20: 570333 training rows
+01:21:53 INFO    qtrade |   kept 20/44 stable signals
+01:22:05 INFO    qtrade | walk-forward refit 9/92 at 2005-12-19: 608949 training rows
+01:22:05 INFO    qtrade |   kept 20/44 stable signals
+01:22:17 INFO    qtrade | walk-forward refit 10/92 at 2006-03-22: 624369 training rows
+01:22:18 INFO    qtrade |   kept 20/44 stable signals
+01:22:30 INFO    qtrade | walk-forward refit 11/92 at 2006-06-21: 641526 training rows
+01:22:31 INFO    qtrade |   kept 19/44 stable signals
+01:22:43 INFO    qtrade | walk-forward refit 12/92 at 2006-09-20: 657986 training rows
+01:22:43 INFO    qtrade |   kept 23/44 stable signals
+01:22:56 INFO    qtrade | walk-forward refit 13/92 at 2006-12-19: 674760 training rows
+01:22:56 INFO    qtrade |   kept 23/44 stable signals
+01:23:08 INFO    qtrade | walk-forward refit 14/92 at 2007-03-23: 691715 training rows
+01:23:09 INFO    qtrade |   kept 19/44 stable signals
+01:23:21 INFO    qtrade | walk-forward refit 15/92 at 2007-06-22: 709048 training rows
+01:23:21 INFO    qtrade |   kept 12/44 stable signals
+01:23:34 INFO    qtrade | walk-forward refit 16/92 at 2007-09-21: 728059 training rows
+01:23:34 INFO    qtrade |   kept 17/44 stable signals
+01:23:47 INFO    qtrade | walk-forward refit 17/92 at 2007-12-20: 747285 training rows
+01:23:47 INFO    qtrade |   kept 17/44 stable signals
+01:24:00 INFO    qtrade | walk-forward refit 18/92 at 2008-03-25: 767477 training rows
+01:24:00 INFO    qtrade |   kept 18/44 stable signals
+01:24:12 INFO    qtrade | walk-forward refit 19/92 at 2008-06-23: 786261 training rows
+01:24:13 INFO    qtrade |   kept 18/44 stable signals
+01:24:25 INFO    qtrade | walk-forward refit 20/92 at 2008-09-22: 803598 training rows
+01:24:26 INFO    qtrade |   kept 21/44 stable signals
+01:24:37 INFO    qtrade | walk-forward refit 21/92 at 2008-12-19: 817382 training rows
+01:24:38 INFO    qtrade |   kept 21/44 stable signals
+01:24:49 INFO    qtrade | walk-forward refit 22/92 at 2009-03-24: 826037 training rows
+01:24:50 INFO    qtrade |   kept 13/44 stable signals
+01:25:02 INFO    qtrade | walk-forward refit 23/92 at 2009-06-23: 835356 training rows
+01:25:02 INFO    qtrade |   kept 15/44 stable signals
+01:25:15 INFO    qtrade | walk-forward refit 24/92 at 2009-09-22: 845315 training rows
+01:25:15 INFO    qtrade |   kept 15/44 stable signals
+01:25:28 INFO    qtrade | walk-forward refit 25/92 at 2009-12-21: 854947 training rows
+01:25:28 INFO    qtrade |   kept 14/44 stable signals
+01:25:41 INFO    qtrade | walk-forward refit 26/92 at 2010-03-24: 862915 training rows
+01:25:41 INFO    qtrade |   kept 15/44 stable signals
+01:25:53 INFO    qtrade | walk-forward refit 27/92 at 2010-06-23: 872598 training rows
+01:25:54 INFO    qtrade |   kept 18/44 stable signals
+01:26:06 INFO    qtrade | walk-forward refit 28/92 at 2010-09-22: 881125 training rows
+01:26:06 INFO    qtrade |   kept 16/44 stable signals
+01:26:18 INFO    qtrade | walk-forward refit 29/92 at 2010-12-21: 887436 training rows
+01:26:18 INFO    qtrade |   kept 14/44 stable signals
+01:26:31 INFO    qtrade | walk-forward refit 30/92 at 2011-03-23: 894012 training rows
+01:26:31 INFO    qtrade |   kept 18/44 stable signals
+01:26:44 INFO    qtrade | walk-forward refit 31/92 at 2011-06-22: 899471 training rows
+01:26:44 INFO    qtrade |   kept 17/44 stable signals
+01:26:56 INFO    qtrade | walk-forward refit 32/92 at 2011-09-21: 907255 training rows
+01:26:56 INFO    qtrade |   kept 17/44 stable signals
+01:27:08 INFO    qtrade | walk-forward refit 33/92 at 2011-12-20: 913343 training rows
+01:27:09 INFO    qtrade |   kept 16/44 stable signals
+01:27:21 INFO    qtrade | walk-forward refit 34/92 at 2012-03-22: 917831 training rows
+01:27:21 INFO    qtrade |   kept 15/44 stable signals
+01:27:33 INFO    qtrade | walk-forward refit 35/92 at 2012-06-21: 921859 training rows
+01:27:33 INFO    qtrade |   kept 20/44 stable signals
+01:27:45 INFO    qtrade | walk-forward refit 36/92 at 2012-09-20: 922894 training rows
+01:27:45 INFO    qtrade |   kept 20/44 stable signals
+01:27:57 INFO    qtrade | walk-forward refit 37/92 at 2012-12-21: 924559 training rows
+01:27:58 INFO    qtrade |   kept 22/44 stable signals
+01:28:10 INFO    qtrade | walk-forward refit 38/92 at 2013-03-26: 927659 training rows
+01:28:10 INFO    qtrade |   kept 20/44 stable signals
+01:28:22 INFO    qtrade | walk-forward refit 39/92 at 2013-06-25: 931712 training rows
+01:28:22 INFO    qtrade |   kept 15/44 stable signals
+01:28:34 INFO    qtrade | walk-forward refit 40/92 at 2013-09-24: 935336 training rows
+01:28:34 INFO    qtrade |   kept 15/44 stable signals
+01:28:46 INFO    qtrade | walk-forward refit 41/92 at 2013-12-23: 942247 training rows
+01:28:47 INFO    qtrade |   kept 17/44 stable signals
+01:28:59 INFO    qtrade | walk-forward refit 42/92 at 2014-03-26: 954547 training rows
+01:29:00 INFO    qtrade |   kept 16/44 stable signals
+01:29:12 INFO    qtrade | walk-forward refit 43/92 at 2014-06-25: 965384 training rows
+01:29:13 INFO    qtrade |   kept 22/44 stable signals
+01:29:25 INFO    qtrade | walk-forward refit 44/92 at 2014-09-24: 975147 training rows
+01:29:26 INFO    qtrade |   kept 20/44 stable signals
+01:29:38 INFO    qtrade | walk-forward refit 45/92 at 2014-12-23: 984726 training rows
+01:29:39 INFO    qtrade |   kept 13/44 stable signals
+01:29:51 INFO    qtrade | walk-forward refit 46/92 at 2015-03-26: 994965 training rows
+01:29:52 INFO    qtrade |   kept 11/44 stable signals
+01:30:04 INFO    qtrade | walk-forward refit 47/92 at 2015-06-25: 1003052 training rows
+01:30:04 INFO    qtrade |   kept 12/44 stable signals
+01:30:16 INFO    qtrade | walk-forward refit 48/92 at 2015-09-24: 1012988 training rows
+01:30:17 INFO    qtrade |   kept 14/44 stable signals
+01:30:29 INFO    qtrade | walk-forward refit 49/92 at 2015-12-23: 1023112 training rows
+01:30:29 INFO    qtrade |   kept 9/44 stable signals
+01:30:41 INFO    qtrade | walk-forward refit 50/92 at 2016-03-28: 1031728 training rows
+01:30:41 INFO    qtrade |   kept 8/44 stable signals
+01:30:54 INFO    qtrade | walk-forward refit 51/92 at 2016-06-24: 1039023 training rows
+01:30:54 INFO    qtrade |   kept 9/44 stable signals
+01:31:07 INFO    qtrade | walk-forward refit 52/92 at 2016-09-23: 1044967 training rows
+01:31:07 INFO    qtrade |   kept 5/44 stable signals
+01:31:20 INFO    qtrade | walk-forward refit 53/92 at 2016-12-22: 1052477 training rows
+01:31:20 INFO    qtrade |   kept 3/44 stable signals
+01:31:33 INFO    qtrade | walk-forward refit 54/92 at 2017-03-27: 1060831 training rows
+01:31:33 INFO    qtrade |   kept 11/44 stable signals
+01:31:46 INFO    qtrade | walk-forward refit 55/92 at 2017-06-26: 1069184 training rows
+01:31:47 INFO    qtrade |   kept 8/44 stable signals
+01:31:59 INFO    qtrade | walk-forward refit 56/92 at 2017-09-25: 1078529 training rows
+01:31:59 INFO    qtrade |   kept 11/44 stable signals
+01:32:12 INFO    qtrade | walk-forward refit 57/92 at 2017-12-22: 1088450 training rows
+01:32:12 INFO    qtrade |   kept 14/44 stable signals
+01:32:25 INFO    qtrade | walk-forward refit 58/92 at 2018-03-27: 1096875 training rows
+01:32:25 INFO    qtrade |   kept 17/44 stable signals
+01:32:38 INFO    qtrade | walk-forward refit 59/92 at 2018-06-26: 1104846 training rows
+01:32:38 INFO    qtrade |   kept 20/44 stable signals
+01:32:51 INFO    qtrade | walk-forward refit 60/92 at 2018-09-25: 1112839 training rows
+01:32:51 INFO    qtrade |   kept 9/44 stable signals
+01:33:04 INFO    qtrade | walk-forward refit 61/92 at 2018-12-26: 1119705 training rows
+01:33:04 INFO    qtrade |   kept 12/44 stable signals
+01:33:17 INFO    qtrade | walk-forward refit 62/92 at 2019-03-28: 1124398 training rows
+01:33:18 INFO    qtrade |   kept 6/44 stable signals
+01:33:30 INFO    qtrade | walk-forward refit 63/92 at 2019-06-27: 1129033 training rows
+01:33:31 INFO    qtrade |   kept 13/44 stable signals
+01:33:43 INFO    qtrade | walk-forward refit 64/92 at 2019-09-26: 1134453 training rows
+01:33:44 INFO    qtrade |   kept 14/44 stable signals
+01:33:56 INFO    qtrade | walk-forward refit 65/92 at 2019-12-26: 1139620 training rows
+01:33:57 INFO    qtrade |   kept 16/44 stable signals
+01:34:09 INFO    qtrade | walk-forward refit 66/92 at 2020-03-27: 1144399 training rows
+01:34:10 INFO    qtrade |   kept 20/44 stable signals
+01:34:22 INFO    qtrade | walk-forward refit 67/92 at 2020-06-26: 1148907 training rows
+01:34:23 INFO    qtrade |   kept 19/44 stable signals
+01:34:35 INFO    qtrade | walk-forward refit 68/92 at 2020-09-25: 1152827 training rows
+01:34:35 INFO    qtrade |   kept 19/44 stable signals
+01:34:48 INFO    qtrade | walk-forward refit 69/92 at 2020-12-24: 1156774 training rows
+01:34:48 INFO    qtrade |   kept 18/44 stable signals
+01:35:01 INFO    qtrade | walk-forward refit 70/92 at 2021-03-29: 1161950 training rows
+01:35:01 INFO    qtrade |   kept 19/44 stable signals
+01:35:14 INFO    qtrade | walk-forward refit 71/92 at 2021-06-28: 1167799 training rows
+01:35:14 INFO    qtrade |   kept 16/44 stable signals
+01:35:27 INFO    qtrade | walk-forward refit 72/92 at 2021-09-27: 1173030 training rows
+01:35:27 INFO    qtrade |   kept 18/44 stable signals
+01:35:40 INFO    qtrade | walk-forward refit 73/92 at 2021-12-27: 1177195 training rows
+01:35:40 INFO    qtrade |   kept 19/44 stable signals
+01:35:53 INFO    qtrade | walk-forward refit 74/92 at 2022-03-28: 1181101 training rows
+01:35:53 INFO    qtrade |   kept 18/44 stable signals
+01:36:05 INFO    qtrade | walk-forward refit 75/92 at 2022-06-28: 1184721 training rows
+01:36:06 INFO    qtrade |   kept 18/44 stable signals
+01:36:18 INFO    qtrade | walk-forward refit 76/92 at 2022-09-27: 1188212 training rows
+01:36:18 INFO    qtrade |   kept 18/44 stable signals
+01:36:31 INFO    qtrade | walk-forward refit 77/92 at 2022-12-27: 1190923 training rows
+01:36:31 INFO    qtrade |   kept 18/44 stable signals
+01:36:43 INFO    qtrade | walk-forward refit 78/92 at 2023-03-29: 1193281 training rows
+01:36:43 INFO    qtrade |   kept 18/44 stable signals
+01:36:55 INFO    qtrade | walk-forward refit 79/92 at 2023-06-29: 1195574 training rows
+01:36:56 INFO    qtrade |   kept 19/44 stable signals
+01:37:08 INFO    qtrade | walk-forward refit 80/92 at 2023-09-28: 1197636 training rows
+01:37:09 INFO    qtrade |   kept 17/44 stable signals
+01:37:21 INFO    qtrade | walk-forward refit 81/92 at 2023-12-28: 1199841 training rows
+01:37:21 INFO    qtrade |   kept 17/44 stable signals
+01:37:33 INFO    qtrade | walk-forward refit 82/92 at 2024-04-01: 1202597 training rows
+01:37:33 INFO    qtrade |   kept 14/44 stable signals
+01:37:46 INFO    qtrade | walk-forward refit 83/92 at 2024-07-01: 1205703 training rows
+01:37:46 INFO    qtrade |   kept 16/44 stable signals
+01:37:59 INFO    qtrade | walk-forward refit 84/92 at 2024-09-30: 1209347 training rows
+01:38:00 INFO    qtrade |   kept 17/44 stable signals
+01:38:13 INFO    qtrade | walk-forward refit 85/92 at 2024-12-30: 1212762 training rows
+01:38:13 INFO    qtrade |   kept 19/44 stable signals
+01:38:26 INFO    qtrade | walk-forward refit 86/92 at 2025-04-02: 1216147 training rows
+01:38:26 INFO    qtrade |   kept 14/44 stable signals
+01:38:39 INFO    qtrade | walk-forward refit 87/92 at 2025-07-03: 1219514 training rows
+01:38:40 INFO    qtrade |   kept 14/44 stable signals
+01:38:51 INFO    qtrade | walk-forward refit 88/92 at 2025-10-02: 1223081 training rows
+01:38:52 INFO    qtrade |   kept 15/44 stable signals
+01:39:05 INFO    qtrade | walk-forward refit 89/92 at 2026-01-02: 1226430 training rows
+01:39:06 INFO    qtrade |   kept 10/44 stable signals
+01:39:18 INFO    qtrade | walk-forward refit 90/92 at 2026-04-06: 1228564 training rows
+01:39:19 INFO    qtrade |   kept 9/44 stable signals
+01:39:31 INFO    qtrade | walk-forward refit 91/92 at 2026-07-07: 1230646 training rows
+01:39:32 INFO    qtrade |   kept 17/44 stable signals
+01:39:44 INFO    qtrade | walk-forward refit 92/92 at 2026-10-05: 1233083 training rows
+01:39:44 INFO    qtrade | fit time by model: {'ridge': 40.3, 'elastic_net': 19.1, 'regime_ridge': 132.5, 'kernel_ridge': 184.4, 'gbm': 726.5, 'ic_weighted': 19.5}
+01:39:44 INFO    qtrade | research pipeline complete
+01:39:51 INFO    qtrade | backtest ridge        2003-12-19 -> 2026-10-19  final equity 14740
+01:39:58 INFO    qtrade | backtest elastic_net  2003-12-19 -> 2026-10-19  final equity 15855
+01:40:05 INFO    qtrade | backtest regime_ridge 2003-12-19 -> 2026-10-19  final equity 12949
+01:40:12 INFO    qtrade | backtest kernel_ridge 2003-12-19 -> 2026-10-19  final equity 17880
+01:40:19 INFO    qtrade | backtest gbm          2003-12-19 -> 2026-10-19  final equity 19065
+01:40:27 INFO    qtrade | backtest ic_weighted  2003-12-19 -> 2026-10-19  final equity 11932
+01:40:34 INFO    qtrade | backtest ensemble     2003-12-19 -> 2026-10-19  final equity 17002
+01:40:41 INFO    qtrade | backtest current config 2003-12-19 -> 2026-10-19  final equity 17002
+01:40:48 INFO    qtrade | backtest frictionless 2003-12-19 -> 2026-10-19  final equity 25924
+01:40:55 INFO    qtrade | backtest auction_costs (no spread) 2003-12-19 -> 2026-10-19  final equity 17002
+01:41:02 INFO    qtrade | backtest quoted_spread_costs 2003-12-19 -> 2026-10-19  final equity 8550
+01:41:09 INFO    qtrade | backtest rank_weights 2003-12-19 -> 2026-10-19  final equity 17083
+01:41:16 INFO    qtrade | backtest dollar_neutral_only 2003-12-19 -> 2026-10-19  final equity 12375
+01:41:25 INFO    qtrade | backtest regime_ic    2003-12-19 -> 2026-10-19  final equity 16583
+01:41:33 INFO    qtrade | backtest regime_ic + edge_scaling 2003-12-19 -> 2026-10-19  final equity 15862
+01:41:40 INFO    qtrade | backtest edge_scaling 2003-12-19 -> 2026-10-19  final equity 16547
+01:41:47 INFO    qtrade | backtest halflife=0 cost_aversion=0.0 2003-12-19 -> 2026-10-19  final equity 21953
+01:41:54 INFO    qtrade | backtest halflife=0 cost_aversion=0.25 2003-12-19 -> 2026-10-19  final equity 24153
+01:42:01 INFO    qtrade | backtest halflife=0 cost_aversion=0.5 2003-12-19 -> 2026-10-19  final equity 24990
+01:42:08 INFO    qtrade | backtest halflife=0 cost_aversion=1.0 2003-12-19 -> 2026-10-19  final equity 27455
+01:42:15 INFO    qtrade | backtest halflife=3 cost_aversion=0.0 2003-12-19 -> 2026-10-19  final equity 17724
+01:42:22 INFO    qtrade | backtest halflife=3 cost_aversion=0.25 2003-12-19 -> 2026-10-19  final equity 17785
+01:42:30 INFO    qtrade | backtest halflife=3 cost_aversion=0.5 2003-12-19 -> 2026-10-19  final equity 18158
+01:42:37 INFO    qtrade | backtest halflife=3 cost_aversion=1.0 2003-12-19 -> 2026-10-19  final equity 17002
+01:42:44 INFO    qtrade | backtest halflife=7 cost_aversion=0.0 2003-12-19 -> 2026-10-19  final equity 11789
+01:42:51 INFO    qtrade | backtest halflife=7 cost_aversion=0.25 2003-12-19 -> 2026-10-19  final equity 12022
+01:42:58 INFO    qtrade | backtest halflife=7 cost_aversion=0.5 2003-12-19 -> 2026-10-19  final equity 12180
+01:43:05 INFO    qtrade | backtest halflife=7 cost_aversion=1.0 2003-12-19 -> 2026-10-19  final equity 11636
+01:43:12 INFO    qtrade | backtest halflife=15 cost_aversion=0.0 2003-12-19 -> 2026-10-19  final equity 14437
+01:43:19 INFO    qtrade | backtest halflife=15 cost_aversion=0.25 2003-12-19 -> 2026-10-19  final equity 14556
+01:43:26 INFO    qtrade | backtest halflife=15 cost_aversion=0.5 2003-12-19 -> 2026-10-19  final equity 13990
+01:43:33 INFO    qtrade | backtest halflife=15 cost_aversion=1.0 2003-12-19 -> 2026-10-19  final equity 14066
+01:43:40 INFO    qtrade | backtest halflife=30 cost_aversion=0.0 2003-12-19 -> 2026-10-19  final equity 11135
+01:43:47 INFO    qtrade | backtest halflife=30 cost_aversion=0.25 2003-12-19 -> 2026-10-19  final equity 11209
+01:43:54 INFO    qtrade | backtest halflife=30 cost_aversion=0.5 2003-12-19 -> 2026-10-19  final equity 11208
+01:44:01 INFO    qtrade | backtest halflife=30 cost_aversion=1.0 2003-12-19 -> 2026-10-19  final equity 10922
+01:44:01 INFO    qtrade | portfolio diagnostics:
+                                sharpe  sharpe_1st_half  sharpe_2nd_half  ann_return  ann_vol  pre_cost_sharpe  avg_gross  ann_turnover  cost_drag
+variant                                                                                                                                           
+current config                   0.354            0.783           -0.199       0.026    0.073            0.568      0.944        77.018      0.016
+frictionless                     0.537            1.091           -0.089       0.045    0.085            0.537      1.151       102.403      0.000
+auction_costs (no spread)        0.354            0.783           -0.199       0.026    0.073            0.568      0.944        77.018      0.016
+quoted_spread_costs             -0.102            0.160           -0.434      -0.005    0.053            0.589      0.581        44.608      0.037
+rank_weights                     0.336            0.696           -0.184       0.027    0.079            0.538      0.939        76.038      0.016
+dollar_neutral_only              0.143            0.378           -0.124       0.014    0.101            0.256      0.836        55.267      0.011
+regime_ic                        0.291            0.690           -0.116       0.026    0.090            0.516      1.235        99.419      0.020
+regime_ic + edge_scaling         0.356            0.745           -0.097       0.022    0.062            0.590      0.868        73.482      0.015
+edge_scaling                     0.403            0.919           -0.171       0.024    0.059            0.619      0.759        63.390      0.013
+halflife=0 cost_aversion=0.0     0.415            0.953           -0.184       0.039    0.094            1.111      1.234       336.204      0.065
+halflife=0 cost_aversion=0.25    0.461            1.050           -0.192       0.043    0.093            1.116      1.190       312.758      0.061
+halflife=0 cost_aversion=0.5     0.485            1.077           -0.168       0.044    0.092            1.110      1.140       291.321      0.057
+halflife=0 cost_aversion=1.0     0.547            1.139           -0.100       0.048    0.088            1.134      1.065       260.944      0.052
+halflife=3 cost_aversion=0.0     0.366            0.775           -0.195       0.028    0.077            0.611      1.030        93.262      0.019
+halflife=3 cost_aversion=0.25    0.371            0.792           -0.206       0.028    0.076            0.606      1.014        87.958      0.018
+halflife=3 cost_aversion=0.5     0.387            0.804           -0.181       0.029    0.075            0.616      0.994        84.079      0.017
+halflife=3 cost_aversion=1.0     0.354            0.783           -0.199       0.026    0.073            0.568      0.944        77.018      0.016
+halflife=7 cost_aversion=0.0     0.138            0.472           -0.207       0.010    0.070            0.311      0.975        57.777      0.012
+halflife=7 cost_aversion=0.25    0.152            0.480           -0.194       0.010    0.069            0.323      0.961        55.583      0.012
+halflife=7 cost_aversion=0.5     0.165            0.447           -0.157       0.011    0.065            0.333      0.906        52.045      0.011
+halflife=7 cost_aversion=1.0     0.134            0.371           -0.150       0.009    0.066            0.294      0.882        49.549      0.011
+halflife=15 cost_aversion=0.0    0.214            0.411            0.071       0.021    0.097            0.343      1.306        54.669      0.013
+halflife=15 cost_aversion=0.25   0.219            0.406            0.082       0.021    0.096            0.346      1.297        53.110      0.012
+halflife=15 cost_aversion=0.5    0.202            0.397            0.061       0.019    0.096            0.326      1.279        51.623      0.012
+halflife=15 cost_aversion=1.0    0.205            0.392            0.069       0.019    0.095            0.327      1.246        49.571      0.011
+halflife=30 cost_aversion=0.0    0.109            0.185            0.039       0.007    0.060            0.218      0.810        27.389      0.007
+halflife=30 cost_aversion=0.25   0.113            0.199            0.037       0.007    0.060            0.221      0.807        26.817      0.006
+halflife=30 cost_aversion=0.5    0.113            0.197            0.039       0.007    0.060            0.220      0.801        26.381      0.006
+halflife=30 cost_aversion=1.0    0.094            0.199            0.005       0.006    0.061            0.197      0.801        25.944      0.006
+01:44:50 INFO    qtrade | stable-signal selection: kept on average 16.5 of 44 signals; most often kept:
+peer_gap           0.96
+rev_1d             0.95
+rev_5d             0.91
+resid_rev_1d       0.87
+ou_sscore          0.87
+low_volume_rev     0.86
+intraday_rev       0.80
+bollinger_z        0.76
+resid_rev_5d       0.75
+close_location     0.64
+vol_price_corr     0.63
+intraday_rev_21    0.62
+rev_21d            0.59
+peer_lead          0.53
+same_month         0.50
+dtype: float64
+01:44:50 INFO    qtrade | report written to reports/backtest/report.html
+01:44:50 INFO    qtrade | Sharpe 0.35 | ann. return 2.6% | max DD -29.1% | deflated Sharpe prob 83.1%
+
+================================================================
+ 2003-12-19 -> 2026-10-19   model: ensemble   stocks: 1000
+ Sharpe 0.35 | return 2.6%/yr | vol 7.3% | max DD -29.1%
+ deflated-Sharpe probability 83% over 7 models
+================================================================
+              sharpe  ann_return  ann_vol  max_drawdown  ann_turnover  ann_cost_drag  mean_ic
+model                                                                                        
+gbm            0.461       0.031    0.066        -0.302        75.765          0.013    0.005
+kernel_ridge   0.405       0.028    0.069        -0.260        76.796          0.013    0.006
+ensemble       0.354       0.026    0.073        -0.291        77.018          0.013    0.007
+elastic_net    0.317       0.023    0.072        -0.349        70.514          0.012    0.004
+ridge          0.276       0.020    0.071        -0.304        74.192          0.013    0.007
+regime_ridge   0.208       0.013    0.065        -0.227        69.431          0.012    0.007
+ic_weighted    0.144       0.010    0.072        -0.331        91.201          0.016    0.008
+
+Report: reports/backtest/report.html

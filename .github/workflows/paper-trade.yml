@@ -27,6 +27,8 @@ concurrency:
 
 jobs:
   trade:
+    # the intraday strategy owns the account when TRADING_MODE = intraday
+    if: github.event_name != 'schedule' || vars.TRADING_MODE != 'intraday'
     runs-on: ubuntu-latest
     timeout-minutes: 70
     env:

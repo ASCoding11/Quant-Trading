@@ -1,0 +1,93 @@
+name: intraday-trade
+
+# Intraday paper trading: rebalances every 5 minutes on Alpaca paper and goes
+# flat before the close. It owns the whole paper account, so it only runs on
+# schedule when the repository variable TRADING_MODE is "intraday" (and the
+# daily paper-trade workflow then stands aside). Settings -> Secrets and
+# variables -> Actions -> Variables -> TRADING_MODE = intraday.
+#
+# Uses the model.json published by the intraday-backtest workflow. A GitHub job
+# lasts at most 6 hours and the session is 6.5, so a run that reaches its time
+# budget while the market is open starts a follow-up run, which picks up the
+# positions from Alpaca.
+
+on:
+  schedule:
+    - cron: "20 13 * * 1-5"   # 9:20am New York in summer (8:20 in winter: it waits for the open)
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "Send orders to the paper account (false = dry run)"
+        type: boolean
+        default: false
+      chain:
+        description: "Internal: follow-up run number"
+        default: "0"
+
+permissions:
+  contents: read
+  actions: write    # start a follow-up run
+
+concurrency:
+  group: intraday-trade
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    if: github.event_name != 'schedule' || vars.TRADING_MODE == 'intraday'
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      QTRADE_CONFIG: ${{ vars.QTRADE_CONFIG || 'config/small_account.yaml' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Start the job clock
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Get the latest intraday model
+        run: |
+          git fetch -q --depth 1 origin results
+          mkdir -p data
+          git show origin/results:intraday/latest/model.json > data/intraday_model.json \
+            || { echo "::error::No intraday model yet - run the intraday-backtest workflow first."; exit 1; }
+      - name: Wait for the open (winter schedule runs an hour early)
+        if: github.event_name == 'schedule'
+        run: |
+          python - <<'PY'
+          import os, time
+          from alpaca.trading.client import TradingClient
+          c = TradingClient(os.environ["ALPACA_API_KEY"], os.environ["ALPACA_SECRET_KEY"], paper=True)
+          clock = c.get_clock()
+          wait = (clock.next_open - clock.timestamp).total_seconds()
+          if not clock.is_open and 0 < wait < 80 * 60:
+              print(f"market opens in {wait / 60:.0f} min - waiting"); time.sleep(wait + 5)
+          PY
+      - name: Trade
+        run: |
+          SEND=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then SEND="--send"; fi
+          LEFT=$(( (JOB_START + 345 * 60 - $(date +%s)) / 60 ))   # stop well inside the 6-hour limit
+          python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} intraday-paper --model data/intraday_model.json \
+            $SEND --minutes "$LEFT" --status-file status.txt
+      - name: Continue in a follow-up run
+        if: always()
+        run: |
+          CHAIN="${{ inputs.chain || '0' }}"
+          if [ "$(cat status.txt 2>/dev/null)" = "continue" ] && [ "$CHAIN" -lt 2 ]; then
+            SEND=false
+            if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then SEND=true; fi
+            gh workflow run intraday-trade.yml --ref "${{ github.ref_name }}" -f send=$SEND -f chain=$((CHAIN + 1))
+            echo "started a follow-up run for the rest of the session"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: intraday-trade-logs-${{ github.run_id }}
+          path: logs

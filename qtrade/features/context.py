@@ -45,7 +45,8 @@ class FeatureContext:
 
     @cached_property
     def dollar_volume(self) -> pd.DataFrame:
-        return self.md.close * self.md.volume
+        """As-traded dollar volume (independent of later dividends)."""
+        return self.md.dollar_volume
 
     @cached_property
     def adv(self) -> pd.DataFrame:
@@ -91,7 +92,7 @@ class FeatureContext:
         """True where the stock can be traded tomorrow based on today's data."""
         u = self.cfg.universe
         history = self.md.close.notna().rolling(252, min_periods=1).sum() >= 240
-        price_ok = self.md.close >= u.min_price
+        price_ok = self.md.traded_close >= u.min_price   # the price that day, not split-adjusted
         liquid = self.adv >= u.min_dollar_volume
         return history & price_ok & liquid & self.md.close.notna()
 

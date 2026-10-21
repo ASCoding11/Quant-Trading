@@ -205,7 +205,7 @@ def run_paper(cfg: Config, dry_run: bool | None = None, out_dir: str | Path | No
     t = len(md.dates) - 1
     d = dec.decide(t, w_cur, deploy, risk_scale, allowed=allowed, no_short=no_short)
 
-    prices = {tk: float(px) for tk, px in md.close.iloc[-1].items() if np.isfinite(px)}
+    prices = {tk: float(px) for tk, px in md.traded_close.iloc[-1].items() if np.isfinite(px)}
     tw = {tk: float(w) for tk, w in zip(cols, d.weights) if abs(w) > 1e-6}
     orders, targets = plan_orders(tw, prices, deploy, pos_qty, shortable, cfg.live.min_order_value)
 

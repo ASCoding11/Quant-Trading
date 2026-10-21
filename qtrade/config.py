@@ -112,6 +112,35 @@ class LiveConfig:
 
 
 @dataclass
+class IntradayConfig:
+    """Intraday reversal strategy on N-minute bars (``qtrade.intraday``)."""
+    store: str = "data/intraday/5min"  # per-symbol bar files (see `qtrade intraday`)
+    bar_minutes: int = 5
+    n_symbols: int = 500             # most liquid names in the store's symbols.csv
+    start: str | None = None         # first day to load (None = everything)
+    horizon_bars: int = 6            # forecast the next 6 bars (30 minutes)
+    train_months: int = 12           # rolling training window, refit monthly
+    min_train_months: int = 6
+    ridge: float = 1e-3
+    start_bar: int = 3               # first decision at the close of bar 3 (9:50 for 5-min bars)
+    flat_bar: int = 74               # from the open of bar 75 (15:45) the book goes flat
+    rebalance_every: int = 1         # trade every N bars (1 = every bar)
+    gross: float = 2.0               # long + short as a multiple of capital
+    n_side: int | None = 20          # names per side (None = the whole universe)
+    cost_aversion: float = 1.0       # scales the no-trade band
+    vol_days: int = 20               # days of history for volatility / volume baselines
+    slippage_bps: float = 0.5
+    # intraday orders cross the spread: half-spread by daily $ volume tier
+    spread_tiers: list = field(default_factory=lambda: [
+        [1e9, 1.0], [2e8, 2.0], [5e7, 4.0], [0.0, 8.0],
+    ])
+    impact_coef: float = 0.5
+    aum: float = 10_000
+    min_order_value: float = 25.0
+    feed: str = "iex"                # live bars: the free plan's real-time feed
+
+
+@dataclass
 class Config:
     universe: UniverseConfig = field(default_factory=UniverseConfig)
     data: DataConfig = field(default_factory=DataConfig)
@@ -121,6 +150,7 @@ class Config:
     portfolio: PortfolioConfig = field(default_factory=PortfolioConfig)
     costs: CostConfig = field(default_factory=CostConfig)
     live: LiveConfig = field(default_factory=LiveConfig)
+    intraday: IntradayConfig = field(default_factory=IntradayConfig)
     report_dir: str = "reports"
     diagnostics: bool = True         # also backtest portfolio-construction variants
 

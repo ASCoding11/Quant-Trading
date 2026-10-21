@@ -1,0 +1,10 @@
+03:00:46 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+03:00:47 INFO    qtrade | research task: quality
+{
+ "quality": {
+  "bad_prints_masked": 0,
+  "max_abs_close-to-close": 257.3333245152623,
+  "max_abs_overnight": 225.24998169143745,
+  "max_abs_intraday": 5.249999960001184
+ }
+}

@@ -1,0 +1,8 @@
+{
+  "events": {
+    "news_event_types": 15
+  },
+  "survivorship": {
+    "error": "RuntimeError: Alpaca data API error 400: {\"message\":\"invalid symbol: 0029900E0\"}\n"
+  }
+}

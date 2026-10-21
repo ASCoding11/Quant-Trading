@@ -1,10 +1,33 @@
-03:31:08 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-03:31:08 INFO    qtrade | research task: quality
+03:37:03 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+03:37:03 INFO    qtrade | research task: events
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/events.py:85: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  m = hl.str.contains(pat, regex=True)
+03:40:11 WARNING qtrade | index events skipped: 
+03:40:11 INFO    qtrade | research task: survivorship
+03:40:13 INFO    qtrade | all stocks: 15860 symbols (active + delisted)
+03:40:14 ERROR   qtrade | task survivorship failed
+Traceback (most recent call last):
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 167, in main
+    summary[task] = run(md, out, cfg)
+                    ^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/survivorship.py", line 51, in run
+    data = load_all_stocks_daily(cfg.data.cache_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/data/public.py", line 254, in load_all_stocks_daily
+    got = client.bars(syms[i:i + 100], "1Day", start, end)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/data/intraday.py", line 97, in bars
+    data = self._get(params)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/data/intraday.py", line 85, in _get
+    raise RuntimeError(f"Alpaca data API error {r.status_code}: {r.text[:300]}")
+RuntimeError: Alpaca data API error 400: {"message":"invalid symbol: 0029900E0"}
+
 {
- "quality": {
-  "bad_prints_masked": 0,
-  "max_abs_close-to-close": 257.3333245152623,
-  "max_abs_overnight": 225.24998169143745,
-  "max_abs_intraday": 5.249999960001184
+ "events": {
+  "news_event_types": 15
+ },
+ "survivorship": {
+  "error": "RuntimeError: Alpaca data API error 400: {\"message\":\"invalid symbol: 0029900E0\"}\n"
  }
 }

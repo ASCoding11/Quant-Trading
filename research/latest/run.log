@@ -1,32 +1,55 @@
-03:55:58 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-03:55:59 INFO    qtrade | research task: events
-/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/events.py:95: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
-  m = hl.str.contains(pat, regex=True)
-03:57:50 WARNING qtrade | index events skipped: 
-03:57:50 INFO    qtrade | research task: survivorship
-03:57:51 INFO    qtrade | all stocks: 14793 symbols (active + delisted)
-04:10:29 INFO    qtrade | survivorship: horizon 5 done
-04:11:25 INFO    qtrade | survivorship: horizon 21 done
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 186, in <module>
-    main()
-  File "/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/__main__.py", line 174, in main
-    (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
-                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/__init__.py", line 238, in dumps
-    **kw).encode(obj)
-          ^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 202, in encode
-    chunks = list(chunks)
-             ^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 432, in _iterencode
-    yield from _iterencode_dict(o, _current_indent_level)
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 406, in _iterencode_dict
-    yield from chunks
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 406, in _iterencode_dict
-    yield from chunks
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/json/encoder.py", line 377, in _iterencode_dict
-    raise TypeError(f'keys must be str, int, float, bool or None, '
-TypeError: keys must be str, int, float, bool or None, not tuple
+04:10:12 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+04:10:13 INFO    qtrade | research task: strategies
+04:10:18 INFO    qtrade | downloaded 45 / 45 tickers
+04:10:43 WARNING qtrade | FRED T10Y2Y failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=20)
+04:11:03 WARNING qtrade | FRED T10Y3M failed: HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=20)
+04:11:04 INFO    qtrade | macro from Yahoo: ['term_spread_10y3m', 'term_spread_10y5y', 'credit_spread_hyg_lqd', 'breakeven_tip_ief', 'dollar_index', 'oil_wti', 'vix']
+04:11:22 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+04:11:46 INFO    qtrade | factor model: 309 refits, 15 factors
+04:12:20 INFO    qtrade | computed 3 signals
+{
+ "strategies": {
+  "strategies": 43,
+  "chosen_for_diversified_book": [
+   "spy_tsmom_12m",
+   "spy_ma200",
+   "spy_vol_managed",
+   "spy_hmm_timing",
+   "spy_turn_of_month",
+   "multi_asset_trend",
+   "risk_parity",
+   "cross_asset_mom",
+   "broad_trend_3m",
+   "broad_trend_12m",
+   "broad_trend_blend",
+   "short_vol_contango",
+   "short_vol_always",
+   "spy_macro_timing",
+   "pairs",
+   "etf_pairs",
+   "REVERSAL BOOK (current system)"
+  ],
+  "diversified": [
+   {
+    "portfolio": "diversified (17 strategies chosen on 2006-2014)",
+    "sharpe_1st": 1.284,
+    "ret_1st": 0.128,
+    "max_dd_1st": -0.091,
+    "sharpe_2nd": 0.833,
+    "ret_2nd": 0.092,
+    "max_dd_2nd": -0.178,
+    "vol": 0.106
+   },
+   {
+    "portfolio": "reversal book alone (10% vol)",
+    "sharpe_1st": 0.436,
+    "ret_1st": 0.044,
+    "max_dd_1st": -0.23,
+    "sharpe_2nd": 0.156,
+    "ret_2nd": 0.014,
+    "max_dd_2nd": -0.284,
+    "vol": 0.093
+   }
+  ]
+ }
+}

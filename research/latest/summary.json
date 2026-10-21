@@ -1,23 +1,7 @@
 {
-  "alt": {
-    "signals": [
-      "earnings_yield",
-      "book_to_market",
-      "gross_prof",
-      "asset_growth",
-      "accruals",
-      "sue",
-      "ear",
-      "news_volume",
-      "news_tone",
-      "no_news_rev",
-      "news_mom"
-    ]
-  },
   "strategies": {
-    "strategies": 33,
+    "strategies": 43,
     "chosen_for_diversified_book": [
-      "accruals",
       "spy_tsmom_12m",
       "spy_ma200",
       "spy_vol_managed",
@@ -31,18 +15,20 @@
       "broad_trend_blend",
       "short_vol_contango",
       "short_vol_always",
+      "spy_macro_timing",
       "pairs",
+      "etf_pairs",
       "REVERSAL BOOK (current system)"
     ],
     "diversified": [
       {
-        "portfolio": "diversified (16 strategies chosen on 2006-2014)",
-        "sharpe_1st": 1.29,
-        "ret_1st": 0.129,
-        "max_dd_1st": -0.096,
-        "sharpe_2nd": 0.853,
-        "ret_2nd": 0.095,
-        "max_dd_2nd": -0.174,
+        "portfolio": "diversified (17 strategies chosen on 2006-2014)",
+        "sharpe_1st": 1.284,
+        "ret_1st": 0.128,
+        "max_dd_1st": -0.091,
+        "sharpe_2nd": 0.833,
+        "ret_2nd": 0.092,
+        "max_dd_2nd": -0.178,
         "vol": 0.106
       },
       {

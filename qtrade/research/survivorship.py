@@ -79,6 +79,7 @@ def run(md, out: Path, cfg) -> dict:
     tab = pd.DataFrame(rows)
     piv = tab.pivot_table(index=["signal", "horizon"], columns="universe", values="ic")
     piv["bias (survivor - pit)"] = piv["survivors (current method)"] - piv["point-in-time (incl. delisted)"]
+    piv.index = [f"{a} ({b}d)" for a, b in piv.index]
     dead = len([c for c in close.columns if close[c].last_valid_index() is not None
                 and close[c].last_valid_index() < close.index[-1] - pd.Timedelta(days=30)])
     tab.to_csv(out / "survivorship.csv", index=False)
@@ -91,4 +92,4 @@ def run(md, out: Path, cfg) -> dict:
              "been in real time.", ""]
     (out / "survivorship.md").write_text("\n".join(lines) + "\n")
     return {"stocks": int(close.shape[1]), "delisted": dead,
-            "bias": piv["bias (survivor - pit)"].round(4).to_dict()}
+            "bias": {f"{k[0]}@{k[1]}d": v for k, v in piv["bias (survivor - pit)"].round(4).items()}}

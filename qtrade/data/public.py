@@ -133,11 +133,25 @@ def load_sp500_changes(root: str | Path = "data", refresh: bool = False) -> pd.D
         return pd.read_parquet(path)
     html = _session().get(SP500_WIKI, timeout=60).text
     tables = pd.read_html(io.StringIO(html))
-    ch = next(t for t in tables if isinstance(t.columns, pd.MultiIndex) and any("Added" in str(c) for c in t.columns))
-    ch.columns = ["_".join(str(x) for x in c).strip() for c in ch.columns]
-    date_col = next(c for c in ch.columns if c.lower().startswith("effective date") or c.lower().startswith("date"))
-    add_col = next(c for c in ch.columns if "Added" in c and "Ticker" in c)
-    rem_col = next(c for c in ch.columns if "Removed" in c and "Ticker" in c)
+    def flat(t):
+        cols = t.columns
+        return [" ".join(str(x) for x in c).strip() if isinstance(c, tuple) else str(c) for c in cols]
+
+    def find(cols, *words):
+        return next((c for c in cols if all(w in c.lower() for w in words)), None)
+
+    ch = None
+    for t in tables:                                 # the change table: added / removed tickers by date
+        cols = flat(t)
+        add_col = find(cols, "add", "ticker") or find(cols, "add", "symbol")
+        rem_col = find(cols, "remov", "ticker") or find(cols, "remov", "symbol")
+        date_col = find(cols, "date")
+        if add_col and rem_col and date_col:
+            ch = t.copy()
+            ch.columns = cols
+            break
+    if ch is None:
+        raise ValueError(f"S&P 500 change table not found among {len(tables)} tables")
     out = pd.DataFrame({"date": pd.to_datetime(ch[date_col], errors="coerce"),
                         "added": ch[add_col].astype(str).str.strip().str.replace(".", "-", regex=False),
                         "removed": ch[rem_col].astype(str).str.strip().str.replace(".", "-", regex=False)})

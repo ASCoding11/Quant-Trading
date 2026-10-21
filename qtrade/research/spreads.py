@@ -111,10 +111,10 @@ def run(md, ctx, out: Path, n_symbols: int = 140, days_per_year: int = 3, seed: 
             LOG.warning("auction check %s failed: %s", day.date(), exc)
         LOG.info("spreads: %s done (%d rows)", day.date(), len(rows))
 
+    # the quote-level samples are vendor market data: only summaries are written out
+    # (results are published to a public branch)
     df = pd.DataFrame(rows)
-    df.to_csv(out / "spreads_raw.csv", index=False)
     au = pd.DataFrame(auction)
-    au.to_csv(out / "auction_raw.csv", index=False)
     if df.empty:
         return {"error": "no quotes returned"}
     df["half_bp"] = df["spread"] / 2 * 1e4

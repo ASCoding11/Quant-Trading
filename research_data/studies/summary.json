@@ -1,119 +1,17 @@
 {
-  "multi": {
-    "books": [
-      {
-        "book": "ETF sleeves: all 8 sleeves",
-        "sharpe_2006_14": 0.926,
-        "return_2006_14": 0.092,
-        "vol_2006_14": 0.099,
-        "max_dd_2006_14": -0.124,
-        "sharpe_2015_26": 0.93,
-        "return_2015_26": 0.089,
-        "vol_2015_26": 0.095,
-        "max_dd_2015_26": -0.132
-      },
-      {
-        "book": "ETF sleeves: small account (no 30-ETF trend)",
-        "sharpe_2006_14": 0.914,
-        "return_2006_14": 0.093,
-        "vol_2006_14": 0.102,
-        "max_dd_2006_14": -0.151,
-        "sharpe_2015_26": 0.902,
-        "return_2015_26": 0.092,
-        "vol_2015_26": 0.101,
-        "max_dd_2015_26": -0.136
-      },
-      {
-        "book": "stock book (reversal, as backtested)",
-        "sharpe_2006_14": 0.436,
-        "return_2006_14": 0.034,
-        "vol_2006_14": 0.079,
-        "max_dd_2006_14": -0.185,
-        "sharpe_2015_26": 0.156,
-        "return_2015_26": 0.011,
-        "vol_2015_26": 0.069,
-        "max_dd_2015_26": -0.231
-      }
-    ],
-    "blends": [
-      {
-        "etf_fraction": 0.3,
-        "sharpe_2006_14": 0.816,
-        "return_2006_14": 0.052,
-        "vol_2006_14": 0.063,
-        "max_dd_2006_14": -0.117,
-        "sharpe_2015_26": 0.58,
-        "return_2015_26": 0.034,
-        "vol_2015_26": 0.059,
-        "max_dd_2015_26": -0.161
-      },
-      {
-        "etf_fraction": 0.5,
-        "sharpe_2006_14": 0.986,
-        "return_2006_14": 0.063,
-        "vol_2006_14": 0.064,
-        "max_dd_2006_14": -0.084,
-        "sharpe_2015_26": 0.804,
-        "return_2015_26": 0.05,
-        "vol_2015_26": 0.062,
-        "max_dd_2015_26": -0.132
-      },
-      {
-        "etf_fraction": 0.7,
-        "sharpe_2006_14": 1.01,
-        "return_2006_14": 0.075,
-        "vol_2006_14": 0.074,
-        "max_dd_2006_14": -0.076,
-        "sharpe_2015_26": 0.907,
-        "return_2015_26": 0.065,
-        "vol_2015_26": 0.072,
-        "max_dd_2015_26": -0.123
-      }
-    ],
-    "corr_with_stock_book": 0.066
+  "events": {
+    "news_event_types": 15
   },
-  "strategies": {
-    "strategies": 43,
-    "chosen_for_diversified_book": [
-      "spy_tsmom_12m",
-      "spy_ma200",
-      "spy_vol_managed",
-      "spy_hmm_timing",
-      "spy_turn_of_month",
-      "multi_asset_trend",
-      "risk_parity",
-      "cross_asset_mom",
-      "broad_trend_3m",
-      "broad_trend_12m",
-      "broad_trend_blend",
-      "short_vol_contango",
-      "short_vol_always",
-      "spy_macro_timing",
-      "pairs",
-      "etf_pairs",
-      "REVERSAL BOOK (current system)"
-    ],
-    "diversified": [
-      {
-        "portfolio": "diversified (17 strategies chosen on 2006-2014)",
-        "sharpe_1st": 1.284,
-        "ret_1st": 0.128,
-        "max_dd_1st": -0.091,
-        "sharpe_2nd": 0.833,
-        "ret_2nd": 0.092,
-        "max_dd_2nd": -0.178,
-        "vol": 0.106
-      },
-      {
-        "portfolio": "reversal book alone (10% vol)",
-        "sharpe_1st": 0.436,
-        "ret_1st": 0.044,
-        "max_dd_1st": -0.23,
-        "sharpe_2nd": 0.156,
-        "ret_2nd": 0.014,
-        "max_dd_2nd": -0.284,
-        "vol": 0.093
-      }
-    ]
+  "survivorship": {
+    "stocks": 14736,
+    "delisted": 1954,
+    "bias": {
+      "a@md": 0.0389,
+      "l@od": -0.0411,
+      "m@ad": -0.0283,
+      "m@od": -0.0295,
+      "r@ed": 0.01,
+      "s@id": 0.0245
+    }
   }
 }

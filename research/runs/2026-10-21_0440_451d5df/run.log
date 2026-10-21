@@ -1,0 +1,26 @@
+04:25:22 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+04:25:23 INFO    qtrade | research task: events
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/events.py:95: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  m = hl.str.contains(pat, regex=True)
+04:27:14 WARNING qtrade | index events skipped: S&P 500 change table not found among 2 tables
+04:27:14 INFO    qtrade | research task: survivorship
+04:27:16 INFO    qtrade | all stocks: 14793 symbols (active + delisted)
+04:40:01 INFO    qtrade | survivorship: horizon 5 done
+04:40:58 INFO    qtrade | survivorship: horizon 21 done
+{
+ "events": {
+  "news_event_types": 15
+ },
+ "survivorship": {
+  "stocks": 14736,
+  "delisted": 1954,
+  "bias": {
+   "a@md": 0.0389,
+   "l@od": -0.0411,
+   "m@ad": -0.0283,
+   "m@od": -0.0295,
+   "r@ed": 0.01,
+   "s@id": 0.0245
+  }
+ }
+}

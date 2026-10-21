@@ -58,3 +58,4 @@ data, and adds its results to `research/zoo/best_correlations.csv` on the
 
 - [x] Ideas wave 5: news-event signals from the event study (buybacks, lawsuits, M&A, net upgrades, dividend raises, CEO changes) — in-sample by construction, judge with care
 - [x] Ideas report IC for 2015-20 and 2021-26 separately (an honest split for news signals)
+- [x] Intraday model zoo (gross edge, for direct exchange access): 20 signals x 6 models x 5 horizons on 5-minute bars, monthly walk-forward, net shown at 0.5 / 1 / 2.34 bp

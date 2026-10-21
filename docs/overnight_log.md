@@ -35,3 +35,7 @@ Findings so far:
 
 ## 04:00 UTC
 - Pushed ideas wave 4 (combination signals: momentum + 52w high, reversal + residual momentum, momentum trio, reversal within winners) and a zoo `targets` group (ridge/GBM on factor-residual and vol-scaled targets, top/bottom-decile logistic). Synthetic runs clean; real-data run triggered via `[zoo: ...]` tag.
+- Strategy zoo wave 2 (real data): **diversified book of 16 strategies chosen on 2006-14 → net Sharpe 1.29 / 0.85 (2015-26), max DD -17%**, vs reversal book alone 0.44 / 0.16. Inverse-vol weights beat Ledoit-Wolf mean-variance out of sample (0.85 vs 0.76). Best single legs in 2015-26: SPY vol-managed 0.84, cross-asset momentum 0.78, pairs 0.72 (corr with SPY 0.23), risk parity 0.70, broad 12m trend 0.54 (corr with SPY -0.01). Short vol works but with -66% to -95% drawdowns. Losers: sector seasonality, low vol, earnings premium, 52w-high alone, sector momentum.
+- Execution: 5-day reversal does better filled at the next open (0.07-0.09) than the next close (-0.03); 1-day residual reversal loses either way once costs are in.
+- Capacity: momentum goes from 0.05 to -0.16 (2015-26) between $10k and $1B, so it's fine at retail size.
+- FRED timed out from the runners → added a Yahoo fallback (5ddc44b) and started the strategies study again.

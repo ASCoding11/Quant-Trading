@@ -1,0 +1,32 @@
+00:36:00 INFO    qtrade | cached prices come from an older version of the downloader; downloading again
+00:36:10 INFO    qtrade | downloaded 100 / 1000 tickers
+00:36:19 INFO    qtrade | downloaded 200 / 1000 tickers
+00:36:29 INFO    qtrade | downloaded 300 / 1000 tickers
+00:36:39 INFO    qtrade | downloaded 400 / 1000 tickers
+00:36:48 INFO    qtrade | downloaded 500 / 1000 tickers
+00:36:58 INFO    qtrade | downloaded 600 / 1000 tickers
+00:37:08 INFO    qtrade | downloaded 700 / 1000 tickers
+00:37:17 INFO    qtrade | downloaded 800 / 1000 tickers
+00:37:26 INFO    qtrade | downloaded 900 / 1000 tickers
+00:37:37 INFO    qtrade | downloaded 1000 / 1000 tickers
+00:37:41 INFO    qtrade | research task: quality
+00:37:44 INFO    qtrade | research task: spreads
+00:38:17 INFO    qtrade | spreads: 2016-08-03 done (781 rows)
+00:38:55 INFO    qtrade | spreads: 2016-09-12 done (1574 rows)
+00:39:26 INFO    qtrade | spreads: 2016-11-11 done (2365 rows)
+00:39:55 INFO    qtrade | spreads: 2017-01-09 done (3155 rows)
+00:40:21 INFO    qtrade | spreads: 2017-01-18 done (3935 rows)
+00:40:47 INFO    qtrade | spreads: 2017-01-30 done (4719 rows)
+00:41:15 INFO    qtrade | spreads: 2018-07-03 done (5239 rows)
+00:41:41 INFO    qtrade | spreads: 2018-08-22 done (5962 rows)
+00:42:06 INFO    qtrade | spreads: 2018-11-27 done (6692 rows)
+00:42:34 INFO    qtrade | spreads: 2019-07-18 done (7439 rows)
+00:43:00 INFO    qtrade | spreads: 2019-08-19 done (8196 rows)
+00:43:39 INFO    qtrade | spreads: 2019-09-23 done (8945 rows)
+00:44:09 INFO    qtrade | spreads: 2020-04-13 done (9721 rows)
+00:44:40 INFO    qtrade | spreads: 2020-09-02 done (10494 rows)
+00:45:05 INFO    qtrade | spreads: 2020-10-23 done (11235 rows)
+00:45:31 INFO    qtrade | spreads: 2021-01-14 done (11980 rows)
+00:45:57 INFO    qtrade | spreads: 2021-07-23 done (12750 rows)
+00:46:20 INFO    qtrade | spreads: 2021-11-08 done (13513 rows)
+00:46:48 INFO    qtrade | spreads: 2022-02-03 done (14275 rows)

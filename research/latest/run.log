@@ -1,5 +1,5 @@
-03:01:25 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-03:01:26 INFO    qtrade | research task: quality
+03:31:08 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+03:31:08 INFO    qtrade | research task: quality
 {
  "quality": {
   "bad_prints_masked": 0,

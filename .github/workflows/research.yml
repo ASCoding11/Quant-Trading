@@ -1,7 +1,8 @@
 name: research
 
 # Research studies on real data (qtrade/research): data quality, real bid-ask
-# spreads from Alpaca quotes, per-signal edge vs. cost, and HMM accuracy.
+# spreads from Alpaca quotes, per-signal edge vs. cost, fundamental and news
+# signals, trading only when the edge is biggest, and HMM accuracy.
 # Runs on pushes to claude/* branches that change the studies, or by hand.
 # Results go to research/ on the "results" branch.
 
@@ -12,8 +13,8 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: "Comma list: quality,spreads,edge,hmm"
-        default: "quality,spreads,edge,hmm"
+        description: "Comma list: quality,spreads,edge,alt,conditional,hmm"
+        default: "quality,spreads,edge,alt,conditional,hmm"
 
 permissions:
   contents: write
@@ -30,6 +31,7 @@ jobs:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
       GH_TOKEN: ${{ github.token }}
+      DATA_KEY: ${{ secrets.DATA_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -45,11 +47,16 @@ jobs:
           restore-keys: prices-1000-15-2000-01-01-
       - name: Select universe
         run: '[ -f data/universe.csv ] || python -m qtrade universe'
+      - name: Fetch fundamentals and news
+        run: |
+          source scripts/datastore.sh
+          fetch_dataset fundamentals fundamentals || echo "no fundamentals dataset"
+          fetch_dataset news news || echo "no news dataset"
       - name: Run studies
         run: |
           set -o pipefail
           mkdir -p reports/research
-          python -m qtrade.research --tasks "${{ inputs.tasks || 'quality,spreads,edge,hmm' }}" \
+          python -m qtrade.research --tasks "${{ inputs.tasks || 'quality,spreads,edge,alt,conditional,hmm' }}" \
             --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
         if: always()

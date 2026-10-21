@@ -13,7 +13,7 @@ from ..utils import LOG, setup_logging
 def main(argv=None):
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tasks", default="quality,spreads,edge,hmm")
+    ap.add_argument("--tasks", default="quality,spreads,edge,alt,conditional,hmm")
     ap.add_argument("--out", default="reports/research")
     ap.add_argument("--config")
     ap.add_argument("--synthetic", action="store_true", help="offline smoke test on a simulated market")
@@ -35,7 +35,7 @@ def main(argv=None):
 
     ctx = FeatureContext(md, cfg)
     tasks = [t.strip() for t in args.tasks.split(",") if t.strip()]
-    summary = {}
+    summary, extra = {}, {}
     for task in tasks:
         LOG.info("research task: %s", task)
         try:
@@ -48,6 +48,50 @@ def main(argv=None):
             elif task == "edge":
                 from .edge import run
                 summary[task] = run(md, ctx, out)
+                extra["composite"] = summary[task].pop("_composite", None)
+            elif task == "alt":
+                from ..signals import normalize_signal
+                from .alt_signals import load_alt
+                from .edge import Bench
+
+                raw, fam = load_alt(md, ctx, cfg.data.cache_dir)
+                alt = {k: normalize_signal(v, ctx.tradable) for k, v in raw.items()}
+                extra["alt"] = alt
+                if alt:
+                    tab, dec = Bench(md, ctx).table(alt, fam)
+                    tab.to_csv(out / "alt_signals.csv", index=False)
+                    dec.to_csv(out / "alt_decay.csv", index=False)
+                    cols = ["signal", "family", "halflife", "universe", "breakeven_bp_1st", "breakeven_bp_2nd",
+                            "gross_sharpe_1st", "gross_sharpe_2nd", "net_sharpe_1st", "net_sharpe_2nd", "turnover_1st"]
+                    d5 = dec[dec["horizon"].isin([5, 21])]
+                    (out / "alt.md").write_text("\n".join([
+                        "## Fundamental and news signals", "",
+                        "Fundamentals start in 2009 and news in 2015, so '1st' covers 2009/2015-2014 only "
+                        "(empty for news) - judge news on the 2nd period.", "",
+                        "IC by horizon:", "", d5.round(4).to_markdown(index=False), "",
+                        tab[cols].round(3).to_markdown(index=False), ""]) + "\n")
+                    summary[task] = {"signals": list(alt)}
+                else:
+                    summary[task] = {"error": "no fundamentals or news data found"}
+            elif task == "conditional":
+                from ..signals import compute_signals
+                from .conditional import run
+
+                sigs = compute_signals(ctx, ["rev_5d", "resid_rev_1d", "low_volume_rev", "peer_gap"])
+                if extra.get("composite") is not None:
+                    from ..signals import normalize_signal
+                    sigs["composite"] = normalize_signal(extra["composite"], ctx.tradable)
+                for k in ("no_news_rev", "sue", "ear"):
+                    if k in extra.get("alt", {}):
+                        sigs[k] = extra["alt"][k]
+                news_counts = None
+                npath = Path(cfg.data.cache_dir) / "news"
+                if any(npath.glob("news_*.parquet")):
+                    from ..data.news import article_counts, load_news
+                    c = article_counts(load_news(npath))
+                    c.index = c.index.to_timestamp()
+                    news_counts = c
+                summary[task] = run(md, ctx, out, cfg, sigs, news_counts)
             elif task == "hmm":
                 from .hmm_eval import run
                 summary[task] = run(md, ctx, out, cfg)
@@ -56,7 +100,7 @@ def main(argv=None):
             summary[task] = {"error": f"{type(exc).__name__}: {exc}"}
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
     parts = ["# Research results", ""]
-    for name in ("data_quality", "spreads", "edge", "hmm"):
+    for name in ("data_quality", "spreads", "edge", "alt", "conditional", "hmm"):
         p = out / f"{name}.md"
         if p.exists():
             parts.append(p.read_text())

@@ -61,52 +61,79 @@ def summarize(daily: pd.DataFrame) -> dict:
     return res
 
 
-def run(md, ctx, out: Path, half_spread_bp: dict | None = None) -> dict:
-    """``half_spread_bp``: measured half-spread by liquidity tier (from the
-    spreads study); defaults to the cost model's quoted tiers."""
+def cost_panel(ctx, half_spread_bp: dict | None = None) -> pd.DataFrame:
+    """One-way cost per dollar traded for every (day, stock): half-spread by
+    liquidity tier + 1 bp slippage."""
     tiers = half_spread_bp or {500e6: 1.5, 100e6: 3.0, 20e6: 6.0, 0.0: 12.0}
     adv = ctx.adv
     hs = pd.DataFrame(np.nan, index=adv.index, columns=adv.columns)
     for thr, bp in sorted(tiers.items(), key=lambda x: -x[0]):
         hs = hs.where(hs.notna() | ~(adv >= thr), bp / 1e4)
-    cost = hs.fillna(max(tiers.values()) / 1e4) + 1e-4               # + 1 bp slippage
-    o = md.open
-    r1 = (o.shift(-2) / o.shift(-1) - 1).clip(-0.5, 0.5)
-    tradable = ctx.tradable
-    liquid = tradable & (adv.where(tradable).rank(axis=1, ascending=False) <= 300)
-    fwd = {h: (o.shift(-(1 + h)) / o.shift(-1) - 1).where(tradable).to_numpy() for h in HORIZONS}
+    return hs.fillna(max(tiers.values()) / 1e4) + 1e-4
 
-    sigs = compute_signals(ctx)
-    rows, decay = [], []
-    for name, z in sigs.items():
+
+class Bench:
+    """Shared inputs for scoring signal panels the same way everywhere."""
+
+    def __init__(self, md, ctx, half_spread_bp: dict | None = None):
+        self.cost = cost_panel(ctx, half_spread_bp)
+        o = md.open
+        self.r1 = (o.shift(-2) / o.shift(-1) - 1).clip(-0.5, 0.5)
+        self.tradable = ctx.tradable
+        adv = ctx.adv
+        self.liquid = self.tradable & (adv.where(self.tradable).rank(axis=1, ascending=False) <= 300)
+        self.fwd = {h: (o.shift(-(1 + h)) / o.shift(-1) - 1).where(self.tradable).to_numpy() for h in HORIZONS}
+
+    def decay(self, name: str, z: pd.DataFrame) -> list[dict]:
+        rows = []
         for h in HORIZONS:
-            ic = pd.Series(rank_ic(z.to_numpy(), fwd[h]), index=z.index).dropna()
-            decay.append({"signal": name, "horizon": h, "ic_1st": ic[ic.index < SPLIT].mean(),
-                          "ic_2nd": ic[ic.index >= SPLIT].mean(),
-                          "t_1st": ic[ic.index < SPLIT].mean() / ic[ic.index < SPLIT].std()
-                          * np.sqrt((ic.index < SPLIT).sum() / h)})
-        for hl in HALFLIVES:
-            zz = z.ewm(halflife=hl, ignore_na=True).mean() if hl else z
-            for uni, mask in (("all", tradable), ("top300", liquid)):
-                st = summarize(portfolio_stats(_weights(zz, mask), r1, cost))
-                rows.append({"signal": name, "family": REGISTRY[name].family, "halflife": hl,
-                             "universe": uni, **st})
-        LOG.info("edge: %s done", name)
-    tab = pd.DataFrame(rows)
-    dec = pd.DataFrame(decay)
+            ic = pd.Series(rank_ic(z.to_numpy(), self.fwd[h]), index=z.index).dropna()
+            a, b = ic[ic.index < SPLIT], ic[ic.index >= SPLIT]
+            rows.append({"signal": name, "horizon": h, "ic_1st": a.mean(), "ic_2nd": b.mean(),
+                         "t_1st": a.mean() / a.std() * np.sqrt(len(a) / h) if len(a) > 10 else np.nan,
+                         "t_2nd": b.mean() / b.std() * np.sqrt(len(b) / h) if len(b) > 10 else np.nan})
+        return rows
+
+    def score(self, z: pd.DataFrame, halflife: float = 0, universe: str = "all",
+              mask: pd.DataFrame | None = None) -> dict:
+        zz = z.ewm(halflife=halflife, ignore_na=True).mean() if halflife else z
+        m = self.tradable if universe == "all" else self.liquid
+        if mask is not None:
+            m = m & mask
+        return summarize(portfolio_stats(_weights(zz, m), self.r1, self.cost))
+
+    def table(self, sigs: dict, families: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+        rows, decay = [], []
+        for name, z in sigs.items():
+            decay += self.decay(name, z)
+            for hl in HALFLIVES:
+                for uni in ("all", "top300"):
+                    rows.append({"signal": name, "family": (families or {}).get(name, ""), "halflife": hl,
+                                 "universe": uni, **self.score(z, hl, uni)})
+            LOG.info("edge: %s done", name)
+        return pd.DataFrame(rows), pd.DataFrame(decay)
+
+
+def run(md, ctx, out: Path, half_spread_bp: dict | None = None) -> dict:
+    """``half_spread_bp``: measured half-spread by liquidity tier (from the
+    spreads study); defaults to the cost model's quoted tiers."""
+    bench = Bench(md, ctx, half_spread_bp)
+    sigs = compute_signals(ctx)
+    tab, dec = bench.table(sigs, {n: REGISTRY[n].family for n in sigs})
 
     # composite chosen on the first period only
     first = dec[dec["horizon"] == 1].set_index("signal")["t_1st"]
     w_sig = first.where(first.abs() > 2, 0.0)                     # keep signals with |t| > 2 in 2004-2014
-    comp_rows = []
     composite = sum(sigs[s] * w for s, w in w_sig.items() if w != 0)
-    for hl in HALFLIVES:
-        zz = composite.ewm(halflife=hl, ignore_na=True).mean() if hl else composite
-        for uni, mask in (("all", tradable), ("top300", liquid)):
-            st = summarize(portfolio_stats(_weights(zz, mask), r1, cost))
-            comp_rows.append({"halflife": hl, "universe": uni, **st})
-    comp = pd.DataFrame(comp_rows)
+    comp = pd.DataFrame([{"halflife": hl, "universe": uni, **bench.score(composite, hl, uni)}
+                         for hl in HALFLIVES for uni in ("all", "top300")])
+    _write(tab, dec, comp, out)
+    survivors = tab[(tab["breakeven_bp_1st"] > 5) & (tab["breakeven_bp_2nd"] > 5)]
+    return {"n_signals": len(sigs), "n_survivors_5bp": int(len(survivors)),
+            "composite": comp.round(3).to_dict(orient="records"), "_composite": composite}
 
+
+def _write(tab, dec, comp, out: Path) -> None:
     tab.to_csv(out / "edge_signals.csv", index=False)
     dec.to_csv(out / "edge_decay.csv", index=False)
     comp.to_csv(out / "edge_composite.csv", index=False)
@@ -126,5 +153,3 @@ def run(md, ctx, out: Path, half_spread_bp: dict | None = None) -> dict:
                         "net_sharpe_1st", "net_sharpe_2nd"]].round(2).to_markdown(index=False)
              if len(survivors) else "(none)", ""]
     (out / "edge.md").write_text("\n".join(lines) + "\n")
-    return {"n_signals": len(sigs), "n_survivors_5bp": int(len(survivors)),
-            "composite": comp.round(3).to_dict(orient="records")}

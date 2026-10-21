@@ -1,56 +1,127 @@
-04:23:23 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-04:23:23 INFO    qtrade | research task: intraday
-04:23:30 INFO    qtrade | intraday strategies: 8
+04:35:52 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+04:35:52 INFO    qtrade | research task: multi
+04:35:57 INFO    qtrade | downloaded 45 / 45 tickers
+04:35:58 INFO    qtrade | multi book done
+04:35:58 INFO    qtrade | research task: strategies
+04:36:01 INFO    qtrade | downloaded 45 / 45 tickers
+04:36:17 INFO    qtrade | regime HMM: 24 walk-forward fits, 3 states
+04:36:36 INFO    qtrade | factor model: 309 refits, 15 factors
+04:37:00 INFO    qtrade | computed 3 signals
 {
- "intraday": {
-  "strategies": [
+ "multi": {
+  "books": [
    {
-    "strategy": "market_intraday_momentum (equal-weight market, 15:30 -> close)",
-    "net_sharpe_1st": -0.78,
-    "net_sharpe_2nd": -1.91,
-    "breakeven_bp_2nd": -0.47
+    "book": "ETF sleeves: all 8 sleeves",
+    "sharpe_2006_14": 0.926,
+    "return_2006_14": 0.092,
+    "vol_2006_14": 0.099,
+    "max_dd_2006_14": -0.124,
+    "sharpe_2015_26": 0.93,
+    "return_2015_26": 0.089,
+    "vol_2015_26": 0.095,
+    "max_dd_2015_26": -0.132
    },
    {
-    "strategy": "opening_drive (first 30 min -> rest of day)",
-    "net_sharpe_1st": -12.38,
-    "net_sharpe_2nd": -9.47,
-    "breakeven_bp_2nd": -1.61
+    "book": "ETF sleeves: small account (no 30-ETF trend)",
+    "sharpe_2006_14": 0.914,
+    "return_2006_14": 0.093,
+    "vol_2006_14": 0.102,
+    "max_dd_2006_14": -0.151,
+    "sharpe_2015_26": 0.902,
+    "return_2015_26": 0.092,
+    "vol_2015_26": 0.101,
+    "max_dd_2015_26": -0.136
    },
    {
-    "strategy": "late_momentum (overnight + first 30 -> last 30)",
-    "net_sharpe_1st": -38.47,
-    "net_sharpe_2nd": -27.46,
-    "breakeven_bp_2nd": -0.23
+    "book": "stock book (reversal, as backtested)",
+    "sharpe_2006_14": 0.436,
+    "return_2006_14": 0.034,
+    "vol_2006_14": 0.079,
+    "max_dd_2006_14": -0.185,
+    "sharpe_2015_26": 0.156,
+    "return_2015_26": 0.011,
+    "vol_2015_26": 0.069,
+    "max_dd_2015_26": -0.231
+   }
+  ],
+  "blends": [
+   {
+    "etf_fraction": 0.3,
+    "sharpe_2006_14": 0.816,
+    "return_2006_14": 0.052,
+    "vol_2006_14": 0.063,
+    "max_dd_2006_14": -0.117,
+    "sharpe_2015_26": 0.58,
+    "return_2015_26": 0.034,
+    "vol_2015_26": 0.059,
+    "max_dd_2015_26": -0.161
    },
    {
-    "strategy": "gap_reversal_open (gap -> open to close, short gappers)",
-    "net_sharpe_1st": -9.67,
-    "net_sharpe_2nd": -6.95,
-    "breakeven_bp_2nd": 2.65
+    "etf_fraction": 0.5,
+    "sharpe_2006_14": 0.986,
+    "return_2006_14": 0.063,
+    "vol_2006_14": 0.064,
+    "max_dd_2006_14": -0.084,
+    "sharpe_2015_26": 0.804,
+    "return_2015_26": 0.05,
+    "vol_2015_26": 0.062,
+    "max_dd_2015_26": -0.132
    },
    {
-    "strategy": "gap_reversal_10am (gap -> 10:00 to close)",
-    "net_sharpe_1st": -7.05,
-    "net_sharpe_2nd": -5.3,
-    "breakeven_bp_2nd": 0.49
+    "etf_fraction": 0.7,
+    "sharpe_2006_14": 1.01,
+    "return_2006_14": 0.075,
+    "vol_2006_14": 0.074,
+    "max_dd_2006_14": -0.076,
+    "sharpe_2015_26": 0.907,
+    "return_2015_26": 0.065,
+    "vol_2015_26": 0.072,
+    "max_dd_2015_26": -0.123
+   }
+  ],
+  "corr_with_stock_book": 0.066
+ },
+ "strategies": {
+  "strategies": 43,
+  "chosen_for_diversified_book": [
+   "spy_tsmom_12m",
+   "spy_ma200",
+   "spy_vol_managed",
+   "spy_hmm_timing",
+   "spy_turn_of_month",
+   "multi_asset_trend",
+   "risk_parity",
+   "cross_asset_mom",
+   "broad_trend_3m",
+   "broad_trend_12m",
+   "broad_trend_blend",
+   "short_vol_contango",
+   "short_vol_always",
+   "spy_macro_timing",
+   "pairs",
+   "etf_pairs",
+   "REVERSAL BOOK (current system)"
+  ],
+  "diversified": [
+   {
+    "portfolio": "diversified (17 strategies chosen on 2006-2014)",
+    "sharpe_1st": 1.284,
+    "ret_1st": 0.128,
+    "max_dd_1st": -0.091,
+    "sharpe_2nd": 0.833,
+    "ret_2nd": 0.092,
+    "max_dd_2nd": -0.178,
+    "vol": 0.106
    },
    {
-    "strategy": "overnight_persistence (past month's overnight -> tonight)",
-    "net_sharpe_1st": -24.51,
-    "net_sharpe_2nd": -13.89,
-    "breakeven_bp_2nd": 0.52
-   },
-   {
-    "strategy": "intraday_persistence (past month's open-to-close -> today's)",
-    "net_sharpe_1st": -9.92,
-    "net_sharpe_2nd": -10.94,
-    "breakeven_bp_2nd": -0.06
-   },
-   {
-    "strategy": "last30_next_overnight (last 30 min -> tonight)",
-    "net_sharpe_1st": -34.1,
-    "net_sharpe_2nd": -25.32,
-    "breakeven_bp_2nd": -1.01
+    "portfolio": "reversal book alone (10% vol)",
+    "sharpe_1st": 0.436,
+    "ret_1st": 0.044,
+    "max_dd_1st": -0.23,
+    "sharpe_2nd": 0.156,
+    "ret_2nd": 0.014,
+    "max_dd_2nd": -0.284,
+    "vol": 0.093
    }
   ]
  }

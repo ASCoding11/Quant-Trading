@@ -1,0 +1,92 @@
+{
+  "edge": {
+    "n_signals": 44,
+    "n_survivors_5bp": 50,
+    "composite": [
+      {
+        "halflife": 0,
+        "universe": "all",
+        "gross_ret_1st": 0.095,
+        "gross_sharpe_1st": 1.847,
+        "turnover_1st": 1.028,
+        "breakeven_bp_1st": 3.682,
+        "net_sharpe_1st": -2.172,
+        "gross_ret_2nd": 0.06,
+        "gross_sharpe_2nd": 1.008,
+        "turnover_2nd": 1.03,
+        "breakeven_bp_2nd": 2.299,
+        "net_sharpe_2nd": -2.061
+      },
+      {
+        "halflife": 0,
+        "universe": "top300",
+        "gross_ret_1st": 0.103,
+        "gross_sharpe_1st": 1.648,
+        "turnover_1st": 1.049,
+        "breakeven_bp_1st": 3.899,
+        "net_sharpe_1st": -0.357,
+        "gross_ret_2nd": 0.053,
+        "gross_sharpe_2nd": 0.779,
+        "turnover_2nd": 1.039,
+        "breakeven_bp_2nd": 2.032,
+        "net_sharpe_2nd": -0.625
+      },
+      {
+        "halflife": 5,
+        "universe": "all",
+        "gross_ret_1st": 0.061,
+        "gross_sharpe_1st": 1.207,
+        "turnover_1st": 0.242,
+        "breakeven_bp_1st": 10.047,
+        "net_sharpe_1st": 0.233,
+        "gross_ret_2nd": 0.045,
+        "gross_sharpe_2nd": 0.696,
+        "turnover_2nd": 0.239,
+        "breakeven_bp_2nd": 7.461,
+        "net_sharpe_2nd": 0.039
+      },
+      {
+        "halflife": 5,
+        "universe": "top300",
+        "gross_ret_1st": 0.062,
+        "gross_sharpe_1st": 1.005,
+        "turnover_1st": 0.253,
+        "breakeven_bp_1st": 9.756,
+        "net_sharpe_1st": 0.504,
+        "gross_ret_2nd": 0.033,
+        "gross_sharpe_2nd": 0.449,
+        "turnover_2nd": 0.248,
+        "breakeven_bp_2nd": 5.334,
+        "net_sharpe_2nd": 0.137
+      },
+      {
+        "halflife": 20,
+        "universe": "all",
+        "gross_ret_1st": 0.046,
+        "gross_sharpe_1st": 0.934,
+        "turnover_1st": 0.122,
+        "breakeven_bp_1st": 14.896,
+        "net_sharpe_1st": 0.415,
+        "gross_ret_2nd": 0.034,
+        "gross_sharpe_2nd": 0.591,
+        "turnover_2nd": 0.116,
+        "breakeven_bp_2nd": 11.713,
+        "net_sharpe_2nd": 0.233
+      },
+      {
+        "halflife": 20,
+        "universe": "top300",
+        "gross_ret_1st": 0.035,
+        "gross_sharpe_1st": 0.57,
+        "turnover_1st": 0.13,
+        "breakeven_bp_1st": 10.614,
+        "net_sharpe_1st": 0.301,
+        "gross_ret_2nd": 0.024,
+        "gross_sharpe_2nd": 0.339,
+        "turnover_2nd": 0.128,
+        "breakeven_bp_2nd": 7.344,
+        "net_sharpe_2nd": 0.165
+      }
+    ]
+  }
+}

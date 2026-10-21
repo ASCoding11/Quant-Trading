@@ -1,7 +1,7 @@
 {
-  "strategies": 3888,
-  "rank_corr_sharpe": 0.6202407647632471,
-  "luck_hurdle_sharpe": 2.208117731647451,
+  "strategies": 4104,
+  "rank_corr_sharpe": 0.62558282647122,
+  "luck_hurdle_sharpe": 2.439020102243362,
   "top10_period2_sharpe": 0.13975747501032382,
   "robust_count": 45
 }

@@ -1,0 +1,131 @@
+04:26:19 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+04:26:20 INFO    qtrade | research task: asia
+04:26:22 ERROR   yfinance | $CAJ: possibly delisted; no timezone found
+04:26:28 ERROR   yfinance | 
+1 Failed download:
+04:26:28 ERROR   yfinance | ['CAJ']: possibly delisted; no timezone found
+04:26:28 INFO    qtrade | downloaded 100 / 240 tickers
+04:26:35 ERROR   yfinance | HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: 0011.HK"}}}
+04:26:35 ERROR   yfinance | $0011.HK: possibly delisted; no timezone found
+04:26:35 ERROR   yfinance | 
+1 Failed download:
+04:26:35 ERROR   yfinance | ['0011.HK']: possibly delisted; no timezone found
+04:26:35 INFO    qtrade | downloaded 200 / 240 tickers
+04:26:38 INFO    qtrade | downloaded 240 / 240 tickers
+04:26:39 INFO    qtrade | Asia: 238 of 240 tickers downloaded
+{
+ "asia": {
+  "tickers": 238,
+  "leadlag_tradable": [
+   {
+    "market": "Japan",
+    "strategy": "US close-to-close (D-1) -> Japan after the open",
+    "direction": "+",
+    "sharpe_2006_14": 1.144,
+    "sharpe_2015_26": 0.783,
+    "net_sharpe_2015_26": 0.459,
+    "avg_bp_2015_26": 4.817,
+    "cost_bp": 2.0
+   },
+   {
+    "market": "Japan",
+    "strategy": "US open-to-close (D-1) -> Japan after the open",
+    "direction": "+",
+    "sharpe_2006_14": 1.339,
+    "sharpe_2015_26": 0.794,
+    "net_sharpe_2015_26": 0.469,
+    "avg_bp_2015_26": 4.888,
+    "cost_bp": 2.0
+   },
+   {
+    "market": "Japan",
+    "strategy": "Japan close-to-close (D) -> US US after the open",
+    "direction": "+",
+    "sharpe_2006_14": 0.156,
+    "sharpe_2015_26": -0.118,
+    "net_sharpe_2015_26": -0.118,
+    "avg_bp_2015_26": -0.62,
+    "cost_bp": 0.0
+   },
+   {
+    "market": "Japan",
+    "strategy": "Japan open-to-close (D) -> US US after the open",
+    "direction": "+",
+    "sharpe_2006_14": 0.269,
+    "sharpe_2015_26": 0.19,
+    "net_sharpe_2015_26": 0.19,
+    "avg_bp_2015_26": 0.998,
+    "cost_bp": 0.0
+   },
+   {
+    "market": "Hong Kong",
+    "strategy": "US close-to-close (D-1) -> Hong Kong after the open",
+    "direction": "-",
+    "sharpe_2006_14": 1.096,
+    "sharpe_2015_26": 0.852,
+    "net_sharpe_2015_26": 0.54,
+    "avg_bp_2015_26": 5.445,
+    "cost_bp": 2.0
+   },
+   {
+    "market": "Hong Kong",
+    "strategy": "US open-to-close (D-1) -> Hong Kong after the open",
+    "direction": "-",
+    "sharpe_2006_14": 0.602,
+    "sharpe_2015_26": 0.624,
+    "net_sharpe_2015_26": 0.312,
+    "avg_bp_2015_26": 3.995,
+    "cost_bp": 2.0
+   },
+   {
+    "market": "Hong Kong",
+    "strategy": "Hong Kong close-to-close (D) -> US US after the open",
+    "direction": "+",
+    "sharpe_2006_14": 0.273,
+    "sharpe_2015_26": -0.428,
+    "net_sharpe_2015_26": -0.428,
+    "avg_bp_2015_26": -2.246,
+    "cost_bp": 0.0
+   },
+   {
+    "market": "Hong Kong",
+    "strategy": "Hong Kong open-to-close (D) -> US US after the open",
+    "direction": "+",
+    "sharpe_2006_14": 0.96,
+    "sharpe_2015_26": 0.151,
+    "net_sharpe_2015_26": 0.151,
+    "avg_bp_2015_26": 0.794,
+    "cost_bp": 0.0
+   },
+   {
+    "market": "China",
+    "strategy": "US close-to-close (D-1) -> China after the open",
+    "direction": "-",
+    "sharpe_2006_14": 0.024,
+    "sharpe_2015_26": 0.154,
+    "net_sharpe_2015_26": -0.132,
+    "avg_bp_2015_26": 1.073,
+    "cost_bp": 2.0
+   },
+   {
+    "market": "China",
+    "strategy": "US open-to-close (D-1) -> China after the open",
+    "direction": "+",
+    "sharpe_2006_14": 0.315,
+    "sharpe_2015_26": -0.261,
+    "net_sharpe_2015_26": -0.547,
+    "avg_bp_2015_26": -1.818,
+    "cost_bp": 2.0
+   },
+   {
+    "market": "China",
+    "strategy": "China close-to-close (D) -> US US after the open",
+    "direction": "+",
+    "sharpe_2006_14": 0.027,
+    "sharpe_2015_26": -0.182,
+    "net_sharpe_2015_26": -0.182,
+    "avg_bp_2015_26": -0.956,
+    "cost_bp": 0.0
+   },
+   {
+    "market": "Chi

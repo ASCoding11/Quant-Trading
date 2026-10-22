@@ -1,0 +1,438 @@
+{
+  "asia": {
+    "tickers": 238,
+    "leadlag_tradable": [
+      {
+        "market": "Japan",
+        "strategy": "US close-to-close (D-1) -> Japan after the open",
+        "direction": "+",
+        "sharpe_2006_14": 1.144,
+        "sharpe_2015_26": 0.783,
+        "net_sharpe_2015_26": 0.459,
+        "avg_bp_2015_26": 4.817,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Japan",
+        "strategy": "US open-to-close (D-1) -> Japan after the open",
+        "direction": "+",
+        "sharpe_2006_14": 1.339,
+        "sharpe_2015_26": 0.794,
+        "net_sharpe_2015_26": 0.469,
+        "avg_bp_2015_26": 4.888,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Japan",
+        "strategy": "Japan close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.156,
+        "sharpe_2015_26": -0.118,
+        "net_sharpe_2015_26": -0.118,
+        "avg_bp_2015_26": -0.62,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Japan",
+        "strategy": "Japan open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.269,
+        "sharpe_2015_26": 0.19,
+        "net_sharpe_2015_26": 0.19,
+        "avg_bp_2015_26": 0.998,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Hong Kong",
+        "strategy": "US close-to-close (D-1) -> Hong Kong after the open",
+        "direction": "-",
+        "sharpe_2006_14": 1.096,
+        "sharpe_2015_26": 0.852,
+        "net_sharpe_2015_26": 0.54,
+        "avg_bp_2015_26": 5.445,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Hong Kong",
+        "strategy": "US open-to-close (D-1) -> Hong Kong after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.602,
+        "sharpe_2015_26": 0.624,
+        "net_sharpe_2015_26": 0.312,
+        "avg_bp_2015_26": 3.995,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Hong Kong",
+        "strategy": "Hong Kong close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.273,
+        "sharpe_2015_26": -0.428,
+        "net_sharpe_2015_26": -0.428,
+        "avg_bp_2015_26": -2.246,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Hong Kong",
+        "strategy": "Hong Kong open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.96,
+        "sharpe_2015_26": 0.151,
+        "net_sharpe_2015_26": 0.151,
+        "avg_bp_2015_26": 0.794,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "China",
+        "strategy": "US close-to-close (D-1) -> China after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.024,
+        "sharpe_2015_26": 0.154,
+        "net_sharpe_2015_26": -0.132,
+        "avg_bp_2015_26": 1.073,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "China",
+        "strategy": "US open-to-close (D-1) -> China after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.315,
+        "sharpe_2015_26": -0.261,
+        "net_sharpe_2015_26": -0.547,
+        "avg_bp_2015_26": -1.818,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "China",
+        "strategy": "China close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.027,
+        "sharpe_2015_26": -0.182,
+        "net_sharpe_2015_26": -0.182,
+        "avg_bp_2015_26": -0.956,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "China",
+        "strategy": "China open-to-close (D) -> US US after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.116,
+        "sharpe_2015_26": -0.407,
+        "net_sharpe_2015_26": -0.407,
+        "avg_bp_2015_26": -2.14,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Korea",
+        "strategy": "US close-to-close (D-1) -> Korea after the open",
+        "direction": "-",
+        "sharpe_2006_14": 1.471,
+        "sharpe_2015_26": 0.552,
+        "net_sharpe_2015_26": 0.261,
+        "avg_bp_2015_26": 3.784,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Korea",
+        "strategy": "US open-to-close (D-1) -> Korea after the open",
+        "direction": "-",
+        "sharpe_2006_14": 1.122,
+        "sharpe_2015_26": 0.785,
+        "net_sharpe_2015_26": 0.493,
+        "avg_bp_2015_26": 5.384,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Korea",
+        "strategy": "Korea close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.549,
+        "sharpe_2015_26": -0.245,
+        "net_sharpe_2015_26": -0.245,
+        "avg_bp_2015_26": -1.285,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Korea",
+        "strategy": "Korea open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.718,
+        "sharpe_2015_26": -0.067,
+        "net_sharpe_2015_26": -0.067,
+        "avg_bp_2015_26": -0.354,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Taiwan",
+        "strategy": "US close-to-close (D-1) -> Taiwan after the open",
+        "direction": "-",
+        "sharpe_2006_14": 1.744,
+        "sharpe_2015_26": -2.975,
+        "net_sharpe_2015_26": -3.349,
+        "avg_bp_2015_26": -15.865,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Taiwan",
+        "strategy": "US open-to-close (D-1) -> Taiwan after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.762,
+        "sharpe_2015_26": -2.129,
+        "net_sharpe_2015_26": -2.5,
+        "avg_bp_2015_26": -11.449,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Taiwan",
+        "strategy": "Taiwan close-to-close (D) -> US US after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.005,
+        "sharpe_2015_26": -0.059,
+        "net_sharpe_2015_26": -0.059,
+        "avg_bp_2015_26": -0.309,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Taiwan",
+        "strategy": "Taiwan open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.759,
+        "sharpe_2015_26": 0.151,
+        "net_sharpe_2015_26": 0.151,
+        "avg_bp_2015_26": 0.797,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Australia",
+        "strategy": "US close-to-close (D-1) -> Australia after the open",
+        "direction": "+",
+        "sharpe_2006_14": 5.163,
+        "sharpe_2015_26": 5.862,
+        "net_sharpe_2015_26": 5.415,
+        "avg_bp_2015_26": 26.169,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Australia",
+        "strategy": "US open-to-close (D-1) -> Australia after the open",
+        "direction": "+",
+        "sharpe_2006_14": 5.002,
+        "sharpe_2015_26": 5.0,
+        "net_sharpe_2015_26": 4.559,
+        "avg_bp_2015_26": 22.701,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Australia",
+        "strategy": "Australia close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.075,
+        "sharpe_2015_26": -0.062,
+        "net_sharpe_2015_26": -0.062,
+        "avg_bp_2015_26": -0.323,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Australia",
+        "strategy": "Australia open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.442,
+        "sharpe_2015_26": -0.095,
+        "net_sharpe_2015_26": -0.095,
+        "avg_bp_2015_26": -0.522,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "India",
+        "strategy": "US close-to-close (D-1) -> India after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.238,
+        "sharpe_2015_26": -0.22,
+        "net_sharpe_2015_26": -0.589,
+        "avg_bp_2015_26": -1.19,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "India",
+        "strategy": "US open-to-close (D-1) -> India after the open",
+        "direction": "+",
+        "sharpe_2006_14": 1.102,
+        "sharpe_2015_26": 0.263,
+        "net_sharpe_2015_26": -0.106,
+        "avg_bp_2015_26": 1.424,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "India",
+        "strategy": "India close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.644,
+        "sharpe_2015_26": -0.002,
+        "net_sharpe_2015_26": -0.002,
+        "avg_bp_2015_26": -0.009,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "India",
+        "strategy": "India open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.807,
+        "sharpe_2015_26": 0.017,
+        "net_sharpe_2015_26": 0.017,
+        "avg_bp_2015_26": 0.091,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Singapore",
+        "strategy": "US close-to-close (D-1) -> Singapore after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.774,
+        "sharpe_2015_26": 0.036,
+        "net_sharpe_2015_26": -0.479,
+        "avg_bp_2015_26": 0.139,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Singapore",
+        "strategy": "US open-to-close (D-1) -> Singapore after the open",
+        "direction": "-",
+        "sharpe_2006_14": 0.395,
+        "sharpe_2015_26": 0.449,
+        "net_sharpe_2015_26": -0.067,
+        "avg_bp_2015_26": 1.742,
+        "cost_bp": 2.0
+      },
+      {
+        "market": "Singapore",
+        "strategy": "Singapore close-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.608,
+        "sharpe_2015_26": -0.414,
+        "net_sharpe_2015_26": -0.414,
+        "avg_bp_2015_26": -2.17,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Singapore",
+        "strategy": "Singapore open-to-close (D) -> US US after the open",
+        "direction": "+",
+        "sharpe_2006_14": 0.265,
+        "sharpe_2015_26": 0.03,
+        "net_sharpe_2015_26": 0.03,
+        "avg_bp_2015_26": 0.16,
+        "cost_bp": 0.0
+      },
+      {
+        "market": "Asia (average)",
+        "strategy": "Asia average (D) -> SPY open-to-close (D)",
+        "direction": "+",
+        "sharpe_2006_14": 0.592,
+        "sharpe_2015_26": -0.147,
+        "net_sharpe_2015_26": -0.147,
+        "avg_bp_2015_26": -0.77,
+        "cost_bp": 0.0
+      }
+    ],
+    "adr_strategy": [
+      {
+        "strategy": "ADRs: trade the home-vs-gap residual, MOO in / MOC out",
+        "direction": "+",
+        "cost_bp_round_trip": 0.0,
+        "sharpe_2006_14": 3.899,
+        "sharpe_2015_26": 2.637,
+        "avg_bp_2015_26": 7.96,
+        "adrs_per_day_2015_26": 22.056
+      },
+      {
+        "strategy": "ADRs: trade the home-vs-gap residual, MOO in / MOC out",
+        "direction": "+",
+        "cost_bp_round_trip": 1.0,
+        "sharpe_2006_14": 3.692,
+        "sharpe_2015_26": 2.306,
+        "avg_bp_2015_26": 7.96,
+        "adrs_per_day_2015_26": 22.056
+      },
+      {
+        "strategy": "ADRs: trade the home-vs-gap residual, MOO in / MOC out",
+        "direction": "+",
+        "cost_bp_round_trip": 3.0,
+        "sharpe_2006_14": 3.276,
+        "sharpe_2015_26": 1.643,
+        "avg_bp_2015_26": 7.96,
+        "adrs_per_day_2015_26": 22.056
+      }
+    ],
+    "best_market_strategies": [
+      {
+        "market": "Korea",
+        "strategy": "5-day reversal (close to close)",
+        "direction": "+",
+        "stocks": 28,
+        "sharpe_2006_14": 1.5,
+        "sharpe_2015_26": 1.138,
+        "annual_return_2015_26": 0.162,
+        "net_sharpe_2015_26": -0.372,
+        "net_annual_return_2015_26": -0.053,
+        "round_trip_cost_bp": 23.0,
+        "on_ibkr": false,
+        "bad_open_share": 0.07
+      },
+      {
+        "market": "Japan",
+        "strategy": "5-day reversal (close to close)",
+        "direction": "+",
+        "stocks": 40,
+        "sharpe_2006_14": 0.635,
+        "sharpe_2015_26": 0.131,
+        "annual_return_2015_26": 0.014,
+        "net_sharpe_2015_26": -0.693,
+        "net_annual_return_2015_26": -0.076,
+        "round_trip_cost_bp": 10.0,
+        "on_ibkr": true,
+        "bad_open_share": 0.038
+      },
+      {
+        "market": "Australia",
+        "strategy": "5-day reversal (close to close)",
+        "direction": "+",
+        "stocks": 30,
+        "sharpe_2006_14": 0.639,
+        "sharpe_2015_26": 0.267,
+        "annual_return_2015_26": 0.028,
+        "net_sharpe_2015_26": -1.122,
+        "net_annual_return_2015_26": -0.117,
+        "round_trip_cost_bp": 16.0,
+        "on_ibkr": true,
+        "bad_open_share": 0.038
+      },
+      {
+        "market": "India",
+        "strategy": "5-day reversal (close to close)",
+        "direction": "+",
+        "stocks": 30,
+        "sharpe_2006_14": 1.182,
+        "sharpe_2015_26": 0.879,
+        "annual_return_2015_26": 0.086,
+        "net_sharpe_2015_26": -1.52,
+        "net_annual_return_2015_26": -0.149,
+        "round_trip_cost_bp": 25.0,
+        "on_ibkr": false,
+        "bad_open_share": 0.014
+      },
+      {
+        "market": "Hong Kong",
+        "strategy": "5-day reversal (close to close)",
+        "direction": "-",
+        "stocks": 35,
+        "sharpe_2006_14": 0.016,
+        "sharpe_2015_26": 0.265,
+        "annual_return_2015_26": 0.032,
+        "net_sharpe_2015_26": -2.048,
+        "net_annual_return_2015_26": -0.251,
+        "round_trip_cost_bp": 32.0,
+        "on_ibkr": true,
+        "bad_open_share": 0.071
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+strategy,direction,cost_bp_round_trip,sharpe_2006_14,sharpe_2015_26,avg_bp_2015_26,adrs_per_day_2015_26
+"ADRs: trade the home-vs-gap residual, MOO in / MOC out",+,0.0,3.8994394415927722,2.6370675932189314,7.9596183940698815,22.056266846361186
+"ADRs: trade the home-vs-gap residual, MOO in / MOC out",+,1.0,3.691680169438321,2.3057618116272387,7.9596183940698815,22.056266846361186
+"ADRs: trade the home-vs-gap residual, MOO in / MOC out",+,3.0,3.276161625129419,1.643150248443855,7.9596183940698815,22.056266846361186

@@ -10,6 +10,8 @@ re-downloading rather than appending.
 """
 from __future__ import annotations
 
+import re
+
 import time
 from pathlib import Path
 
@@ -22,9 +24,17 @@ from .market import FIELDS, RAW_FIELDS, MarketData
 _YF_FIELDS = {"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}
 
 
+# exchange suffixes Yahoo writes with a dot (Tokyo, Hong Kong, Korea, Taiwan, Sydney, India, China, Singapore)
+_EXCHANGE_SUFFIX = re.compile(r"^(.+)\.(T|HK|KS|KQ|TW|TWO|AX|NS|BO|SS|SZ|SI)$")
+
+
 def to_yahoo(ticker: str) -> str:
-    """Yahoo uses '-' for share classes: BRK.B -> BRK-B."""
-    return ticker.strip().upper().replace(".", "-").replace("/", "-")
+    """Yahoo uses '-' for share classes: BRK.B -> BRK-B (but keeps exchange suffixes: 7203.T, 0700.HK)."""
+    t = ticker.strip().upper()
+    m = _EXCHANGE_SUFFIX.match(t)
+    if m:
+        return m.group(1).replace("/", "-") + "." + m.group(2)
+    return t.replace(".", "-").replace("/", "-")
 
 
 def to_alpaca(ticker: str) -> str:

@@ -351,6 +351,7 @@ def benzinga_feature_sets(md, news: pd.DataFrame) -> dict[str, dict]:
     x["tone"] = x["headline"].map(_tone)
     low = x["headline"].str.lower()
     for k, pat in HEADLINE_FLAGS.items():
+        pat = re.sub(r"\((?!\?)", "(?:", pat)                  # non-capturing: no pandas warning
         x[k] = low.str.contains(pat, regex=True).astype(float)
     x["entry"] = entry_of_times(x["created_at"], dates)
     x["ticker"] = x["symbols"].fillna("").str.split(",")

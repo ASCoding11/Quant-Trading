@@ -48,3 +48,14 @@ def test_encrypt_decrypt_round_trip(tmp_path):
     assert not p.exists() and b"AAA" not in enc.read_bytes()
     out = Lg.decrypt(enc, str(priv))
     assert out.read_text() == "symbol,pnl\nAAA,1.5\n"
+
+
+def test_partial_fills_merge_back_into_one_trade():
+    f = _fills([("2026-10-20 09:41:55", "AAA", "buy", 1, 10.0, "day"),
+                ("2026-10-20 09:41:56", "AAA", "buy", 3, 10.4, "day"),
+                ("2026-10-22 09:30:05", "AAA", "sell", 4, 11.0, "opg")])
+    t, _ = Lg.round_trips(f)
+    assert len(t) == 2
+    m = Lg.merge_pieces(t)
+    assert len(m) == 1 and m.iloc[0].shares == 4 and np.isclose(m.iloc[0].entry_price, 10.3)
+    assert np.isclose(m.iloc[0].pnl, 1.0 + 3 * 0.6)

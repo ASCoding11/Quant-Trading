@@ -105,6 +105,28 @@ def round_trips(fills: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, deque]]:
     return pd.DataFrame(trades), lots
 
 
+def merge_pieces(trades: pd.DataFrame) -> pd.DataFrame:
+    """Partial fills split one position into several lots; merge lots opened the same day and closed by the
+    same order (same minute) back into one trade, with share-weighted prices."""
+    if trades.empty:
+        return trades
+    t = trades.copy()
+    t["_open_day"] = pd.to_datetime(t["opened"]).dt.date
+    t["_close_key"] = pd.to_datetime(t["closed"]).dt.floor("min")
+    keys = ["symbol", "side", "_open_day", "_close_key", "entry_order", "exit_order"]
+    rows = []
+    for _, g in t.groupby(keys, dropna=False, sort=False):
+        sh = g["shares"].sum()
+        entry = float((g["entry_price"] * g["shares"]).sum() / sh)
+        exit_ = float((g["exit_price"] * g["shares"]).sum() / sh)
+        d = 1.0 if g["side"].iloc[0] == "long" else -1.0
+        rows.append({**g.iloc[0][["symbol", "side", "entry_order", "exit_order"]].to_dict(),
+                     "shares": sh, "opened": g["opened"].min(), "closed": g["closed"].max(),
+                     "entry_price": entry, "exit_price": exit_, "pnl": float(g["pnl"].sum()),
+                     "return_pct": 100 * d * (exit_ / entry - 1), "days_held": g["days_held"].max()})
+    return pd.DataFrame(rows)
+
+
 def open_positions(lots: dict[str, deque], marks: dict[str, float]) -> pd.DataFrame:
     rows = []
     for sym, book in lots.items():
@@ -156,7 +178,7 @@ def build(out: Path, public_key: str | None = None) -> dict:
     r.raise_for_status()
     marks = {p["symbol"]: float(p["current_price"]) for p in r.json()}
     opened = open_positions(lots, marks)
-    all_trades = pd.concat([trades, opened], ignore_index=True)
+    all_trades = merge_pieces(pd.concat([trades, opened], ignore_index=True))
     daily = trades.groupby(trades["closed"].dt.date)["pnl"].agg(["sum", "count"]).rename(
         columns={"sum": "realised_pnl", "count": "trades"}) if len(trades) else pd.DataFrame()
     files = {"fills.csv": fills.drop(columns=["order_id"]), "trades.csv": all_trades, "daily.csv": daily.reset_index()}

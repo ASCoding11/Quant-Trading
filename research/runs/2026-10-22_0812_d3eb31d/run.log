@@ -1,0 +1,123 @@
+07:52:35 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-20)
+07:52:36 INFO    qtrade | research task: news
+07:53:01 INFO    qtrade | Wikidata: 3517 tickers with an English Wikipedia article
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+07:54:44 INFO    qtrade | news zoo: {'hacker_news': 8, 'wikipedia': 4, 'sec_filings': 56, 'sec_phrases': 66, 'benzinga': 10, 'benzinga_headlines': 56}
+07:54:46 INFO    qtrade | news zoo: scanning hacker_news (8 features)
+07:55:30 INFO    qtrade | news zoo: scanning wikipedia (4 features)
+07:55:47 INFO    qtrade | news zoo: scanning sec_filings (56 features)
+08:00:49 INFO    qtrade | news zoo: scanning sec_phrases (66 features)
+08:06:45 INFO    qtrade | news zoo: scanning benzinga (10 features)
+08:07:39 INFO    qtrade | news zoo: scanning benzinga_headlines (56 features)
+08:12:43 INFO    qtrade | downloaded 45 / 45 tickers
+{
+ "news": {
+  "cross_tests": 1200,
+  "cross_both_halves_t2": 186,
+  "top_tradable": [
+   {
+    "feature": "headline:buyback",
+    "target": "intraday",
+    "ic_A": 0.006,
+    "ic_B": 0.0045,
+    "t_A": 5.1725,
+    "t_B": 3.3799
+   },
+   {
+    "feature": "headline:ceo_change",
+    "target": "intraday",
+    "ic_A": -0.0053,
+    "ic_B": -0.0079,
+    "t_A": -3.3313,
+    "t_B": -4.425
+   },
+   {
+    "feature": "headline:ceo_change",
+    "target": "next_1d",
+    "ic_A": -0.0052,
+    "ic_B": -0.0085,
+    "t_A": -3.3132,
+    "t_B": -4.7549
+   },
+   {
+    "feature": "sec_10q",
+    "target": "next_1d",
+    "ic_A": -0.0033,
+    "ic_B": -0.0046,
+    "t_A": -3.2717,
+    "t_B": -3.4779
+   },
+   {
+    "feature": "sec_10q",
+    "target": "intraday",
+    "ic_A": -0.0028,
+    "ic_B": -0.0048,
+    "t_A": -2.7684,
+    "t_B": -3.5911
+   },
+   {
+    "feature": "headline:buyback",
+    "target": "next_1d",
+    "ic_A": 0.0051,
+    "ic_B": 0.0035,
+    "t_A": 4.4403,
+    "t_B": 2.7062
+   },
+   {
+    "feature": "headline:buyback:last_5d",
+    "target": "intraday",
+    "ic_A": 0.0024,
+    "ic_B": 0.0033,
+    "t_A": 2.6442,
+    "t_B": 3.021
+   },
+   {
+    "feature": "8k_says:tender offer:last_5d",
+    "target": "intraday",
+    "ic_A": -0.0024,
+    "ic_B": -0.0023,
+    "t_A": -2.7282,
+    "t_B": -2.2965
+   },
+   {
+    "feature": "sec_8k_5.02",
+    "target": "intraday",
+    "ic_A": -0.0018,
+    "ic_B": -0.007,
+    "t_A": -2.2914,
+    "t_B": -7.1043
+   },
+   {
+    "feature": "sec_8k_5.02",
+    "target": "next_1d",
+    "ic_A": -0.0017,
+    "ic_B": -0.0062,
+    "t_A": -2.1995,
+    "t_B": -6.422
+   }
+  ],
+  "market_tests": 4047,
+  "market_both_halves_t2": 2
+ }
+}

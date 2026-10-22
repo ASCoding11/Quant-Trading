@@ -1,1 +1,7 @@
-
+dataset,rows,columns,first,last,megabytes
+gdelt_theme_timelinevolraw,3541,21,2017-01-01,2026-10-22,0.3
+gdelt_total_articles,3541,1,2017-01-01,2026-10-22,0.1
+hn_stories,538065,6,,,33.1
+sec_filings,1709772,4,,,23.5
+sec_phrase_hits,486597,6,,,8.5
+wiki_extra_pageviews,4131,137,2015-07-01,2026-10-21,0.8

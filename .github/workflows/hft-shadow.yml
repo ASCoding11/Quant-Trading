@@ -1,7 +1,8 @@
 name: hft-shadow
 
 # Shadow high-frequency trader (qtrade/intraday/hft_shadow.py): simulated trades on
-# live IEX quotes for liquid stocks (instant fills, 0 bp fees), every trade logged. It
+# live IEX quotes for liquid stocks (orders arrive 5-10 ms after the decision, 0 bp fees),
+# every trade logged. It
 # never touches the paper account. The trade log is encrypted to
 # config/ledger_public_key.pem (quotes are market data) and kept on the results
 # branch under paper/hft/; the research session copies it into the Google Sheet.
@@ -31,6 +32,9 @@ jobs:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
       GH_TOKEN: ${{ github.token }}
+      # optional: write trades straight into the Google Sheet every few seconds
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      HFT_SHEET_ID: ${{ secrets.HFT_SHEET_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

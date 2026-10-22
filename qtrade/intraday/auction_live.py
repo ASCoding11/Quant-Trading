@@ -333,9 +333,15 @@ def run_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs", adr: bool 
         LOG.info("not a pre-open window (next open %s) - nothing to do", clock.next_open)
         return {"status": "outside window"}
     open_orders = client.get("/orders", {"status": "open", "limit": 500})
-    if any(o.get("time_in_force") == "opg" for o in open_orders):
+    if tif == "opg" and any(o.get("time_in_force") == "opg" for o in open_orders):
         LOG.info("market-on-open orders already queued - nothing to do")
         return {"status": "already queued"}
+    if tif == "day":
+        # after the open, leftover market-on-open orders are dead (they expire unfilled - Alpaca's paper
+        # simulator leaves many of them unfilled); only regular orders still working mean "in progress"
+        if any(o.get("time_in_force") == "day" for o in open_orders):
+            LOG.info("market orders from an earlier flatten are still working - nothing to do")
+            return {"status": "in progress"}
     equity, pos_qty, _, shortable, tradable, _ = _account_state(client)
     from ..live.alpaca_trader import PlannedOrder
 
@@ -360,7 +366,7 @@ def run_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs", adr: bool 
         orders = [PlannedOrder(t, "sell" if q > 0 else "buy", abs(q), float("nan"), "flatten")
                   for t, q in pos_qty.items() if q != 0 and t not in keep]
     if tif == "opg" and _now() >= cutoff:               # the ADR lookup ran past Alpaca's 9:28 cutoff
-        LOG.warning("past the market-on-open cutoff - leaving it to the 9:31 flatten")
+        LOG.warning("past the market-on-open cutoff - leaving it to the flatten after the open")
         return {"status": "missed cutoff"}
     pd.DataFrame([o.__dict__ for o in orders]).to_csv(out / f"auction_open_{_now():%Y%m%d_%H%M}.csv", index=False)
     LOG.info("%d orders at the open (%s): flatten the overnight book%s", len(orders), tif.upper(),
@@ -401,8 +407,8 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
     market-on-close window. The keeper polls the clock every 30 seconds:
 
     * 9:00-9:27 on a trading day: queue market-on-open orders that close everything;
-    * 9:31-10:30: if positions are still open (the open phase was missed or rejected),
-      close them with market orders;
+    * 9:34-10:30: if positions are still open (the open phase was missed, or its market-on-open
+      orders expired unfilled), close them with market orders, retrying every 5 minutes until flat;
     * 15:40-15:49: build the book and send market-on-close orders (``run_close`` waits
       until 15:45 and skips if today's orders were already sent).
 
@@ -419,6 +425,7 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
     adr_mode = cfg.auction.adr_mode if cfg.auction.adr_enabled else None
     adr_names = set(ADRS) if adr_mode else set()        # held during the day, closed at the close
     open_start = 9 * 60 + 18 if adr_mode == "premarket" else 9 * 60   # pre-market prices as late as possible
+    last_try = pd.Timestamp(0, tz=NY)
     LOG.info("keeper up for %.1f hours (until %s New York)", hours,
              (_now() + pd.Timedelta(hours=hours)).strftime("%a %H:%M"))
     while time.time() < end:
@@ -438,13 +445,17 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
                     and done.get("adr") != today:
                 done["adr"] = today
                 actions.append(("adr book", str(now), run_adr_after_open(cfg, dry_run=dry_run, out_dir=out_dir)))
-            elif clock.is_open and 9 * 60 + 31 <= hm < 10 * 60 + 30 and done.get("late") != today:
-                done["late"] = today
+            elif clock.is_open and 9 * 60 + 34 <= hm < 10 * 60 + 30 and done.get("late") != today \
+                    and (now - last_try).total_seconds() >= 300:
+                # every 5 minutes until flat: market-on-open orders expire at ~9:33 when they don't fill
+                last_try = now
                 pos = {t: q for t, q in _account_state(client)[1].items() if t not in adr_names and q != 0}
                 if pos:
                     LOG.warning("%d positions still open after the open - closing them", len(pos))
                     actions.append(("late flatten", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir,
                                                                        keep=adr_names)))
+                else:
+                    done["late"] = today
             elif clock.is_open and 15 * 60 + 40 <= hm < 15 * 60 + 49 and done.get("close") != today:
                 done["close"] = today
                 fill_report(days=4, out_dir=out_dir)

@@ -104,3 +104,65 @@ def test_keeper_acts_once_per_window(monkeypatch):
     monkeypatch.setattr(A.time, "time", lambda: t0.__setitem__(0, t0[0] + 1) or t0[0])
     res = A.run_keeper(Config(), [], {}, hours=4 / 3600, dry_run=True)
     assert calls == ["open"]
+
+
+def test_flatten_after_the_open_ignores_expired_market_on_open_orders(monkeypatch, tmp_path):
+    """2026-10-22: Alpaca paper left 33 of 36 market-on-open orders unfilled; the 9:31 flatten saw them
+    still listed as open and did nothing. After the open, only working market orders mean 'in progress'."""
+    from qtrade.intraday import auction_live as A
+
+    class Clock:
+        is_open = True
+        next_open = pd.Timestamp("2026-10-23 09:30", tz=NY)
+
+    working = {"orders": [{"time_in_force": "opg", "status": "new"}]}
+
+    class Client:
+        def get_clock(self):
+            return Clock()
+
+        def get(self, path, params=None):
+            return working["orders"]
+
+    sent = []
+    monkeypatch.setattr(A, "_client", lambda: Client())
+    monkeypatch.setattr(A, "_now", lambda: pd.Timestamp("2026-10-22 09:35", tz=NY))
+    monkeypatch.setattr(A, "_account_state", lambda c: (1e5, {"ACN": 1, "CLF": -31}, {}, set(), None, 1e5))
+    monkeypatch.setattr(A, "_submit", lambda client, orders, tif: sent.append((tif, orders)) or [])
+    res = A.run_open(Config(), dry_run=False, out_dir=tmp_path)
+    assert res["status"] == "done" and sent[0][0] == "day"
+    assert {(o.symbol, o.side, o.qty) for o in sent[0][1]} == {("ACN", "sell", 1), ("CLF", "buy", 31)}
+    working["orders"] = [{"time_in_force": "day", "status": "new"}]       # our own market orders still working
+    assert A.run_open(Config(), dry_run=False, out_dir=tmp_path)["status"] == "in progress"
+
+
+def test_keeper_retries_the_late_flatten_until_flat(monkeypatch):
+    from qtrade.intraday import auction_live as A
+
+    times = iter(pd.date_range("2026-10-22 09:34", periods=40, freq="1min", tz=NY))
+
+    class Clock:
+        is_open = True
+        next_open = pd.Timestamp("2026-10-23 09:30", tz=NY)
+
+    class Client:
+        def get_clock(self):
+            return Clock()
+
+    state = {"pos": {"ACN": 1}, "calls": 0}
+
+    def flatten(cfg, **k):
+        state["calls"] += 1
+        if state["calls"] == 2:            # the second attempt gets filled
+            state["pos"] = {}
+        return {"status": "done"}
+
+    monkeypatch.setattr(A, "_client", lambda: Client())
+    monkeypatch.setattr(A, "_now", lambda: next(times))
+    monkeypatch.setattr(A, "_account_state", lambda c: (1e5, dict(state["pos"]), {}, set(), None, 1e5))
+    monkeypatch.setattr(A, "run_open", flatten)
+    monkeypatch.setattr(A.time, "sleep", lambda s: None)
+    t0 = [0.0]
+    monkeypatch.setattr(A.time, "time", lambda: t0.__setitem__(0, t0[0] + 1) or t0[0])
+    A.run_keeper(Config(), [], {}, hours=30 / 3600, dry_run=True)
+    assert state["calls"] == 2              # 9:34 and 9:39, then flat: no more attempts

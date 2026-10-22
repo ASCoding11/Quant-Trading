@@ -146,7 +146,7 @@ class AuctionConfig:
     earnings_per_event: float = 0.02  # last_reaction: capital per company reporting tonight (long or short)
     earnings_max_gross: float = 0.5   # ... capped in total on a busy night
     # the ADR book (qtrade.intraday.adr_book): Asian ADRs vs their home markets, open to close
-    adr_enabled: bool = True
+    adr_enabled: bool = False         # off until the executable-version research confirms it
     adr_mode: str = "premarket"       # "premarket": market-on-open with the pre-market price; "after_open": 9:35
     adr_gross: float = 0.5            # long + short as a multiple of capital (the overnight book is flat by then)
     adr_sign: float = 1.0             # +1: follow the home move the ADR hasn't priced yet (research direction)

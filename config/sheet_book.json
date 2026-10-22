@@ -1,0 +1,5 @@
+{
+  "_comment": "The simulated $10,000 Google Sheet book, split between sleeves (dollars). hft = the shadow HFT (qtrade/intraday/hft_shadow.py), momentum_flip = Nico's momentum flip (qtrade/intraday/flip_sleeve.py).",
+  "hft": 5000,
+  "momentum_flip": 5000
+}

@@ -96,18 +96,19 @@ def test_sheet_rows_summary_and_book_line():
 
 
 def test_the_10k_book_is_shared_and_compounds():
-    h = S.ShadowHFT([f"S{i}" for i in range(12)], latency_ms=5, jitter_ms=0)
-    for i in range(12):                                         # 12 lopsided books, but only 10 slots each
+    n = S.SLOTS + 2
+    h = S.ShadowHFT([f"S{i}" for i in range(n)], latency_ms=5, jitter_ms=0)
+    for i in range(n):                                          # more lopsided books than slots
         h.on_quote(f"S{i}", at(0, i), 100.00, 900, 100.01, 50)
     taker = [o for o in h.pending + h.positions if o["strategy"] == "imbalance_taker"]
-    assert len(taker) == 10
+    assert len(taker) == S.SLOTS
     assert np.isclose(taker[0]["notional"], S.BOOK_USD / 4 / S.SLOTS)
-    for i in range(12):
+    for i in range(n):
         h.on_quote(f"S{i}", at(29, i), 101.00, 500, 101.01, 500)  # everything rose ~1% before the timeouts
     h.step(at(32))
     t = h.take_closed()
     tk = t[t.strategy == "imbalance_taker"]
-    assert len(tk) == 10 and (tk.pnl_usd > 0).all()
+    assert len(tk) == S.SLOTS and (tk.pnl_usd > 0).all()
     assert np.isclose(h.equity["imbalance_taker"], S.BOOK_USD / 4 + tk.pnl_usd.sum())
     assert h.reserved["imbalance_taker"] < 1e-9                 # cash released after the exits
 

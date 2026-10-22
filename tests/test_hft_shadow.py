@@ -56,3 +56,10 @@ def test_sheet_rows_and_summary():
     assert rows[0][3].endswith(".005") and rows[0][-1] == 5.5
     s = S._summary_rows(t)
     assert s[0][0] == "Strategy" and s[1][:2] == ["market_maker", 1]
+
+
+def test_broken_wide_quotes_are_not_traded():
+    h = S.ShadowHFT(["AAA"], latency_ms=5, jitter_ms=0)
+    h.on_quote("AAA", at(0), 380.0, 900, 393.0, 100)           # 336 bp wide and lopsided: no taker
+    h.step(at(1))                                              # ... and no maker quotes either
+    assert not h.pending and not h.resting

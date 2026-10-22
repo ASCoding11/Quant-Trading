@@ -44,6 +44,7 @@ FEE_BP = 0.0                    # the sheet's assumption: no fees at all
 LATENCY_MS = 5.0                # every order reaches the market this long after the decision ...
 JITTER_MS = 5.0                 # ... plus a uniform random 0-5 ms
 IMB_THRESHOLD = 0.6
+MAX_SPREAD_BP = 25.0            # ignore broken / one-sided IEX quotes (e.g. a 328 bp TSLA quote on 2026-10-22)
 HOLD_S = 30
 MM_EVERY_S = 10
 MM_WAIT_S = 10
@@ -138,7 +139,7 @@ class ShadowHFT:
             return
         b.bid, b.bsize, b.ask, b.asize = bid, bsize, ask, asize
         imb = b.imbalance
-        if abs(imb) >= IMB_THRESHOLD and t >= self.taker_busy_until[sym]:
+        if abs(imb) >= IMB_THRESHOLD and b.spread_bp <= MAX_SPREAD_BP and t >= self.taker_busy_until[sym]:
             delay = self._delay()
             self.pending.append({"kind": "entry", "strategy": "imbalance_taker", "symbol": sym,
                                  "side": "buy" if imb > 0 else "sell", "decision_time": t, "exec_at": t + delay,
@@ -161,7 +162,7 @@ class ShadowHFT:
         self.advance(now)
         self.resting = [o for o in self.resting if o["expires"] >= now]
         for sym, b in self.books.items():
-            if not b.ok or now - self.last_mm[sym] < pd.Timedelta(seconds=MM_EVERY_S):
+            if not b.ok or b.spread_bp > MAX_SPREAD_BP or now - self.last_mm[sym] < pd.Timedelta(seconds=MM_EVERY_S):
                 continue
             self.last_mm[sym] = now
             imb = b.imbalance

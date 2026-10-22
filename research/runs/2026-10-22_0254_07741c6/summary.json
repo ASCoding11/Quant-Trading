@@ -1,0 +1,90 @@
+{
+  "news": {
+    "cross_tests": 420,
+    "cross_both_halves_t2": 98,
+    "top_tradable": [
+      {
+        "feature": "headline:buyback",
+        "target": "intraday",
+        "ic_A": 0.006,
+        "ic_B": 0.0045,
+        "t_A": 5.1726,
+        "t_B": 3.3799
+      },
+      {
+        "feature": "headline:ceo_change",
+        "target": "intraday",
+        "ic_A": -0.0053,
+        "ic_B": -0.0079,
+        "t_A": -3.3314,
+        "t_B": -4.425
+      },
+      {
+        "feature": "headline:ceo_change",
+        "target": "next_1d",
+        "ic_A": -0.0052,
+        "ic_B": -0.0085,
+        "t_A": -3.3137,
+        "t_B": -4.7542
+      },
+      {
+        "feature": "headline:buyback",
+        "target": "next_1d",
+        "ic_A": 0.0051,
+        "ic_B": 0.0035,
+        "t_A": 4.4419,
+        "t_B": 2.7128
+      },
+      {
+        "feature": "headline:buyback:last_5d",
+        "target": "intraday",
+        "ic_A": 0.0024,
+        "ic_B": 0.0033,
+        "t_A": 2.6442,
+        "t_B": 3.0138
+      },
+      {
+        "feature": "headline:dividend_up",
+        "target": "next_1d",
+        "ic_A": 0.0034,
+        "ic_B": 0.0032,
+        "t_A": 2.1685,
+        "t_B": 2.2501
+      },
+      {
+        "feature": "headline:deal:last_5d",
+        "target": "intraday",
+        "ic_A": -0.002,
+        "ic_B": -0.0025,
+        "t_A": -2.0087,
+        "t_B": -2.0515
+      },
+      {
+        "feature": "headline:dividend_up",
+        "target": "intraday",
+        "ic_A": 0.0032,
+        "ic_B": 0.004,
+        "t_A": 1.9693,
+        "t_B": 2.8988
+      },
+      {
+        "feature": "headline:deal:last_5d",
+        "target": "next_1d",
+        "ic_A": -0.0018,
+        "ic_B": -0.0021,
+        "t_A": -1.8316,
+        "t_B": -1.7747
+      },
+      {
+        "feature": "headline:halt",
+        "target": "next_1d",
+        "ic_A": -0.0037,
+        "ic_B": -0.0034,
+        "t_A": -1.9204,
+        "t_B": -1.6416
+      }
+    ],
+    "market_tests": 71,
+    "market_both_halves_t2": 0
+  }
+}

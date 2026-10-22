@@ -1,57 +1,119 @@
-23:29:27 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
-23:29:28 INFO    qtrade | research task: consumer
-23:29:53 INFO    qtrade | SEC submissions: 100/1000 tickers, 7987 earnings filings
-23:30:28 INFO    qtrade | SEC submissions: 200/1000 tickers, 16107 earnings filings
-23:30:57 INFO    qtrade | SEC submissions: 300/1000 tickers, 24518 earnings filings
-23:31:23 INFO    qtrade | SEC submissions: 400/1000 tickers, 32493 earnings filings
-23:32:03 INFO    qtrade | SEC submissions: 500/1000 tickers, 40611 earnings filings
-23:32:28 INFO    qtrade | SEC submissions: 600/1000 tickers, 48976 earnings filings
-23:32:58 INFO    qtrade | SEC submissions: 700/1000 tickers, 56623 earnings filings
-23:33:22 INFO    qtrade | SEC submissions: 800/1000 tickers, 64562 earnings filings
-23:33:44 INFO    qtrade | SEC submissions: 900/1000 tickers, 72366 earnings filings
-23:34:10 INFO    qtrade | SEC submissions: 1000/1000 tickers, 80267 earnings filings
-23:34:11 INFO    qtrade | SEC: 1000 profiles (157 consumer), 80267 earnings filings
-23:34:17 INFO    qtrade | Wikidata: 3517 tickers with an English Wikipedia article
-23:35:43 WARNING qtrade | Wikipedia INCY: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Incyte/daily/20150701/20261020
-23:35:43 WARNING qtrade | Wikipedia INDB: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Rockland_Trust/daily/20150701/20261020
-23:35:43 WARNING qtrade | Wikipedia INGR: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Ingredion/daily/20150701/20261020
-23:35:43 WARNING qtrade | Wikipedia INTC: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intel/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia INTU: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intuit/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IOSP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Innospec/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/International_Paper/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IPGP: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/IPG_Photonics/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IRDM: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Iridium_Communications/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IRM: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Iron_Mountain_%28company%29/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia ISRG: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Intuitive_Surgical/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Gartner/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia ITRI: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Itron/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia ITT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/ITT_Inc./daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia ITW: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Illinois_Tool_Works/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia IVZ: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Invesco/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia J: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jacobs_Solutions/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia JAZZ: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jazz_Pharmaceuticals/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia JBHT: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/J._B._Hunt/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia JBL: 429 Client Error: Too Many Requests for url: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/Jabil/daily/20150701/20261020
-23:35:44 WARNING qtrade | Wikipedia: stopped after 486 tickers
-23:35:45 INFO    qtrade | Wikipedia page views: 4130 days x 398 tickers
-23:35:45 WARNING qtrade | Google Trends AAL: The request failed: Google returned a response with code 429
-23:35:55 WARNING qtrade | Google Trends AAP: The request failed: Google returned a response with code 429
-23:36:07 WARNING qtrade | Google Trends ADM: The request failed: Google returned a response with code 429
-23:36:24 WARNING qtrade | Google Trends ALV: The request failed: Google returned a response with code 429
-23:37:23 WARNING qtrade | Google Trends COLM: The request failed: Google returned a response with code 429
-23:37:33 WARNING qtrade | Google Trends: throttled - stopping with 28 terms
-23:37:33 INFO    qtrade | Google Trends: 28 terms
-23:37:53 INFO    qtrade | consumer earnings: 30535 events
+02:47:21 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+02:47:21 INFO    qtrade | research task: news
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+/home/runner/work/Quant-Trading/Quant-Trading/qtrade/research/news_zoo.py:354: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  x[k] = low.str.contains(pat, regex=True).astype(float)
+02:47:40 INFO    qtrade | news zoo: {'wikipedia': 4, 'benzinga': 10, 'benzinga_headlines': 56}
+02:47:42 INFO    qtrade | news zoo: scanning wikipedia (4 features)
+02:48:01 INFO    qtrade | news zoo: scanning benzinga (10 features)
+02:48:58 INFO    qtrade | news zoo: scanning benzinga_headlines (56 features)
+02:54:14 INFO    qtrade | downloaded 45 / 45 tickers
 {
- "consumer": {
-  "events": 30535,
-  "consumer_events": 4490,
-  "coverage": {
-   "wiki_attention": 0.33941378745701656,
-   "wiki_yoy": 0.3325036842967087,
-   "trends_yoy": 0.013787457016538399,
-   "runup_20d": 1.0,
-   "last_reaction": 0.9703618798100541
-  }
+ "news": {
+  "cross_tests": 420,
+  "cross_both_halves_t2": 98,
+  "top_tradable": [
+   {
+    "feature": "headline:buyback",
+    "target": "intraday",
+    "ic_A": 0.006,
+    "ic_B": 0.0045,
+    "t_A": 5.1726,
+    "t_B": 3.3799
+   },
+   {
+    "feature": "headline:ceo_change",
+    "target": "intraday",
+    "ic_A": -0.0053,
+    "ic_B": -0.0079,
+    "t_A": -3.3314,
+    "t_B": -4.425
+   },
+   {
+    "feature": "headline:ceo_change",
+    "target": "next_1d",
+    "ic_A": -0.0052,
+    "ic_B": -0.0085,
+    "t_A": -3.3137,
+    "t_B": -4.7542
+   },
+   {
+    "feature": "headline:buyback",
+    "target": "next_1d",
+    "ic_A": 0.0051,
+    "ic_B": 0.0035,
+    "t_A": 4.4419,
+    "t_B": 2.7128
+   },
+   {
+    "feature": "headline:buyback:last_5d",
+    "target": "intraday",
+    "ic_A": 0.0024,
+    "ic_B": 0.0033,
+    "t_A": 2.6442,
+    "t_B": 3.0138
+   },
+   {
+    "feature": "headline:dividend_up",
+    "target": "next_1d",
+    "ic_A": 0.0034,
+    "ic_B": 0.0032,
+    "t_A": 2.1685,
+    "t_B": 2.2501
+   },
+   {
+    "feature": "headline:deal:last_5d",
+    "target": "intraday",
+    "ic_A": -0.002,
+    "ic_B": -0.0025,
+    "t_A": -2.0087,
+    "t_B": -2.0515
+   },
+   {
+    "feature": "headline:dividend_up",
+    "target": "intraday",
+    "ic_A": 0.0032,
+    "ic_B": 0.004,
+    "t_A": 1.9693,
+    "t_B": 2.8988
+   },
+   {
+    "feature": "headline:deal:last_5d",
+    "target": "next_1d",
+    "ic_A": -0.0018,
+    "ic_B": -0.0021,
+    "t_A": -1.8316,
+    "t_B": -1.7747
+   },
+   {
+    "feature": "headline:halt",
+    "target": "next_1d",
+    "ic_A": -0.0037,
+    "ic_B": -0.0034,
+    "t_A": -1.9204,
+    "t_B": -1.6416
+   }
+  ],
+  "market_tests": 71,
+  "market_both_halves_t2": 0
  }
 }

@@ -209,40 +209,114 @@ def wiki_pageviews(tickers: list[str], root: str | Path = "data", start: str = "
 # -----------------------------------------------------------------------------
 # Google search interest (best effort)
 # -----------------------------------------------------------------------------
-def google_trends(terms: dict[str, str], root: str | Path = "data", refresh: bool = False,
-                  max_terms: int = 150) -> pd.DataFrame:
-    """Weekly search interest (0-100 within each term's own history) for {ticker: search term}.
-    Needs the optional ``pytrends`` package; returns what it could get before Google throttles."""
-    path = _cache(root) / "google_trends.parquet"
-    if path.exists() and not refresh:
-        return pd.read_parquet(path)
+_SUFFIXES = {"inc", "corp", "corporation", "co", "company", "ltd", "plc", "holdings", "holding", "group",
+             "sa", "nv", "lp", "llc", "intl", "cos", "companies"}
+
+
+def company_search_terms(tickers: list[str], root: str | Path = "data") -> dict[str, str]:
+    """{ticker: search term}: the Wikipedia article title when there is one, otherwise the company's
+    SEC name without legal suffixes ("COSTCO WHOLESALE CORP /NEW" -> "Costco Wholesale")."""
+    names = {}
+    try:
+        titles = wiki_titles(root).set_index("ticker")["title"]
+        names = {t: titles[t].replace("_", " ").split(" (")[0] for t in tickers if t in titles.index}
+    except Exception as exc:
+        LOG.warning("Wikipedia titles unavailable: %s", exc)
+    missing = [t for t in tickers if t not in names]
+    if missing:
+        try:
+            from .fundamentals import TICKERS_URL, SecClient, to_yahoo
+
+            data = SecClient().get_json(TICKERS_URL)
+            sec = {to_yahoo(v["ticker"]): v["title"] for v in data.values()}
+            for t in missing:
+                if t in sec:
+                    words = [w for w in sec[t].replace(",", " ").replace(".", " ").split()
+                             if w.lower() not in _SUFFIXES and not w.startswith("/")]      # "/DE/", "/NEW"
+                    if words:
+                        names[t] = " ".join(w if any(c.islower() for c in w) else w.capitalize() for w in words)
+        except Exception as exc:
+            LOG.warning("SEC company names unavailable: %s", exc)
+    return names
+
+
+# Google returns weekly points only for windows under five years (monthly beyond), so the history is
+# fetched in overlapping windows and stitched: each window is rescaled to the previous one on their
+# overlap year.
+TRENDS_WINDOWS = (("2015-06-01", "2020-05-31"), ("2019-06-01", "2024-05-31"), ("2023-06-01", None))
+
+
+def _stitch(parts: list[pd.Series]) -> pd.Series:
+    out = parts[0]
+    for p in parts[1:]:
+        ov = out.index.intersection(p.index)
+        if len(ov) < 8 or p[ov].mean() <= 0:
+            return out                                  # can't scale the next window: keep what is consistent
+        p = p * out[ov].mean() / p[ov].mean()
+        out = pd.concat([out, p[p.index > out.index.max()]])
+    return out
+
+
+def google_trends(terms: dict[str, str], root: str | Path = "data", budget_min: float = 0,
+                  pause: float = 25.0) -> pd.DataFrame:
+    """Weekly search interest (0-100 scale of the first window) for {ticker: search term}.
+
+    Incremental: each ticker is saved as soon as it is fetched (``google_trends_weekly.parquet``, plus
+    ``google_trends_done.csv`` for terms Google had no data for), so throttled runs add up across runs.
+    ``budget_min`` = minutes to spend fetching (0 = only read the cache). Needs ``pytrends``."""
+    c = _cache(root)
+    path, done_path = c / "google_trends_weekly.parquet", c / "google_trends_done.csv"
+    have = pd.read_parquet(path) if path.exists() else pd.DataFrame()
+    done = set(pd.read_csv(done_path)["ticker"]) if done_path.exists() else set()
+    todo = [t for t in terms if t not in done and t not in have.columns]
+    if not todo or budget_min <= 0:
+        return have
     try:
         from pytrends.request import TrendReq
     except ImportError:
         LOG.warning("pytrends not installed - skipping Google Trends")
-        return pd.DataFrame()
+        return have
+    import random
+
     py = TrendReq(hl="en-US", tz=300, timeout=(10, 30))
-    cols, fails = {}, 0
-    for t, term in list(terms.items())[:max_terms]:
-        if fails >= 5:
-            LOG.warning("Google Trends: throttled - stopping with %d terms", len(cols))
+    t0, fails, got = time.time(), 0, 0
+    today = pd.Timestamp.today().strftime("%Y-%m-%d")
+    for t in todo:
+        if time.time() - t0 > budget_min * 60:
+            LOG.info("Google Trends: time budget used")
             break
-        try:
-            py.build_payload([term], timeframe="2016-01-01 " + pd.Timestamp.today().strftime("%Y-%m-%d"), geo="US")
-            d = py.interest_over_time()
+        if fails >= 6:
+            LOG.warning("Google Trends: throttled - stopping")
+            break
+        term, parts, ok = terms[t], [], True
+        for a, b in TRENDS_WINDOWS:
+            try:
+                py.build_payload([term], timeframe=f"{a} {b or today}", geo="US")
+                d = py.interest_over_time()
+                fails = 0
+            except Exception as exc:
+                fails += 1
+                LOG.warning("Google Trends %s: %s - backing off", t, exc.__class__.__name__)
+                time.sleep(min(60 * 2 ** fails, 600))
+                ok = False
+                break
             if len(d) and term in d:
-                cols[t] = d[term].astype(float)
-            time.sleep(1.5)
-        except Exception as exc:
-            fails += 1
-            LOG.warning("Google Trends %s: %s", t, exc)
-            time.sleep(10)
-    df = pd.DataFrame(cols)
-    if len(df):
-        df.index = pd.to_datetime(df.index) + pd.Timedelta(days=7)   # a week's value is known once it ends
-        df.to_parquet(path)
-    LOG.info("Google Trends: %d terms", df.shape[1])
-    return df
+                parts.append(d[term].astype(float))
+            time.sleep(pause * random.uniform(0.8, 1.4))
+        if not ok:
+            continue                                    # retried in a later run
+        s = _stitch(parts) if parts else pd.Series(dtype=float)
+        if len(s) and s.max() > 0:
+            s.index = pd.to_datetime(s.index) + pd.Timedelta(days=7)   # a week's value is known once it ends
+            have = pd.concat([have, s.rename(t)], axis=1).sort_index()
+            have.to_parquet(path)
+            got += 1
+        else:
+            done.add(t)
+            pd.DataFrame({"ticker": sorted(done)}).to_csv(done_path, index=False)
+    LOG.info("Google Trends: +%d terms this run, %d in the cache, %d still to fetch", got, have.shape[1],
+             len([t for t in terms if t not in done and t not in have.columns]))
+    return have
 
 
 # -----------------------------------------------------------------------------

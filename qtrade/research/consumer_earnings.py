@@ -27,6 +27,7 @@ universe side by side.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -232,7 +233,7 @@ def intraday_reaction(md, ctx, df: pd.DataFrame, root: str) -> pd.DataFrame:
 
 
 def run(md, ctx, out: Path, cfg) -> dict:
-    from ..data.consumer import google_trends, sec_profiles_and_earnings, wiki_pageviews
+    from ..data.consumer import company_search_terms, google_trends, sec_profiles_and_earnings, wiki_pageviews
 
     root = cfg.data.cache_dir
     profiles, events = sec_profiles_and_earnings(list(md.tickers), root)
@@ -246,15 +247,8 @@ def run(md, ctx, out: Path, cfg) -> dict:
         LOG.warning("Wikipedia page views unavailable: %s", exc)
     trends = None
     try:
-        cons = profiles.loc[profiles["consumer"], ["ticker", "sic_description"]]
-        names = {}
-        from ..data.consumer import wiki_titles
-
-        titles = wiki_titles(root).set_index("ticker")["title"]
-        for t in cons["ticker"]:
-            if t in titles.index:
-                names[t] = titles[t].replace("_", " ").split(" (")[0]
-        trends = google_trends(names, root)
+        names = company_search_terms(list(profiles.loc[profiles["consumer"], "ticker"]), root)
+        trends = google_trends(names, root, budget_min=float(os.environ.get("TRENDS_BUDGET_MIN", "0")))
         trends = trends if len(trends) else None
     except Exception as exc:
         LOG.warning("Google Trends unavailable: %s", exc)

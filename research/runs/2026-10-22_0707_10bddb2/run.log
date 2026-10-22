@@ -1,0 +1,21 @@
+05:32:00 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+05:32:00 INFO    qtrade | research task: consumer
+05:43:27 WARNING qtrade | Google Trends PEP: TooManyRequestsError - backing off
+06:01:04 WARNING qtrade | Google Trends SBH: TooManyRequestsError - backing off
+06:03:04 WARNING qtrade | Google Trends SBUX: TooManyRequestsError - backing off
+07:00:59 WARNING qtrade | Google Trends PATK: TooManyRequestsError - backing off
+07:06:56 INFO    qtrade | Google Trends: +57 terms this run, 151 in the cache, 4 still to fetch
+07:07:18 INFO    qtrade | consumer earnings: 30535 events
+{
+ "consumer": {
+  "events": 30535,
+  "consumer_events": 4490,
+  "coverage": {
+   "wiki_attention": 0.33941378745701656,
+   "wiki_yoy": 0.3325036842967087,
+   "trends_yoy": 0.1237596201080727,
+   "runup_20d": 1.0,
+   "last_reaction": 0.9703618798100541
+  }
+ }
+}

@@ -53,3 +53,63 @@ def test_page_views_of_the_entry_day_are_not_used():
     views.loc[views.index >= md.dates[700], t] = 1e6        # a spike from the entry day on
     after = C.features(md, ev, views, None)
     assert np.isclose(base.loc[0, "wiki_attention"], after.loc[0, "wiki_attention"])
+
+
+def test_trends_windows_stitch_onto_one_scale():
+    from qtrade.data.consumer import _stitch
+
+    idx = pd.date_range("2016-01-03", periods=300, freq="W")
+    true = pd.Series(np.linspace(10, 80, 300), index=idx)
+    a, b = true.iloc[:150], true.iloc[100:] * 0.5          # second window on its own 0-100 scale
+    s = _stitch([a, b])
+    assert s.index.is_unique and len(s) == 300
+    assert np.allclose(s.iloc[-50:], true.iloc[-50:], rtol=0.05)
+
+
+def test_google_trends_is_incremental(tmp_path, monkeypatch):
+    import sys
+    import types
+
+    from qtrade.data import consumer
+
+    calls = []
+
+    class FakeReq:
+        def __init__(self, *a, **k):
+            pass
+
+        def build_payload(self, kw, timeframe, geo):
+            self.kw = kw[0]
+            calls.append(self.kw)
+
+        def interest_over_time(self):
+            if self.kw == "Nothing Co":
+                return pd.DataFrame()
+            idx = pd.date_range("2016-01-03", periods=260, freq="W")
+            return pd.DataFrame({self.kw: np.arange(260) % 100 + 1.0}, index=idx)
+
+    monkeypatch.setitem(sys.modules, "pytrends", types.ModuleType("pytrends"))
+    monkeypatch.setitem(sys.modules, "pytrends.request", types.SimpleNamespace(TrendReq=FakeReq))
+    monkeypatch.setattr(consumer.time, "sleep", lambda s: None)
+    terms = {"AAA": "Aaa Stores", "BBB": "Nothing Co"}
+    assert consumer.google_trends(terms, tmp_path, budget_min=0).empty      # cache only: no fetching
+    df = consumer.google_trends(terms, tmp_path, budget_min=5, pause=0)
+    assert list(df.columns) == ["AAA"]
+    n = len(calls)
+    again = consumer.google_trends(terms, tmp_path, budget_min=5, pause=0)  # both done: nothing re-fetched
+    assert len(calls) == n and list(again.columns) == ["AAA"]
+
+
+def test_sec_names_become_search_terms(tmp_path, monkeypatch):
+    from qtrade.data import consumer, fundamentals
+
+    monkeypatch.setattr(consumer, "wiki_titles", lambda root: pd.DataFrame({"ticker": ["WMT"], "title": ["Walmart"]}))
+
+    class FakeSec:
+        def get_json(self, url):
+            return {"0": {"ticker": "COST", "title": "COSTCO WHOLESALE CORP /NEW", "cik_str": 1},
+                    "1": {"ticker": "WMT", "title": "Walmart Inc.", "cik_str": 2}}
+
+    monkeypatch.setattr(fundamentals, "SecClient", FakeSec)
+    assert consumer.company_search_terms(["WMT", "COST", "ZZZ"], tmp_path) == {"WMT": "Walmart",
+                                                                               "COST": "Costco Wholesale"}

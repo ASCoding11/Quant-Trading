@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,hmm (blank = all)"
+        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,hmm,consumer,news,flip,multi (blank = all)"
         default: ""
 
 permissions:
@@ -48,6 +48,12 @@ jobs:
           path: data
           key: prices-1000-15-2000-01-01-research-${{ github.run_id }}
           restore-keys: prices-1000-15-2000-01-01-
+      - name: Restore news / media data (media-collect workflow)
+        uses: actions/cache/restore@v4
+        with:
+          path: media_data
+          key: media-none
+          restore-keys: media-
       - name: Select universe
         run: '[ -f data/universe.csv ] || python -m qtrade universe'
       - name: Fetch fundamentals and news
@@ -80,8 +86,10 @@ jobs:
           fi
           TASKS=${TASKS:-quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,intraday,hmm}
           echo "tasks: $TASKS"
-          # optional: Google search interest for the consumer study (unofficial client; skipped if it fails)
-          case "$TASKS" in *consumer*) pip install -q pytrends || echo "pytrends unavailable";; esac
+          # optional: Google search interest for the consumer study (unofficial client; skipped if it fails).
+          # Fetched slowly to stay under Google's throttle and kept in the data cache, so each run adds more.
+          case "$TASKS" in *consumer*) pip install -q pytrends || echo "pytrends unavailable"
+                                       export TRENDS_BUDGET_MIN=${TRENDS_BUDGET_MIN:-150};; esac
           python -m qtrade.research --tasks "$TASKS" --out reports/research 2>&1 | tee reports/research/run.log
       - name: Publish to the results branch
         if: always() && hashFiles('reports/research/**') != ''

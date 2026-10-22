@@ -137,12 +137,14 @@ class MultiConfig:
 @dataclass
 class AuctionConfig:
     """The auction trader (``qtrade.intraday.auction_live``): market-on-close in, market-on-open out."""
-    strategies: list = field(default_factory=lambda: ["last30_fade", "overnight_persistence"])
+    strategies: list = field(default_factory=lambda: ["last30_fade", "overnight_persistence", "last_reaction"])
     gross: float = 2.0               # long + short as a multiple of capital
     frac: float = 0.2                # long the top fifth, short the bottom fifth
     capital: float | None = None     # dollars to trade (default: live.capital_fraction / live.max_capital)
     min_order_value: float = 25.0
     feed: str = "iex"                # today's 5-minute bars on the free plan
+    earnings_per_event: float = 0.02  # last_reaction: capital per company reporting tonight (long or short)
+    earnings_max_gross: float = 0.5   # ... capped in total on a busy night
 
 
 @dataclass

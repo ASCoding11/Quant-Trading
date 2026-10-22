@@ -5,8 +5,10 @@ Every trading day, on Alpaca paper:
 * **close phase** (about 15:45 New York): compute the two signals from live
   prices - against the 15:15 -> 15:45 move (``last30_fade``) and the past
   month's overnight returns (``overnight_persistence``) - build the long/short
-  book (top / bottom fifth, equal capital per strategy) and send
-  **market-on-close** orders before Alpaca's 15:50 cutoff;
+  book (top / bottom fifth, equal capital per strategy), add the earnings leg
+  (``last_reaction``, ``earnings_live``: names reporting tonight, long or short
+  by their previous release's reaction) and send **market-on-close** orders
+  before Alpaca's 15:50 cutoff;
 * **open phase** (before 9:28 the next morning): send **market-on-open**
   orders that close every position, so the account is flat all day;
 * **report**: each phase compares the previous auction's fills with the
@@ -14,7 +16,7 @@ Every trading day, on Alpaca paper:
   way (the backtest assumes 0 bp).
 
 Auction orders fill at the official auction price, so they pay no spread; that
-is why these two strategies are the only ones whose edge survives.
+is why these strategies are the only ones whose edge survives.
 The signal formulas are shared with the backtest (``slice_sim``), and the
 strategy directions are the ones the backtest fixed on 2016-2020.
 """
@@ -30,6 +32,7 @@ import pandas as pd
 from ..data.intraday import AlpacaBars, bars_to_frame
 from ..live.alpaca_trader import _account_state, _client, plan_orders
 from ..utils import LOG
+from .earnings_live import earnings_weights
 from .slice_sim import _weights, last30_signal, overnight_signal
 
 NY = "America/New_York"
@@ -55,12 +58,15 @@ def _fetch(data: AlpacaBars, symbols, timeframe, start, end, feed) -> dict[str, 
 
 
 def build_book(today_5min: dict[str, pd.DataFrame], daily: dict[str, pd.DataFrame], tickers: list[str],
-               signs: dict, acfg, today: pd.Timestamp, shortable: set | None = None) -> dict:
+               signs: dict, acfg, today: pd.Timestamp, shortable: set | None = None,
+               reactions: dict[str, float] | None = None) -> dict:
     """Target weights (fractions of capital), the prices used and the raw signals.
 
     ``today_5min``: today's 5-minute bars per ticker (New York index);
     ``daily``: daily bars with official open/close for the last ~30 sessions including today
-    (today's bar only needs its open)."""
+    (today's bar only needs its open);
+    ``reactions``: for names reporting earnings tonight, their previous release's reaction
+    (the ``last_reaction`` leg, added on top of the other strategies)."""
     N = len(tickers)
     p1515, p1545 = np.full(N, np.nan), np.full(N, np.nan)
     t1515 = today.tz_localize(NY) + pd.Timedelta(hours=15, minutes=10)     # the bar that closes at 15:15
@@ -107,6 +113,12 @@ def build_book(today_5min: dict[str, pd.DataFrame], daily: dict[str, pd.DataFram
         used.append(s)
     for s in used:
         w += _weights(sig[s], ok & np.isfinite(sig[s]), acfg.frac) * acfg.gross / max(len(used), 1)
+    if "last_reaction" in acfg.strategies and reactions:
+        e = earnings_weights(tickers, reactions, ok, signs.get("last_reaction", 1.0), acfg.earnings_per_event,
+                             acfg.earnings_max_gross)
+        if np.abs(e).sum() > 0:
+            w += e
+            used.append("last_reaction")
     if shortable is not None:
         w[(w < 0) & ~np.array([t in shortable for t in tickers])] = 0.0
     return {"weights": dict(zip(tickers, w)), "prices": dict(zip(tickers, p1545)), "signals": sig,
@@ -147,6 +159,29 @@ def _wait_until(target: pd.Timestamp) -> None:
         time.sleep(min(left, 60))
 
 
+def _earnings_reactions(data: AlpacaBars, acfg, tickers: list[str], today: pd.Timestamp) -> dict[str, float]:
+    """Last reactions of the names reporting tonight; {} (and a warning) if any source fails."""
+    from .earnings_live import last_reactions, releases_tonight
+
+    try:
+        names = [t for t in releases_tonight(today) if t in set(tickers)]
+        if not names:
+            LOG.info("last_reaction: no releases tonight among the traded names")
+            return {}
+        start = today.tz_localize(NY) - pd.Timedelta(days=150)       # back past the previous quarter's release
+        hist = _fetch(data, names + ["SPY"], "1Day", start, _now() - pd.Timedelta(minutes=16), "sip")
+        if "SPY" not in hist:
+            return {}
+        stop = _now().normalize() + pd.Timedelta(hours=15, minutes=44)
+        r = last_reactions(names, _now(), hist, hist["SPY"], deadline=stop if _now() < stop else None)
+        LOG.info("last_reaction: %d releases tonight, %d with a previous reaction (%d up, %d down)", len(names),
+                 len(r), sum(v > 0 for v in r.values()), sum(v < 0 for v in r.values()))
+        return r
+    except Exception as exc:
+        LOG.warning("last_reaction leg skipped today: %s", exc)
+        return {}
+
+
 def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_dir: str | Path = "logs") -> dict:
     """Send the evening book as market-on-close orders."""
     acfg = cfg.auction
@@ -163,11 +198,16 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
     if live and not dry_run and _sent_today(client, "cls"):
         LOG.info("market-on-close orders were already sent today (an earlier run) - nothing to do")
         return {"status": "already sent"}
+    data = AlpacaBars(feed=acfg.feed)
+    reactions = None
     if live:
         close_time = pd.Timestamp(clock.next_close).tz_convert(NY)
         if close_time.hour < 16:
             LOG.info("early close today (%s): market-on-close timing differs - skipping", close_time)
             return {"status": "early close"}
+        # the earnings leg needs no prices from today: look it up before the 15:45 rush
+        if "last_reaction" in acfg.strategies:
+            reactions = _earnings_reactions(data, acfg, tickers, today)
         if dry_run:
             LOG.info("dry run during the session: building the book from prices so far")
         else:
@@ -181,7 +221,6 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
     elif not dry_run:
         LOG.info("market is closed - nothing to do")
         return {"status": "closed"}
-    data = AlpacaBars(feed=acfg.feed)
     if not live:                                    # dry run outside hours: replay the last session
         probe = _fetch(data, tickers[:5], "1Day", now - pd.Timedelta(days=10), now - pd.Timedelta(minutes=20), "sip")
         today = max(f.index.max() for f in probe.values()).tz_convert(NY).tz_localize(None).normalize()
@@ -195,7 +234,9 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
     else:
         equity, pos_qty, pos_val, shortable, tradable = 100_000.0, {}, {}, None, None
     capital = acfg.capital or min(equity * cfg.live.capital_fraction, cfg.live.max_capital or equity)
-    book = build_book(today_5, daily, tickers, signs, acfg, today, shortable)
+    if reactions is None and "last_reaction" in acfg.strategies:      # dry run outside hours
+        reactions = _earnings_reactions(data, acfg, tickers, today)
+    book = build_book(today_5, daily, tickers, signs, acfg, today, shortable, reactions)
     tw = {t: w for t, w in book["weights"].items() if abs(w) > 1e-9 and (tradable is None or t in tradable)}
     prices = {t: p for t, p in book["prices"].items() if np.isfinite(p)}
     pos = {t: q for t, q in pos_qty.items() if t in set(tickers)}
@@ -357,7 +398,7 @@ def fill_report(days: int = 5, out_dir: str | Path = "logs") -> pd.DataFrame:
 def load_inputs(tickers_file: str | Path, signs_file: str | Path | None) -> tuple[list[str], dict]:
     t = json.loads(Path(tickers_file).read_text())
     tickers = t["tickers"] if isinstance(t, dict) else list(t)
-    signs = {"last30_fade": 1.0, "overnight_persistence": 1.0}
+    signs = {"last30_fade": 1.0, "overnight_persistence": 1.0, "last_reaction": 1.0}
     if signs_file and Path(signs_file).exists():
         signs |= json.loads(Path(signs_file).read_text())
     LOG.info("auction trader: %d tickers, directions %s", len(tickers), signs)

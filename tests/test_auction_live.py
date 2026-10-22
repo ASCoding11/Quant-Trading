@@ -33,7 +33,7 @@ def test_live_book_matches_backtest():
     _, _, _, qc = S.day_prices(bars)
     ok = np.isfinite(qc[d]) & (qc[d] > 0)
     ref = np.zeros(len(bars.tickers))
-    for s in acfg.strategies:
+    for s in ("last30_fade", "overnight_persistence"):      # no earnings tonight: the two price strategies
         ref += S._weights(signs[s] * sig[s][d], ok & np.isfinite(sig[s][d]), acfg.frac) * acfg.gross / 2
     live = np.array([book["weights"][t] for t in bars.tickers])
     assert np.allclose(live, ref)

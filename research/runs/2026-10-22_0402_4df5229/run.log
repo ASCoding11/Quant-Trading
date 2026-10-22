@@ -1,0 +1,24 @@
+01:31:32 INFO    qtrade | using cached prices (1000 tickers, through 2026-10-19)
+01:31:32 INFO    qtrade | research task: consumer
+01:32:38 WARNING qtrade | Google Trends AAL: TooManyRequestsError - backing off
+02:21:14 WARNING qtrade | Google Trends COKE: TooManyRequestsError - backing off
+02:24:12 WARNING qtrade | Google Trends COLM: TooManyRequestsError - backing off
+02:53:36 WARNING qtrade | Google Trends FCFS: TooManyRequestsError - backing off
+03:29:47 WARNING qtrade | Google Trends LEA: TooManyRequestsError - backing off
+03:40:54 WARNING qtrade | Google Trends MAR: TooManyRequestsError - backing off
+04:02:15 INFO    qtrade | Google Trends: time budget used
+04:02:15 INFO    qtrade | Google Trends: +94 terms this run, 94 in the cache, 62 still to fetch
+04:02:37 INFO    qtrade | consumer earnings: 30535 events
+{
+ "consumer": {
+  "events": 30535,
+  "consumer_events": 4490,
+  "coverage": {
+   "wiki_attention": 0.33941378745701656,
+   "wiki_yoy": 0.3325036842967087,
+   "trends_yoy": 0.07640412641231374,
+   "runup_20d": 1.0,
+   "last_reaction": 0.9703618798100541
+  }
+ }
+}

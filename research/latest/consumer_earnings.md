@@ -1,6 +1,6 @@
 ## Consumer companies around earnings
 
-30535 earnings releases since 2016 (4490 from consumer companies by SIC code), traded with a market-on-close order before the release and a market-on-open exit after it. Signal directions from 2016-2020; 2021-2026 is the check. Coverage of each signal: wiki_attention 34%, wiki_yoy 33%, trends_yoy 1%, runup_20d 100%, last_reaction 97%.
+30535 earnings releases since 2016 (4490 from consumer companies by SIC code), traded with a market-on-close order before the release and a market-on-open exit after it. Signal directions from 2016-2020; 2021-2026 is the check. Coverage of each signal: wiki_attention 34%, wiki_yoy 33%, trends_yoy 8%, runup_20d 100%, last_reaction 97%.
 
 ### Rank correlation of each signal with the outcome
 
@@ -12,9 +12,9 @@
 | consumer      | wiki_yoy       | ann_ret   |       -0.001 |         645 |       -0.013 |         926 |
 | consumer      | wiki_yoy       | drift_5d  |        0.026 |         645 |       -0.009 |         926 |
 | consumer      | wiki_yoy       | drift_20d |       -0.015 |         645 |       -0.057 |         926 |
-| consumer      | trends_yoy     | ann_ret   |      nan     |           0 |       -0.026 |         421 |
-| consumer      | trends_yoy     | drift_5d  |      nan     |           0 |       -0.049 |         421 |
-| consumer      | trends_yoy     | drift_20d |      nan     |           0 |       -0.059 |         421 |
+| consumer      | trends_yoy     | ann_ret   |        0.052 |        1007 |        0.085 |        1325 |
+| consumer      | trends_yoy     | drift_5d  |       -0.035 |        1007 |        0.014 |        1325 |
+| consumer      | trends_yoy     | drift_20d |       -0     |        1007 |       -0.026 |        1325 |
 | consumer      | runup_20d      | ann_ret   |        0.023 |        2098 |       -0.008 |        2390 |
 | consumer      | runup_20d      | drift_5d  |       -0.068 |        2099 |       -0.053 |        2390 |
 | consumer      | runup_20d      | drift_20d |       -0.038 |        2099 |       -0.067 |        2390 |
@@ -27,9 +27,9 @@
 | all companies | wiki_yoy       | ann_ret   |       -0.003 |        3964 |       -0.011 |        6188 |
 | all companies | wiki_yoy       | drift_5d  |        0.009 |        3964 |       -0.022 |        6188 |
 | all companies | wiki_yoy       | drift_20d |        0.007 |        3964 |       -0.031 |        6188 |
-| all companies | trends_yoy     | ann_ret   |      nan     |           0 |       -0.026 |         421 |
-| all companies | trends_yoy     | drift_5d  |      nan     |           0 |       -0.049 |         421 |
-| all companies | trends_yoy     | drift_20d |      nan     |           0 |       -0.059 |         421 |
+| all companies | trends_yoy     | ann_ret   |        0.052 |        1007 |        0.085 |        1325 |
+| all companies | trends_yoy     | drift_5d  |       -0.035 |        1007 |        0.014 |        1325 |
+| all companies | trends_yoy     | drift_20d |       -0     |        1007 |       -0.026 |        1325 |
 | all companies | runup_20d      | ann_ret   |        0.01  |       14003 |       -0.004 |       16530 |
 | all companies | runup_20d      | drift_5d  |       -0.024 |       14004 |       -0.005 |       16530 |
 | all companies | runup_20d      | drift_20d |       -0     |       14004 |       -0.019 |       16529 |
@@ -45,9 +45,10 @@
 |:--------------|:------------------------|:------------|---------:|----------------------:|-----------------:|------------------------:|-----------------------:|-----------------:|------------------------:|-----------------------:|------------:|------------:|
 | consumer      | wiki_attention          | -           |     1585 |                     0 |            0.601 |                   0.007 |                 27.274 |            0.259 |                   0.004 |                 13.452 |     nan     |     nan     |
 | consumer      | wiki_yoy                | -           |     1555 |                     0 |            0.263 |                   0.003 |                 12.027 |           -0.074 |                  -0.001 |                 -3.254 |     nan     |     nan     |
+| consumer      | trends_yoy              | +           |     2311 |                     0 |            1.062 |                   0.015 |                 38.424 |            1.11  |                   0.019 |                 44.485 |     nan     |     nan     |
 | consumer      | runup_20d               | +           |     4468 |                     0 |           -0.419 |                  -0.009 |                -10.769 |           -0.195 |                  -0.005 |                 -5.836 |     nan     |     nan     |
 | consumer      | last_reaction           | +           |     4332 |                     0 |            0.607 |                   0.012 |                 16.454 |           -0.029 |                  -0.001 |                 -0.607 |     nan     |     nan     |
-| consumer      | composite               | +           |     4480 |                     0 |            0.775 |                   0.016 |                 20.195 |            0.094 |                   0.002 |                  3.312 |     nan     |     nan     |
+| consumer      | composite               | +           |     4483 |                     0 |            1.358 |                   0.029 |                 36.009 |            0.207 |                   0.005 |                  6.785 |     nan     |     nan     |
 | consumer      | post-earnings drift 5d  | +           |     4488 |                     0 |          nan     |                 nan     |                -22.775 |          nan     |                 nan     |                -13.834 |      -1.668 |      -1.029 |
 | consumer      | post-earnings drift 20d | +           |     4488 |                     0 |          nan     |                 nan     |                -28.604 |          nan     |                 nan     |                -26.415 |      -1.429 |      -1.343 |
 | all companies | wiki_attention          | +           |    10350 |                     0 |           -0.421 |                  -0.011 |                 -6.299 |            0.057 |                   0.002 |                  1.299 |     nan     |     nan     |
@@ -59,9 +60,10 @@
 | all companies | post-earnings drift 20d | +           |    30533 |                     0 |          nan     |                 nan     |                 14.17  |          nan     |                 nan     |                 16.934 |       1.813 |       2.332 |
 | consumer      | wiki_attention          | -           |     1585 |                     1 |            0.556 |                   0.006 |                 27.274 |            0.219 |                   0.003 |                 13.452 |     nan     |     nan     |
 | consumer      | wiki_yoy                | -           |     1555 |                     1 |            0.218 |                   0.002 |                 12.027 |           -0.116 |                  -0.002 |                 -3.254 |     nan     |     nan     |
+| consumer      | trends_yoy              | +           |     2311 |                     1 |            1.007 |                   0.014 |                 38.424 |            1.061 |                   0.018 |                 44.485 |     nan     |     nan     |
 | consumer      | runup_20d               | +           |     4468 |                     1 |           -0.495 |                  -0.011 |                -10.769 |           -0.259 |                  -0.006 |                 -5.836 |     nan     |     nan     |
 | consumer      | last_reaction           | +           |     4332 |                     1 |            0.532 |                   0.011 |                 16.454 |           -0.092 |                  -0.002 |                 -0.607 |     nan     |     nan     |
-| consumer      | composite               | +           |     4480 |                     1 |            0.697 |                   0.014 |                 20.195 |            0.031 |                   0.001 |                  3.312 |     nan     |     nan     |
+| consumer      | composite               | +           |     4483 |                     1 |            1.283 |                   0.027 |                 36.009 |            0.143 |                   0.004 |                  6.785 |     nan     |     nan     |
 | consumer      | post-earnings drift 5d  | +           |     4488 |                     1 |          nan     |                 nan     |                -22.775 |          nan     |                 nan     |                -13.834 |      -1.668 |      -1.029 |
 | consumer      | post-earnings drift 20d | +           |     4488 |                     1 |          nan     |                 nan     |                -28.604 |          nan     |                 nan     |                -26.415 |      -1.429 |      -1.343 |
 | all companies | wiki_attention          | +           |    10350 |                     1 |           -0.548 |                  -0.014 |                 -6.299 |           -0.058 |                  -0.002 |                  1.299 |     nan     |     nan     |

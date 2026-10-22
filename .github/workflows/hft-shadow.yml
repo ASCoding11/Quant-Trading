@@ -5,7 +5,7 @@ name: hft-shadow
 # never touches the paper account. The trade log is encrypted to
 # config/ledger_public_key.pem (quotes are market data) and kept on the results
 # branch under paper/hft/; the research session copies it into the Google Sheet.
-# A run lasts up to ~5.5 hours and starts its successor if the market is still open.
+# Each run lasts ~1 hour (so the sheet fills during the day) and starts its successor while the market is open.
 
 on:
   schedule:
@@ -39,7 +39,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Trade in the shadow
-        run: python -m qtrade.intraday.hft_shadow --minutes 320 --out logs/hft
+        run: python -m qtrade.intraday.hft_shadow --minutes 55 --out logs/hft    # hourly runs: the sheet fills during the day
       - name: Encrypt and store the trade log
         if: always()
         run: |

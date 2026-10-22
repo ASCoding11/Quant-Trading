@@ -525,6 +525,19 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
             if k in equity:
                 equity[k] += float(v)
     LOG.info("shadow HFT: strategies %s, VIX %s", list(rules), vix)
+    if not rules:                                      # nothing passed the replay test: stay out, but keep the
+        if sheet is not None:                          # run alive so the workflow chain doesn't respawn at once
+            try:
+                sheet.status(f"Paused {pd.Timestamp.now(tz=NY):%Y-%m-%d %H:%M} New York - no HFT strategy made money "
+                             f"on the replay's test days (config/hft_rules.json); the sleeve's money is in the "
+                             f"momentum flip.", book_line(earlier, {}, book_usd), _summary_rows(earlier))
+            except Exception as exc:
+                LOG.warning("Google Sheet update failed: %s", exc)
+        LOG.info("shadow HFT: no enabled strategy - idle")
+        stop = time.time() + minutes * 60
+        while time.time() < stop and pd.Timestamp.now(tz=NY).hour < 16:
+            time.sleep(30)
+        return None
     sims = {k: ShadowHFT(symbols, seed=int(time.time()) + i, equity={k: equity[k]}, rules=r, vix=vix)
             for i, (k, r) in enumerate(rules.items())}
     out = Path(out_dir)

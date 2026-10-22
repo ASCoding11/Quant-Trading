@@ -11,7 +11,7 @@ spread paid on the way out):
 
 * **passive exits** - every position closes with a resting order on the far side of the
   book (a long sells at the ask, a short buys at the bid), collecting the spread instead
-  of paying it; only if it hasn't filled after ``EXIT_TIMEOUT_S`` does it cross the
+  of paying it; only if it hasn't filled after ``Rules.exit_timeout_s`` does it cross the
   spread (column "Exit by": passive / market);
 * **one position per stock per strategy** - no new orders in a stock the strategy is
   already in, which cuts turnover;
@@ -24,8 +24,17 @@ spread paid on the way out):
   price; the first fill cancels the other side;
 * ``maker_with_signal`` - the same, quoting only the side the imbalance favours.
 
-The $10,000 book is split equally between the four strategies; each position takes 1/10
-of its strategy's equity. IEX's own book is thinner and wider than the national best bid
+Rule set 3 (from 2026-10-23): ``qtrade.research.hft_replay`` replays recorded IEX data
+through this simulator for a grid of rule variants (exit target, timeout, stop, imbalance
+threshold, minimum maker spread), picks each strategy's rules on the first half of the days
+and tests them on the second; ``config/hft_rules.json`` holds the picks, and only strategies
+that made money on the test days trade. A fifth strategy, ``imbalance_flip``, is Nico's
+momentum flip brought to the order book: follow the imbalance when yesterday's VIX closed at
+or below 20, fade it above. Without the rules file, rule set 2 applies.
+
+The HFT sleeve of the $10,000 sheet book (``config/sheet_book.json``; the rest is the momentum
+flip sleeve, ``qtrade.intraday.flip_sleeve``) is split equally between the strategies that
+trade; each position takes 1/10 of its strategy's equity. IEX's own book is thinner and wider than the national best bid
 and offer. With ``GOOGLE_SERVICE_ACCOUNT_JSON`` and ``HFT_SHEET_ID`` set, new trades and
 the summary go straight into the Google Sheet's "HFT trades" tab every few seconds.
 """
@@ -36,6 +45,7 @@ import os
 import random
 import time
 from collections import defaultdict
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -51,15 +61,53 @@ SYMBOLS = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "AMZN", "TSLA", "META", "AMD", 
 FEE_BP = 0.0                    # the sheet's assumption: no fees at all
 LATENCY_MS = 5.0                # every order reaches the market this long after the decision ...
 JITTER_MS = 5.0                 # ... plus a uniform random 0-5 ms
-IMB_THRESHOLD = 0.8             # takers: only a very lopsided book ...
-TAKER_MAX_SPREAD_BP = 2.0       # ... with a tight spread
 MAX_SPREAD_BP = 25.0            # ignore broken / one-sided IEX quotes (e.g. a 328 bp TSLA quote on 2026-10-22)
-EXIT_TIMEOUT_S = 30             # a passive exit not filled by then crosses the spread
-MM_EVERY_S = 10
-MM_WAIT_S = 10
 BOOK_USD = 10_000.0             # the whole simulated book
-STRATEGIES = ["imbalance_taker", "imbalance_fade", "market_maker", "maker_with_signal"]
-SLOTS = 10                      # positions a strategy can hold at once: each takes 1/10 of its equity
+ALL_STRATEGIES = ["imbalance_taker", "imbalance_fade", "imbalance_flip", "market_maker", "maker_with_signal"]
+SLOTS = 50                      # positions a strategy can hold at once: each takes 1/50 of its equity
+NEVER = pd.Timestamp.max.tz_localize("UTC")
+
+
+@dataclass(frozen=True)
+class Rules:
+    """Everything the strategies decide with. The defaults are rule set 2."""
+    imb_threshold: float = 0.8          # takers: only a very lopsided book ...
+    taker_max_spread_bp: float = 2.0    # ... with a tight spread
+    taker_target: float = 0.0           # taker exits rest this many spreads beyond the entry (0 = at the entry)
+    maker_target: float = 1.0           # maker exits: 1 = the far side of the book at the fill
+    exit_timeout_s: float = 30.0        # a passive exit not filled by then crosses the spread
+    stop_bp: float | None = None        # ... or as soon as the mid has moved this far against the position
+    mm_every_s: float = 10.0
+    mm_wait_s: float = 10.0
+    mm_min_ticks: int = 1               # makers quote only when the spread is at least this many cents
+    vix_flip: float = 20.0              # imbalance_flip follows the imbalance below this VIX, fades it above
+    strategies: tuple = ("imbalance_taker", "imbalance_fade", "market_maker", "maker_with_signal")
+
+
+RULES = Rules()
+STRATEGIES = list(RULES.strategies)
+RULES_FILE = Path(__file__).resolve().parents[2] / "config" / "hft_rules.json"
+BOOK_FILE = Path(__file__).resolve().parents[2] / "config" / "sheet_book.json"
+
+
+def book_split(path: Path = BOOK_FILE) -> dict[str, float]:
+    """How the $10,000 sheet book is divided between the HFT sleeve and the momentum flip sleeve."""
+    try:
+        return {k: float(v) for k, v in json.loads(Path(path).read_text()).items() if not k.startswith("_")}
+    except FileNotFoundError:
+        return {"hft": BOOK_USD, "momentum_flip": 0.0}
+
+
+def load_rules(path: Path = RULES_FILE) -> dict[str, Rules]:
+    """Per-strategy rules chosen by the replay (``qtrade.research.hft_replay``); only enabled strategies.
+    Without the file: rule set 2 for its four strategies."""
+    try:
+        chosen = json.loads(Path(path).read_text())
+    except FileNotFoundError:
+        return {k: replace(RULES, strategies=(k,)) for k in RULES.strategies}
+    fields = set(Rules.__dataclass_fields__) - {"strategies"}
+    return {k: Rules(**{f: v for f, v in c["rules"].items() if f in fields}, strategies=(k,))
+            for k, c in chosen.items() if c.get("enabled")}
 COLUMNS = ["strategy", "symbol", "side", "decision_time", "entry_time", "entry_price", "exit_time", "exit_price",
            "notional", "pnl_usd", "pnl_mid_usd", "pnl_bp", "pnl_mid_bp", "spread_bp", "imbalance", "latency_ms",
            "exit_by"]
@@ -95,13 +143,15 @@ class ShadowHFT:
     the latency at the book prevailing then."""
 
     def __init__(self, symbols: list[str], latency_ms: float = LATENCY_MS, jitter_ms: float = JITTER_MS,
-                 seed: int = 0, equity: dict[str, float] | None = None):
+                 seed: int = 0, equity: dict[str, float] | None = None, rules: Rules = RULES,
+                 vix: float | None = None, book_usd: float = BOOK_USD):
+        self.rules, self.vix = rules, vix
         self.books = {s: Book() for s in symbols}
         self.latency_ms, self.jitter_ms = latency_ms, jitter_ms
         self.rng = random.Random(seed)
         # the $10,000 book is split equally between the strategies; each strategy's equity moves with its
         # realised P&L, and cash is reserved when an order is sent and released when the position closes
-        self.equity = dict(equity) if equity else {k: BOOK_USD / len(STRATEGIES) for k in STRATEGIES}
+        self.equity = dict(equity) if equity else {k: book_usd / len(rules.strategies) for k in rules.strategies}
         self.reserved: dict[str, float] = defaultdict(float)
         self.pending: list[dict] = []              # market orders on their way (entries and timed-out exits)
         self.resting: list[dict] = []              # maker entry orders
@@ -109,16 +159,23 @@ class ShadowHFT:
         self.closed: list[dict] = []
         self.busy: set[tuple[str, str]] = set()    # (strategy, symbol) with an order or a position
         self.last_mm: dict[str, pd.Timestamp] = defaultdict(lambda: pd.Timestamp(0, tz="UTC"))
+        self._next_due = NEVER                     # earliest pending order / exit deadline (skips idle scans)
 
     def _delay(self) -> pd.Timedelta:
         return pd.Timedelta(milliseconds=self.latency_ms + self.rng.uniform(0, self.jitter_ms))
 
     def _reserve(self, strategy: str) -> float | None:
+        if strategy not in self.equity:
+            return None                                # strategy switched off
         size = self.equity[strategy] / SLOTS
         if size <= 0 or self.equity[strategy] - self.reserved[strategy] < size * 0.999:
             return None                                # all of this strategy's money is in use
         self.reserved[strategy] += size
         return size
+
+    def _due(self, ts: pd.Timestamp) -> None:
+        if ts < self._next_due:
+            self._next_due = ts
 
     def _release(self, strategy: str, size: float) -> None:
         self.reserved[strategy] = max(0.0, self.reserved[strategy] - size)
@@ -126,11 +183,17 @@ class ShadowHFT:
     # --- positions --------------------------------------------------------------------------------
     def _open(self, o: dict, t: pd.Timestamp, price: float) -> None:
         """A filled entry: rest the exit on the far side of the book (after the latency)."""
-        b = self.books[o["symbol"]]
-        exit_px = b.ask if o["side"] == "buy" else b.bid
+        b, r = self.books[o["symbol"]], self.rules
+        d = 1.0 if o["side"] == "buy" else -1.0
+        k = r.maker_target if o["strategy"] in ("market_maker", "maker_with_signal") else r.taker_target
+        spread = (b.ask - b.bid) if b.ok else 0.01
+        exit_px = round(price + d * max(k * spread, 0.0), 2)
+        if k > 0 and exit_px == price:
+            exit_px = round(price + d * 0.01, 2)
         self.positions.append({**o, "entry_time": t, "entry_price": price, "exit_px": exit_px,
                                "exit_live_at": t + self._delay(),
-                               "deadline": t + pd.Timedelta(seconds=EXIT_TIMEOUT_S)})
+                               "deadline": t + pd.Timedelta(seconds=r.exit_timeout_s)})
+        self._due(self.positions[-1]["deadline"])
 
     def _close(self, p: dict, t: pd.Timestamp, exit_px: float, how: str) -> None:
         b = self.books[p["symbol"]]
@@ -152,6 +215,8 @@ class ShadowHFT:
     # --- time ------------------------------------------------------------------------------------
     def advance(self, t: pd.Timestamp) -> None:
         """Everything due strictly before ``t`` happens against the book as it stands."""
+        if t <= self._next_due:
+            return
         while True:
             due = [(o["exec_at"], 0, i) for i, o in enumerate(self.pending) if o["exec_at"] < t] + \
                   [(p["deadline"], 1, i) for i, p in enumerate(self.positions) if p["deadline"] < t]
@@ -175,6 +240,8 @@ class ShadowHFT:
                 self._open(o, o["exec_at"], b.ask if o["side"] == "buy" else b.bid)
             else:
                 self._close(o, o["exec_at"], b.bid if o["side"] == "buy" else b.ask, "market")
+        self._next_due = min([o["exec_at"] for o in self.pending] + [p["deadline"] for p in self.positions],
+                             default=NEVER)
 
     # --- inputs -----------------------------------------------------------------------------------
     def on_quote(self, sym: str, t: pd.Timestamp, bid: float, bsize: float, ask: float, asize: float) -> None:
@@ -183,11 +250,20 @@ class ShadowHFT:
         if not (bid > 0 and ask > bid and bsize > 0 and asize > 0):
             return
         b.bid, b.bsize, b.ask, b.asize = bid, bsize, ask, asize
+        r = self.rules
+        if r.stop_bp is not None:                     # stop: the mid moved too far against a position
+            for p in [p for p in self.positions if p["symbol"] == sym and t >= p["exit_live_at"]]:
+                d = 1.0 if p["side"] == "buy" else -1.0
+                if d * (b.mid / p["entry_price"] - 1) * 1e4 <= -r.stop_bp:
+                    self.positions.remove(p)
+                    self.pending.append({**p, "kind": "exit", "exec_at": t + self._delay()})
+                    self._due(self.pending[-1]["exec_at"])
         imb = b.imbalance
-        if abs(imb) < IMB_THRESHOLD or b.spread_bp > TAKER_MAX_SPREAD_BP:
+        if abs(imb) < r.imb_threshold or b.spread_bp > r.taker_max_spread_bp:
             return
-        for strategy, side in (("imbalance_taker", "buy" if imb > 0 else "sell"),
-                               ("imbalance_fade", "sell" if imb > 0 else "buy")):
+        follow, fade = ("buy", "sell") if imb > 0 else ("sell", "buy")
+        flip = fade if (self.vix is not None and self.vix > r.vix_flip) else follow
+        for strategy, side in (("imbalance_taker", follow), ("imbalance_fade", fade), ("imbalance_flip", flip)):
             if (strategy, sym) in self.busy:
                 continue
             size = self._reserve(strategy)
@@ -199,6 +275,7 @@ class ShadowHFT:
                                  "notional": size, "decision_time": t, "exec_at": t + delay,
                                  "spread_bp": b.spread_bp, "imbalance": imb,
                                  "latency_ms": delay.total_seconds() * 1e3})
+            self._due(t + delay)
 
     def on_trade(self, sym: str, t: pd.Timestamp, price: float, size: float) -> None:
         self.advance(t)
@@ -226,8 +303,12 @@ class ShadowHFT:
             self._release(o["strategy"], o["notional"])
             if not any(x["strategy"] == o["strategy"] and x["symbol"] == o["symbol"] for x in self.resting):
                 self.busy.discard((o["strategy"], o["symbol"]))
-        for sym, b in self.books.items():
-            if not b.ok or b.spread_bp > MAX_SPREAD_BP or now - self.last_mm[sym] < pd.Timedelta(seconds=MM_EVERY_S):
+        order = list(self.books)
+        self.rng.shuffle(order)
+        for sym in order:
+            b = self.books[sym]
+            if not b.ok or b.spread_bp > MAX_SPREAD_BP or b.ask - b.bid < self.rules.mm_min_ticks * 0.01 - 1e-9 \
+                    or now - self.last_mm[sym] < pd.Timedelta(seconds=self.rules.mm_every_s):
                 continue
             self.last_mm[sym] = now
             imb = b.imbalance
@@ -245,7 +326,7 @@ class ShadowHFT:
                     self.busy.add((strategy, sym))
                     self.resting.append({"strategy": strategy, "symbol": sym, "side": side, "price": px,
                                          "notional": size, "decision_time": now, "live_at": now + delay,
-                                         "expires": now + delay + pd.Timedelta(seconds=MM_WAIT_S),
+                                         "expires": now + delay + pd.Timedelta(seconds=self.rules.mm_wait_s),
                                          "spread_bp": b.spread_bp, "imbalance": imb,
                                          "latency_ms": delay.total_seconds() * 1e3})
 
@@ -292,7 +373,13 @@ class SheetWriter:
                            json={"values": [HEADER]}, timeout=30)
             r.raise_for_status()
             return pd.DataFrame(columns=COLUMNS)
-        rows = [r for r in self._get(f"'{self.TAB}'!A6:P100000") if len(r) >= 12 and str(r[3]).startswith(today)]
+        every = self._get(f"'{self.TAB}'!A6:P1000000")
+        rows = [r for r in every if len(r) >= 12 and str(r[3]).startswith(today)]
+        if len(rows) < len(every):                     # earlier days (archived, encrypted, on the results branch)
+            r = self.s.post(f"{self.base}/values:batchClear", json={"ranges": [f"'{self.TAB}'!A6:P1000000"]}, timeout=60)
+            r.raise_for_status()
+            if rows:
+                self.append_rows(rows)
         if not rows:
             return pd.DataFrame(columns=COLUMNS)
         n = len(HEADER)
@@ -314,11 +401,13 @@ class SheetWriter:
                 for r in trades.itertuples()]
 
     def append(self, trades: pd.DataFrame) -> None:
-        if trades.empty:
-            return
+        if not trades.empty:
+            self.append_rows(self._rows(trades))
+
+    def append_rows(self, rows: list[list]) -> None:
         r = self.s.post(f"{self.base}/values/'{self.TAB}'!A6:P:append",
                         params={"valueInputOption": "RAW", "insertDataOption": "INSERT_ROWS"},
-                        json={"values": self._rows(trades)}, timeout=30)
+                        json={"values": rows}, timeout=60)
         r.raise_for_status()
 
     def status(self, text: str, book_line: str, summary_rows: list[list]) -> None:
@@ -355,27 +444,59 @@ def _summary_rows(all_trades: pd.DataFrame) -> list[list]:
     return head + rows
 
 
-def book_line(all_trades: pd.DataFrame, equity: dict[str, float]) -> str:
+def book_line(all_trades: pd.DataFrame, equity: dict[str, float], book_usd: float = BOOK_USD) -> str:
     net = float(all_trades["pnl_usd"].sum()) if len(all_trades) else 0.0
     eq = sum(equity.values())
-    parts = ", ".join(f"{k} ${v:,.2f}" for k, v in equity.items())
-    return (f"Book: ${BOOK_USD:,.0f} at the open -> equity ${eq:,.2f} (net P&L ${net:+,.2f}, {100 * net / BOOK_USD:+.3f}%). "
+    parts = ", ".join(f"{k} ${v:,.2f}" for k, v in equity.items()) or "none (no strategy passed the replay test)"
+    pct = 100 * net / book_usd if book_usd else 0.0
+    return (f"HFT sleeve: ${book_usd:,.0f} at the open -> equity ${eq:,.2f} (net P&L ${net:+,.2f}, {pct:+.3f}%). "
             f"By strategy: {parts}. Each position = 1/{SLOTS} of its strategy's equity.")
 
 
-def _pull(client, url: str, key: str, symbols: list[str], start: pd.Timestamp, end: pd.Timestamp) -> dict:
-    params = {"symbols": ",".join(to_alpaca(s) for s in symbols), "start": start.isoformat(),
-              "end": end.isoformat(), "limit": 10000, "feed": "iex", "sort": "asc"}
+def previous_vix() -> float | None:
+    """Yesterday's VIX close (imbalance_flip fades the book above 20)."""
+    try:
+        import yfinance as yf
+
+        v = yf.download("^VIX", period="10d", progress=False, auto_adjust=False)["Close"].squeeze().dropna()
+        today = pd.Timestamp.now(tz=NY).normalize().tz_localize(None)
+        v = v[pd.to_datetime(v.index).tz_localize(None) < today]
+        return float(v.iloc[-1]) if len(v) else None
+    except Exception as exc:
+        LOG.warning("VIX unavailable (%s)", exc)
+        return None
+
+
+def _pull(client, url: str, key: str, symbols: list[str], start: pd.Timestamp, end: pd.Timestamp,
+          group: int = 200) -> dict:
+    """Every quote / trade of ``symbols`` between ``start`` and ``end``, in groups of 200 symbols."""
     out: dict[str, list] = defaultdict(list)
-    for _ in range(10):
-        data = client._get(params, url)
-        for sym, rows in (data.get(key) or {}).items():
-            out[sym] += rows
-        token = data.get("next_page_token")
-        if not token:
-            break
-        params["page_token"] = token
+    for i in range(0, len(symbols), group):
+        params = {"symbols": ",".join(to_alpaca(s) for s in symbols[i:i + group]), "start": start.isoformat(),
+                  "end": end.isoformat(), "limit": 10000, "feed": "iex", "sort": "asc"}
+        for _ in range(30):
+            data = client._get(params, url)
+            for sym, rows in (data.get(key) or {}).items():
+                out[sym] += rows
+            token = data.get("next_page_token")
+            if not token:
+                break
+            params["page_token"] = token
     return out
+
+
+def universe_symbols(n: int) -> list[str]:
+    """The ``n`` largest US stocks (the momentum flip sleeve's universe), the core symbols first."""
+    if n <= len(SYMBOLS):
+        return SYMBOLS[:n]
+    try:
+        from .flip_sleeve import universe
+
+        names = [t.replace(".", "-") for t in universe()]
+    except Exception as exc:
+        LOG.warning("universe unavailable (%s) - core symbols only", exc)
+        return list(SYMBOLS)
+    return list(dict.fromkeys(SYMBOLS + names))[:n]
 
 
 def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | None = None,
@@ -384,6 +505,7 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
     from ..data.intraday import AlpacaBars
 
     symbols = symbols or SYMBOLS
+    allowed = set(symbols)
     client = AlpacaBars(feed="iex", per_minute=140)     # leaves headroom for other data calls
     sheet, earlier = None, pd.DataFrame(columns=COLUMNS)
     if os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON") and os.environ.get("HFT_SHEET_ID"):
@@ -394,12 +516,17 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
                      sheet_every_s, len(earlier))
         except Exception as exc:
             LOG.warning("Google Sheet unavailable (%s) - log file only", exc.__class__.__name__)
-    equity = {k: BOOK_USD / len(STRATEGIES) for k in STRATEGIES}
+    rules = load_rules()
+    book_usd = book_split().get("hft", BOOK_USD)
+    vix = previous_vix() if "imbalance_flip" in rules else None
+    equity = {k: book_usd / len(rules) for k in rules} if rules else {}
     if len(earlier):                                   # carry the day's realised P&L into this run
         for k, v in earlier.groupby("strategy")["pnl_usd"].sum().items():
             if k in equity:
                 equity[k] += float(v)
-    hft = ShadowHFT(symbols, seed=int(time.time()), equity=equity)
+    LOG.info("shadow HFT: strategies %s, VIX %s", list(rules), vix)
+    sims = {k: ShadowHFT(symbols, seed=int(time.time()) + i, equity={k: equity[k]}, rules=r, vix=vix)
+            for i, (k, r) in enumerate(rules.items())}
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     path = out / f"hft_trades_{pd.Timestamp.now(tz=NY):%Y%m%d_%H%M}.csv"
@@ -431,14 +558,17 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
             events += [(pd.Timestamp(r["t"]), 1, sym, r) for r in rows]
         for t, kind, sym, r in sorted(events, key=lambda e: (e[0], e[1])):
             sym = sym.replace(".", "-")
-            if sym not in hft.books:
+            if sym not in allowed:
                 continue
-            if kind == 0:
-                hft.on_quote(sym, t, r.get("bp", 0), r.get("bs", 0), r.get("ap", 0), r.get("as", 0))
-            else:
-                hft.on_trade(sym, t, r.get("p", 0), r.get("s", 0))
-        hft.step(now)
-        done = hft.take_closed()
+            for hft in sims.values():
+                if kind == 0:
+                    hft.on_quote(sym, t, r.get("bp", 0), r.get("bs", 0), r.get("ap", 0), r.get("as", 0))
+                else:
+                    hft.on_trade(sym, t, r.get("p", 0), r.get("s", 0))
+        for hft in sims.values():
+            hft.step(now)
+        done = pd.concat([h.take_closed() for h in sims.values()] or [pd.DataFrame(columns=COLUMNS)],
+                         ignore_index=True)
         if len(done):
             done.to_csv(path, mode="a", header=not path.exists(), index=False)
             unsent.append(done)
@@ -451,7 +581,7 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
                 unsent = []
                 total = pd.concat(everything, ignore_index=True) if everything else pd.DataFrame(columns=COLUMNS)
                 sheet.status(f"Live - last update {pd.Timestamp.now(tz=NY):%Y-%m-%d %H:%M:%S} New York - "
-                             f"{len(total)} trades today", book_line(total, hft.equity), _summary_rows(total))
+                             f"{len(total)} trades today", book_line(total, {k: h.equity[k] for k, h in sims.items()}, book_usd), _summary_rows(total))
             except Exception as exc:
                 LOG.warning("Google Sheet update failed: %s", exc)
         last = now
@@ -469,9 +599,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--minutes", type=float, default=330)
     ap.add_argument("--out", default="logs/hft")
+    ap.add_argument("--universe", type=int, default=1000, help="trade the N largest US stocks")
     args = ap.parse_args(argv)
     setup_logging()
-    p = run(args.minutes, args.out)
+    p = run(args.minutes, args.out, symbols=universe_symbols(args.universe))
     if p is not None:
         print(summary(pd.read_csv(p)).to_string(index=False))
 

@@ -239,7 +239,7 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
     book = build_book(today_5, daily, tickers, signs, acfg, today, shortable, reactions)
     tw = {t: w for t, w in book["weights"].items() if abs(w) > 1e-9 and (tradable is None or t in tradable)}
     prices = {t: p for t, p in book["prices"].items() if np.isfinite(p)}
-    pos = {t: q for t, q in pos_qty.items() if t in set(tickers)}
+    pos = dict(pos_qty)            # every position: the ADR book (and anything else) is closed or netted here
     orders, targets = plan_orders(tw, prices, capital, pos, shortable, acfg.min_order_value)
     stamp = _now().strftime("%Y%m%d_%H%M")
     pd.DataFrame([o.__dict__ | {"notional": o.notional} for o in orders]).to_csv(out / f"auction_close_{stamp}.csv",
@@ -256,8 +256,63 @@ def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_di
     return {"status": "done", "orders": len(orders), "submitted": len(ids), "capital": capital}
 
 
-def run_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs") -> dict:
-    """Close every position at the open: market-on-open orders before 9:28, market orders if later."""
+def _adr_prices(data: AlpacaBars, symbols: list[str], day: pd.Timestamp, until: pd.Timestamp,
+                after_open: bool) -> dict[str, float]:
+    """Live reference prices from the free IEX feed: the last pre-market trade before ``until`` or,
+    with ``after_open``, the first regular-session price (the open)."""
+    from ..data.intraday import bars_to_frame
+
+    old = data.feed
+    data.feed = "iex"
+    try:
+        start = day.tz_localize(NY) + pd.Timedelta(hours=4)
+        got = data.bars(symbols, "1Min", start.isoformat(), until.isoformat())
+    finally:
+        data.feed = old
+    out = {}
+    for sym, rows in got.items():
+        f = bars_to_frame(rows, regular_hours=False)
+        mins = f.index.hour * 60 + f.index.minute
+        f = f[mins >= 9 * 60 + 30] if after_open else f[mins < 9 * 60 + 25]
+        if len(f):
+            out[sym] = float(f["open"].iloc[0] if after_open else f["close"].iloc[-1])
+    return out
+
+
+def adr_book_targets(cfg, client, data: AlpacaBars, after_open: bool) -> tuple[dict, dict, pd.DataFrame]:
+    """(ADR weights, reference prices, residual table) for today; ({}, {}, empty) if nothing to trade."""
+    from .adr_book import ADRS, build_targets, home_moves
+
+    acfg = cfg.auction
+    now = _now()
+    today = now.tz_localize(None).normalize()
+    names = [t for t, (_, _, m) in ADRS.items() if not acfg.adr_markets or m in acfg.adr_markets]
+    moves = home_moves(today, names)
+    if moves.empty:
+        LOG.info("ADR book: no home market traded today")
+        return {}, {}, pd.DataFrame()
+    syms = list(moves["adr"])
+    daily = _fetch(data, syms, "1Day", today.tz_localize(NY) - pd.Timedelta(days=10),
+                   now - pd.Timedelta(minutes=16), "sip")
+    prev_close = {}
+    for t, f in daily.items():
+        f = f[f.index.tz_convert(NY).tz_localize(None).normalize() < today]
+        if len(f):
+            prev_close[t] = float(f["close"].iloc[-1])
+    ref = _adr_prices(data, syms, today, now, after_open)
+    if not after_open:                                   # no pre-market trade: the ADR hasn't moved
+        ref = {t: ref.get(t, prev_close.get(t, np.nan)) for t in syms}
+    shortable = _account_state(client)[3] if client is not None else None
+    w, tab = build_targets(acfg, today, prev_close, ref, moves, shortable, acfg.adr_sign)
+    return w, ref, tab
+
+
+def run_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs", adr: bool = False,
+             keep: set | None = None) -> dict:
+    """Close every position at the open: market-on-open orders before 9:28, market orders if later.
+
+    ``adr``: also open today's ADR book in the same market-on-open batch (netted against the
+    positions being closed); ``keep``: symbols to leave alone (the ADR book during the day)."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     client = _client()
@@ -281,14 +336,60 @@ def run_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs") -> dict:
     if any(o.get("time_in_force") == "opg" for o in open_orders):
         LOG.info("market-on-open orders already queued - nothing to do")
         return {"status": "already queued"}
-    _, pos_qty, _, _, _, _ = _account_state(client)
+    equity, pos_qty, _, shortable, tradable, _ = _account_state(client)
     from ..live.alpaca_trader import PlannedOrder
 
-    orders = [PlannedOrder(t, "sell" if q > 0 else "buy", abs(q), float("nan"), "flatten")
-              for t, q in pos_qty.items() if q != 0]
+    keep = keep or set()
+    adr_w, ref = {}, {}
+    if adr and tif == "opg":
+        try:
+            adr_w, ref, tab = adr_book_targets(cfg, client, AlpacaBars(feed=cfg.auction.feed), after_open=False)
+            if len(tab):
+                tab.to_csv(out / f"adr_book_{_now():%Y%m%d_%H%M}.csv", index=False)
+            adr_w = {t: w for t, w in adr_w.items() if tradable is None or t in tradable}
+        except (Exception, SystemExit) as exc:            # the flatten must go out regardless
+            LOG.warning("ADR book skipped today: %s", exc)
+            adr_w = {}
+    if adr_w:
+        capital = cfg.auction.capital or min(equity * cfg.live.capital_fraction, cfg.live.max_capital or equity)
+        pos = {t: q for t, q in pos_qty.items() if t not in keep}
+        orders, targets = plan_orders(adr_w, ref, capital, pos, shortable, cfg.auction.min_order_value)
+        LOG.info("ADR book: %d long, %d short, gross $%.0f", sum(v > 0 for v in targets.values()),
+                 sum(v < 0 for v in targets.values()), sum(abs(q) * ref.get(t, 0) for t, q in targets.items()))
+    else:
+        orders = [PlannedOrder(t, "sell" if q > 0 else "buy", abs(q), float("nan"), "flatten")
+                  for t, q in pos_qty.items() if q != 0 and t not in keep]
+    if tif == "opg" and _now() >= cutoff:               # the ADR lookup ran past Alpaca's 9:28 cutoff
+        LOG.warning("past the market-on-open cutoff - leaving it to the 9:31 flatten")
+        return {"status": "missed cutoff"}
     pd.DataFrame([o.__dict__ for o in orders]).to_csv(out / f"auction_open_{_now():%Y%m%d_%H%M}.csv", index=False)
-    LOG.info("%d positions to close at the open (%s orders)", len(orders), tif.upper())
+    LOG.info("%d orders at the open (%s): flatten the overnight book%s", len(orders), tif.upper(),
+             " and open the ADR book" if adr_w else "")
     ids = _submit(client, orders, tif) if (orders and not dry_run) else []
+    return {"status": "done", "orders": len(orders), "submitted": len(ids), "adr_names": len(adr_w)}
+
+
+def run_adr_after_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs") -> dict:
+    """The ADR book's ``after_open`` mode: at ~9:35, reference = the open, regular market orders."""
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    client = _client()
+    if client is None:
+        return {"status": "no account"}
+    if not client.get_clock().is_open:
+        return {"status": "market closed"}
+    from .adr_book import ADRS
+
+    equity, pos_qty, _, shortable, tradable, _ = _account_state(client)
+    w, ref, tab = adr_book_targets(cfg, client, AlpacaBars(feed=cfg.auction.feed), after_open=True)
+    if len(tab):
+        tab.to_csv(out / f"adr_book_{_now():%Y%m%d_%H%M}.csv", index=False)
+    w = {t: x for t, x in w.items() if tradable is None or t in tradable}
+    capital = cfg.auction.capital or min(equity * cfg.live.capital_fraction, cfg.live.max_capital or equity)
+    pos = {t: q for t, q in pos_qty.items() if t in ADRS}
+    orders, _ = plan_orders(w, ref, capital, pos, shortable, cfg.auction.min_order_value)
+    ids = _submit(client, orders, "day") if (orders and not dry_run) else []
+    LOG.info("ADR book after the open: %d orders", len(orders))
     return {"status": "done", "orders": len(orders), "submitted": len(ids)}
 
 
@@ -313,6 +414,11 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
     end = time.time() + hours * 3600
     done: dict[str, pd.Timestamp] = {}
     actions = []
+    from .adr_book import ADRS
+
+    adr_mode = cfg.auction.adr_mode if cfg.auction.adr_enabled else None
+    adr_names = set(ADRS) if adr_mode else set()        # held during the day, closed at the close
+    open_start = 9 * 60 + 18 if adr_mode == "premarket" else 9 * 60   # pre-market prices as late as possible
     LOG.info("keeper up for %.1f hours (until %s New York)", hours,
              (_now() + pd.Timedelta(hours=hours)).strftime("%a %H:%M"))
     while time.time() < end:
@@ -323,16 +429,22 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
             clock = client.get_clock()
             opens_today = pd.Timestamp(clock.next_open).tz_convert(NY).normalize() == today
             trading_day = clock.is_open or opens_today
-            if trading_day and 9 * 60 <= hm < 9 * 60 + 27 and done.get("open") != today:
+            if trading_day and open_start <= hm < 9 * 60 + 27 and done.get("open") != today:
                 done["open"] = today
                 fill_report(days=4, out_dir=out_dir)
-                actions.append(("open", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir)))
+                actions.append(("open", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir,
+                                                           adr=adr_mode == "premarket")))
+            elif clock.is_open and adr_mode == "after_open" and 9 * 60 + 35 <= hm < 9 * 60 + 50 \
+                    and done.get("adr") != today:
+                done["adr"] = today
+                actions.append(("adr book", str(now), run_adr_after_open(cfg, dry_run=dry_run, out_dir=out_dir)))
             elif clock.is_open and 9 * 60 + 31 <= hm < 10 * 60 + 30 and done.get("late") != today:
                 done["late"] = today
-                pos = _account_state(client)[1]
-                if any(q != 0 for q in pos.values()):
-                    LOG.warning("%d positions still open after the open - closing them", sum(q != 0 for q in pos.values()))
-                    actions.append(("late flatten", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir)))
+                pos = {t: q for t, q in _account_state(client)[1].items() if t not in adr_names and q != 0}
+                if pos:
+                    LOG.warning("%d positions still open after the open - closing them", len(pos))
+                    actions.append(("late flatten", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir,
+                                                                       keep=adr_names)))
             elif clock.is_open and 15 * 60 + 40 <= hm < 15 * 60 + 49 and done.get("close") != today:
                 done["close"] = today
                 fill_report(days=4, out_dir=out_dir)

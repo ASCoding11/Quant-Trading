@@ -74,10 +74,11 @@ def test_sent_today_sees_earlier_market_on_close_orders():
 
 
 def test_keeper_acts_once_per_window(monkeypatch):
-    """The keeper queues the open exactly once in the 9:00-9:27 window, whatever the poll count."""
+    """The keeper queues the open exactly once in its window (9:18-9:27 with the pre-market ADR book),
+    whatever the poll count."""
     from qtrade.intraday import auction_live as A
 
-    times = iter(pd.date_range("2026-10-22 09:00", periods=6, freq="1min", tz=NY))
+    times = iter(pd.date_range("2026-10-22 09:16", periods=6, freq="1min", tz=NY))
     calls = []
 
     class Clock:

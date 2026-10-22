@@ -52,17 +52,10 @@ ETF_COST = {"Japan": 10.0, "Hong Kong": 11.0, "Australia": 16.0, "Korea": 5.0, "
             "Singapore": 16.0, "China": 6.0}
 
 # ADR / US listing -> (home listing, FX ticker quoted as local currency per USD, or "1/x" for USD per local)
-ADRS = {
-    "TSM": ("2330.TW", "TWD=X"), "UMC": ("2303.TW", "TWD=X"), "ASX": ("3711.TW", "TWD=X"),
-    "CHT": ("2412.TW", "TWD=X"), "SONY": ("6758.T", "JPY=X"), "TM": ("7203.T", "JPY=X"),
-    "HMC": ("7267.T", "JPY=X"), "MUFG": ("8306.T", "JPY=X"), "SMFG": ("8316.T", "JPY=X"),
-    "MFG": ("8411.T", "JPY=X"), "NMR": ("8604.T", "JPY=X"), "CAJ": ("7751.T", "JPY=X"),
-    "BABA": ("9988.HK", "HKD=X"), "JD": ("9618.HK", "HKD=X"), "BIDU": ("9888.HK", "HKD=X"),
-    "NTES": ("9999.HK", "HKD=X"), "KB": ("105560.KS", "KRW=X"), "SHG": ("055550.KS", "KRW=X"),
-    "PKX": ("005490.KS", "KRW=X"), "LPL": ("034220.KS", "KRW=X"), "KEP": ("015760.KS", "KRW=X"),
-    "IBN": ("ICICIBANK.NS", "INR=X"), "HDB": ("HDFCBANK.NS", "INR=X"), "INFY": ("INFY.NS", "INR=X"),
-    "WIT": ("WIPRO.NS", "INR=X"), "BHP": ("BHP.AX", "1/AUDUSD=X"),
-}
+from ..intraday.adr_book import ADRS as _ADR_BOOK
+
+ADRS = {t: (h, f) for t, (h, f, _) in _ADR_BOOK.items()}
+ADR_MARKET = {t: m for t, (_, _, m) in _ADR_BOOK.items()}
 
 STOCKS = {
     "Japan": ["7203.T", "6758.T", "9984.T", "8306.T", "6861.T", "9432.T", "8035.T", "6098.T", "4063.T", "9983.T",
@@ -277,6 +270,115 @@ def adr_study(md, L: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFram
     return pd.DataFrame(rows), pd.DataFrame(book)
 
 
+SPLIT_ALPACA = "2021-01-01"
+
+
+def _book_daily(p: pd.DataFrame) -> tuple[pd.Series, float]:
+    """Equal-weight long/short by the residual's sign; direction fixed on 2016-2020."""
+    pos = np.sign(p["resid"])
+    s1 = p[p["date"] < SPLIT_ALPACA]
+    d = np.sign((pos[s1.index] * s1["ret"]).mean()) if len(s1) else 1.0
+    if not np.isfinite(d) or d == 0:
+        d = 1.0
+    return (d * pos * p["ret"]).groupby(p["date"]).mean(), d
+
+
+def adr_frames(adrs: list[str], start: str = "2016-01-01") -> dict[str, pd.DataFrame]:
+    """Per ADR and US day: previous close, official open, close (SIP daily bars), the last pre-market
+    trade before 9:25 (IEX - the feed the live trader can see for free) and the 9:35 price (SIP)."""
+    from ..data.intraday import AlpacaBars, bars_to_frame
+
+    end = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(minutes=30)).isoformat()
+    t0 = pd.Timestamp(start, tz="UTC").isoformat()
+    out = {}
+    for feed, tf in (("sip", "1Day"), ("iex", "5Min"), ("sip", "5Min")):
+        api = AlpacaBars(feed=feed)
+        for i in range(0, len(adrs), 10):
+            got = api.bars(adrs[i:i + 10], tf, t0, end)
+            for sym, rows in got.items():
+                f = bars_to_frame(rows, regular_hours=False)
+                if f.empty:
+                    continue
+                day = f.index.tz_localize(None).normalize()
+                d = out.setdefault(sym, {})
+                if tf == "1Day":
+                    d["open"], d["close"] = (pd.Series(f["open"].to_numpy(), index=day),
+                                             pd.Series(f["close"].to_numpy(), index=day))
+                else:
+                    mins = f.index.hour * 60 + f.index.minute
+                    if feed == "iex":
+                        pre = f[(mins >= 4 * 60) & (mins <= 9 * 60 + 20)]
+                        d["pre"] = pd.Series(pre["close"].to_numpy(), index=day[(mins >= 240) & (mins <= 560)]
+                                             ).groupby(level=0).last()
+                    else:
+                        b = f[mins == 9 * 60 + 30]
+                        d["p935"] = pd.Series(b["close"].to_numpy(), index=day[mins == 570]).groupby(level=0).last()
+        LOG.info("ADR bars: %s %s done", feed, tf)
+    frames = {}
+    for sym, d in out.items():
+        if "close" not in d:
+            continue
+        f = pd.DataFrame({k: v for k, v in d.items()})
+        f["prev_close"] = f["close"].shift(1)
+        frames[sym] = f
+    return frames
+
+
+def adr_executable(md, L: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """The ADR book as the live trader can run it, on Alpaca data since 2016 (2016-20 picks the direction,
+    2021-26 checks it), against the backtest's own reference (the official open)."""
+    frames = adr_frames([t for t in ADRS])
+    if not frames:
+        return pd.DataFrame(), pd.DataFrame()
+    panels = {"official open (backtest reference; not executable at the open)": [],
+              "pre-market price before 9:25 -> market-on-open (else the last close)": [],
+              "pre-market price before 9:25 -> market-on-open (names with a pre-market trade)": [],
+              "official open -> enter 9:35 with market orders": []}
+    keys = list(panels)
+    for adr, (home, fx) in ADRS.items():
+        if adr not in frames or home not in L:
+            continue
+        f = frames[adr]
+        h = L[home]
+        fr = _fx_ret(md, fx)
+        fx_move = _align_after(fr, h.index, True).fillna(0.0) if fr is not None else 0.0
+        home_usd = (h["cc"] - fx_move).dropna()
+        x = home_usd.reindex(f.index)                       # the home session must be dated the same day
+        pc, op, cl = f["prev_close"], f["open"], f["close"]
+        pre = f["pre"] if "pre" in f else pd.Series(np.nan, index=f.index)
+        p935 = f["p935"] if "p935" in f else pd.Series(np.nan, index=f.index)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            r_oc = np.log(cl / op).clip(-0.5, 0.5)
+            r_935 = np.log(cl / p935).clip(-0.5, 0.5)
+            res_open = x - np.log(op / pc)
+            res_pre = x - np.log(pre / pc)
+            res_pre_fill = x - np.log(pre.fillna(pc) / pc)
+        for k, res, ret in ((keys[0], res_open, r_oc), (keys[1], res_pre_fill, r_oc), (keys[2], res_pre, r_oc),
+                            (keys[3], res_open, r_935)):
+            panels[k].append(pd.DataFrame({"date": f.index, "adr": adr, "market": ADR_MARKET[adr],
+                                           "resid": res.to_numpy(), "ret": ret.to_numpy()}).dropna())
+    rows, per_mkt = [], []
+    for k, parts in panels.items():
+        if not parts:
+            continue
+        p = pd.concat(parts, ignore_index=True)
+        daily, d = _book_daily(p)
+        n = p.groupby("date").size()
+        costs = (3.0, 6.0, 10.0) if "9:35" in k else (0.0, 1.0, 3.0)
+        for c in costs:
+            net = daily - c / 1e4
+            rows.append({"variant": k, "direction": "+" if d > 0 else "-", "cost_bp_round_trip": c,
+                         "sharpe_2016_20": _sharpe(net[:"2020"]), "sharpe_2021_26": _sharpe(net["2021":]),
+                         "avg_bp_2021_26": float(daily["2021":].mean() * 1e4),
+                         "adrs_per_day_2021_26": float(n["2021":].mean())})
+        for mkt, g in p.groupby("market"):
+            dm, dd = _book_daily(g.reset_index(drop=True))
+            per_mkt.append({"variant": k, "market": mkt, "adrs": g["adr"].nunique(), "direction": "+" if dd > 0 else "-",
+                            "sharpe_2016_20": _sharpe(dm[:"2020"]), "sharpe_2021_26": _sharpe(dm["2021":]),
+                            "avg_bp_2021_26": float(dm["2021":].mean() * 1e4)})
+    return pd.DataFrame(rows), pd.DataFrame(per_mkt)
+
+
 def _xs_weights(sig: pd.DataFrame, frac: float = 0.2) -> pd.DataFrame:
     """Dollar-neutral, gross 1: long the top fifth, short the bottom fifth (at least 3 names a side)."""
     n = sig.notna().sum(axis=1)
@@ -365,6 +467,13 @@ def run(md_us, ctx, out: Path, cfg) -> dict:
     adr, adr_s = adr_study(md, L)
     adr.to_csv(out / "asia_adr.csv", index=False)
     adr_s.to_csv(out / "asia_adr_strategy.csv", index=False)
+    ex, ex_m = pd.DataFrame(), pd.DataFrame()
+    try:
+        ex, ex_m = adr_executable(md, L)
+        ex.to_csv(out / "asia_adr_executable.csv", index=False)
+        ex_m.to_csv(out / "asia_adr_executable_by_market.csv", index=False)
+    except Exception as exc:
+        LOG.warning("executable ADR study failed (Alpaca keys?): %s", exc)
     ms = market_strategies(md)
     ms.to_csv(out / "asia_market_strategies.csv", index=False)
     costs = pd.DataFrame([{"market": m, "round_trip_cost_bp": c, "on_ibkr": i, "what": n}
@@ -391,6 +500,12 @@ def run(md_us, ctx, out: Path, cfg) -> dict:
              "the same-day variant is shown only to measure how much the peek was worth:", "",
              adr_s.round(3).to_markdown(index=False) if len(adr_s) else "(no data)", "",
              "Per ADR (correlations):", "", adr.round(3).to_markdown(index=False) if len(adr) else "(no data)", "",
+             "#### As the live trader can run it (Alpaca bars, 2016-20 picks the direction, 2021-26 checks)", "",
+             "The backtest's reference price is the official open, which isn't known when market-on-open orders "
+             "must be in (9:28). Executable versions: the last pre-market trade before 9:25 on the free IEX feed "
+             "(market-on-open in), or entering at 9:35 with market orders (paying the spread).", "",
+             ex.round(3).to_markdown(index=False) if len(ex) else "(no Alpaca data)", "",
+             "By market:", "", ex_m.round(3).to_markdown(index=False) if len(ex_m) else "(no Alpaca data)", "",
              "### 3. Strategies inside each Asian market (long top fifth / short bottom fifth)", "",
              ms.round(3).to_markdown(index=False) if len(ms) else "(no data)", "",
              "Costs used (round trip at the auctions):", "", costs.to_markdown(index=False), ""]

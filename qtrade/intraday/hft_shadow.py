@@ -44,11 +44,15 @@ FEE_BP = 0.0                    # the sheet's assumption: no fees at all
 LATENCY_MS = 5.0                # every order reaches the market this long after the decision ...
 JITTER_MS = 5.0                 # ... plus a uniform random 0-5 ms
 IMB_THRESHOLD = 0.6
+MAX_SPREAD_BP = 25.0            # ignore broken / one-sided IEX quotes (e.g. a 328 bp TSLA quote on 2026-10-22)
 HOLD_S = 30
 MM_EVERY_S = 10
 MM_WAIT_S = 10
+BOOK_USD = 10_000.0             # the whole simulated book
+STRATEGIES = ["imbalance_taker", "market_maker", "maker_with_signal"]
+SLOTS = 10                      # positions a strategy can hold at once: each takes 1/10 of its equity
 COLUMNS = ["strategy", "symbol", "side", "decision_time", "entry_time", "entry_price", "exit_time", "exit_price",
-           "pnl_bp", "pnl_mid_bp", "spread_bp", "imbalance", "latency_ms"]
+           "notional", "pnl_usd", "pnl_mid_usd", "pnl_bp", "pnl_mid_bp", "spread_bp", "imbalance", "latency_ms"]
 
 
 class Book:
@@ -81,8 +85,12 @@ class ShadowHFT:
     the latency at the book prevailing then."""
 
     def __init__(self, symbols: list[str], latency_ms: float = LATENCY_MS, jitter_ms: float = JITTER_MS,
-                 seed: int = 0):
+                 seed: int = 0, equity: dict[str, float] | None = None):
         self.books = {s: Book() for s in symbols}
+        # the $10,000 book is split equally between the strategies; each strategy's equity moves with its
+        # realised P&L, and cash is reserved when an order is sent and released when the position closes
+        self.equity = dict(equity) if equity else {k: BOOK_USD / len(STRATEGIES) for k in STRATEGIES}
+        self.reserved: dict[str, float] = defaultdict(float)
         self.latency_ms, self.jitter_ms = latency_ms, jitter_ms
         self.rng = random.Random(seed)
         self.pending: list[dict] = []              # market orders on their way (entries and exits)
@@ -91,6 +99,16 @@ class ShadowHFT:
         self.closed: list[dict] = []
         self.last_mm: dict[str, pd.Timestamp] = defaultdict(lambda: pd.Timestamp(0, tz="UTC"))
         self.taker_busy_until: dict[str, pd.Timestamp] = defaultdict(lambda: pd.Timestamp(0, tz="UTC"))
+
+    def _reserve(self, strategy: str) -> float | None:
+        size = self.equity[strategy] / SLOTS
+        if size <= 0 or self.equity[strategy] - self.reserved[strategy] < size * 0.999:
+            return None                                # all of this strategy's money is in use
+        self.reserved[strategy] += size
+        return size
+
+    def _release(self, strategy: str, size: float) -> None:
+        self.reserved[strategy] = max(0.0, self.reserved[strategy] - size)
 
     def _delay(self) -> pd.Timedelta:
         return pd.Timedelta(milliseconds=self.latency_ms + self.rng.uniform(0, self.jitter_ms))
@@ -114,6 +132,10 @@ class ShadowHFT:
     def _execute(self, o: dict) -> None:
         b = self.books[o["symbol"]]
         if not b.ok:
+            if o["kind"] == "entry":
+                self._release(o["strategy"], o["notional"])
+            else:                                      # no book right now: try the exit again a second later
+                self.pending.append({**o, "exec_at": o["exec_at"] + pd.Timedelta(seconds=1)})
             return
         if o["kind"] == "entry":
             px = b.ask if o["side"] == "buy" else b.bid
@@ -122,11 +144,17 @@ class ShadowHFT:
             return
         exit_px = b.bid if o["side"] == "buy" else b.ask
         d = 1.0 if o["side"] == "buy" else -1.0
+        pnl_bp = d * (exit_px / o["entry_price"] - 1) * 1e4 - FEE_BP
+        pnl_mid_bp = d * (b.mid / o["entry_price"] - 1) * 1e4 - FEE_BP
+        pnl_usd = o["notional"] * pnl_bp / 1e4
+        self.equity[o["strategy"]] += pnl_usd
+        self._release(o["strategy"], o["notional"])
         self.closed.append({"strategy": o["strategy"], "symbol": o["symbol"], "side": o["side"],
                             "decision_time": o["decision_time"], "entry_time": o["entry_time"],
                             "entry_price": o["entry_price"], "exit_time": o["exec_at"], "exit_price": exit_px,
-                            "pnl_bp": d * (exit_px / o["entry_price"] - 1) * 1e4 - FEE_BP,
-                            "pnl_mid_bp": d * (b.mid / o["entry_price"] - 1) * 1e4 - FEE_BP,
+                            "notional": o["notional"], "pnl_usd": pnl_usd,
+                            "pnl_mid_usd": o["notional"] * pnl_mid_bp / 1e4,
+                            "pnl_bp": pnl_bp, "pnl_mid_bp": pnl_mid_bp,
                             "spread_bp": o["spread_bp"], "imbalance": o["imbalance"],
                             "latency_ms": o["latency_ms"]})
 
@@ -138,9 +166,12 @@ class ShadowHFT:
             return
         b.bid, b.bsize, b.ask, b.asize = bid, bsize, ask, asize
         imb = b.imbalance
-        if abs(imb) >= IMB_THRESHOLD and t >= self.taker_busy_until[sym]:
+        if abs(imb) >= IMB_THRESHOLD and b.spread_bp <= MAX_SPREAD_BP and t >= self.taker_busy_until[sym]:
+            size = self._reserve("imbalance_taker")
+            if size is None:
+                return
             delay = self._delay()
-            self.pending.append({"kind": "entry", "strategy": "imbalance_taker", "symbol": sym,
+            self.pending.append({"kind": "entry", "strategy": "imbalance_taker", "symbol": sym, "notional": size,
                                  "side": "buy" if imb > 0 else "sell", "decision_time": t, "exec_at": t + delay,
                                  "spread_bp": b.spread_bp, "imbalance": imb,
                                  "latency_ms": delay.total_seconds() * 1e3})
@@ -159,9 +190,11 @@ class ShadowHFT:
     def step(self, now: pd.Timestamp) -> None:
         """Clock tick: run everything due, expire resting orders, send the next maker quotes."""
         self.advance(now)
+        for o in [o for o in self.resting if o["expires"] < now]:
+            self._release(o["strategy"], o["notional"])
         self.resting = [o for o in self.resting if o["expires"] >= now]
         for sym, b in self.books.items():
-            if not b.ok or now - self.last_mm[sym] < pd.Timedelta(seconds=MM_EVERY_S):
+            if not b.ok or b.spread_bp > MAX_SPREAD_BP or now - self.last_mm[sym] < pd.Timedelta(seconds=MM_EVERY_S):
                 continue
             self.last_mm[sym] = now
             imb = b.imbalance
@@ -170,9 +203,13 @@ class ShadowHFT:
                 base = {"symbol": sym, "side": side, "price": px, "decision_time": now, "live_at": now + delay,
                         "expires": now + delay + pd.Timedelta(seconds=MM_WAIT_S), "spread_bp": b.spread_bp,
                         "imbalance": imb, "latency_ms": delay.total_seconds() * 1e3}
-                self.resting.append({**base, "strategy": "market_maker"})
+                strategies = ["market_maker"]
                 if (side == "buy" and imb > 0) or (side == "sell" and imb < 0):
-                    self.resting.append({**base, "strategy": "maker_with_signal"})
+                    strategies.append("maker_with_signal")
+                for k in strategies:
+                    size = self._reserve(k)
+                    if size is not None:
+                        self.resting.append({**base, "strategy": k, "notional": size})
 
     def take_closed(self) -> pd.DataFrame:
         out, self.closed = self.closed, []
@@ -182,8 +219,13 @@ class ShadowHFT:
 # -----------------------------------------------------------------------------
 # Google Sheet (optional): the trade log every few seconds
 # -----------------------------------------------------------------------------
+HEADER = ["Strategy", "Symbol", "Side", "Entry time (NY)", "Entry price", "Exit time (NY)", "Exit price",
+          "Position $", "P&L $", "P&L mid $", "P&L bp", "P&L mid bp", "Spread bp", "Imbalance", "Latency ms"]
+
+
 class SheetWriter:
-    """Appends trades to the 'HFT trades' tab and rewrites its summary, through a service account."""
+    """Appends trades to the 'HFT trades' tab and rewrites its book line and summary, through a
+    service account. Trades from row 6 (header in row 5), book line in A4, summary from Q4."""
 
     TAB = "HFT trades"
 
@@ -196,26 +238,53 @@ class SheetWriter:
         self.s = AuthorizedSession(creds)
         self.base = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
 
+    def _get(self, rng: str) -> list[list]:
+        r = self.s.get(f"{self.base}/values/{rng}", timeout=30)
+        r.raise_for_status()
+        return r.json().get("values", [])
+
+    def todays_trades(self, today: str) -> pd.DataFrame:
+        """Make sure the tab has the current layout (an old layout is cleared once) and return today's
+        trades already in it, so the book's equity carries over between runs."""
+        if self._get(f"'{self.TAB}'!A5:O5") != [HEADER]:
+            r = self.s.post(f"{self.base}/values:batchClear", json={"ranges": [f"'{self.TAB}'!A4:Z100000"]}, timeout=30)
+            r.raise_for_status()
+            r = self.s.put(f"{self.base}/values/'{self.TAB}'!A5:O5", params={"valueInputOption": "RAW"},
+                           json={"values": [HEADER]}, timeout=30)
+            r.raise_for_status()
+            return pd.DataFrame(columns=COLUMNS)
+        rows = [r for r in self._get(f"'{self.TAB}'!A6:O100000") if len(r) >= 12 and str(r[3]).startswith(today)]
+        if not rows:
+            return pd.DataFrame(columns=COLUMNS)
+        df = pd.DataFrame([r[:15] + [""] * (15 - len(r[:15])) for r in rows], columns=HEADER)
+        num = lambda c: pd.to_numeric(df[c], errors="coerce")
+        return pd.DataFrame({"strategy": df["Strategy"], "symbol": df["Symbol"], "side": df["Side"],
+                             "notional": num("Position $"), "pnl_usd": num("P&L $"), "pnl_mid_usd": num("P&L mid $"),
+                             "pnl_bp": num("P&L bp"), "pnl_mid_bp": num("P&L mid bp"), "spread_bp": num("Spread bp"),
+                             "imbalance": num("Imbalance"), "latency_ms": num("Latency ms")})
+
     @staticmethod
     def _rows(trades: pd.DataFrame) -> list[list]:
         def ny(ts):
             return pd.Timestamp(ts).tz_convert(NY).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         return [[r.strategy, r.symbol, r.side, ny(r.entry_time), round(float(r.entry_price), 4), ny(r.exit_time),
-                 round(float(r.exit_price), 4), round(float(r.pnl_bp), 3), round(float(r.pnl_mid_bp), 3),
+                 round(float(r.exit_price), 4), round(float(r.notional), 2), round(float(r.pnl_usd), 4),
+                 round(float(r.pnl_mid_usd), 4), round(float(r.pnl_bp), 3), round(float(r.pnl_mid_bp), 3),
                  round(float(r.spread_bp), 3), round(float(r.imbalance), 3), round(float(r.latency_ms), 2)]
                 for r in trades.itertuples()]
 
     def append(self, trades: pd.DataFrame) -> None:
         if trades.empty:
             return
-        r = self.s.post(f"{self.base}/values/'{self.TAB}'!A6:L:append",
+        r = self.s.post(f"{self.base}/values/'{self.TAB}'!A6:O:append",
                         params={"valueInputOption": "RAW", "insertDataOption": "INSERT_ROWS"},
                         json={"values": self._rows(trades)}, timeout=30)
         r.raise_for_status()
 
-    def status(self, text: str, summary_rows: list[list]) -> None:
+    def status(self, text: str, book_line: str, summary_rows: list[list]) -> None:
         data = [{"range": f"'{self.TAB}'!A3", "values": [[text]]},
-                {"range": f"'{self.TAB}'!N4:S{4 + len(summary_rows)}", "values": summary_rows}]
+                {"range": f"'{self.TAB}'!A4", "values": [[book_line]]},
+                {"range": f"'{self.TAB}'!Q4:Y{4 + len(summary_rows)}", "values": summary_rows}]
         r = self.s.post(f"{self.base}/values:batchUpdate", json={"valueInputOption": "RAW", "data": data}, timeout=30)
         r.raise_for_status()
 
@@ -224,16 +293,34 @@ def summary(trades: pd.DataFrame) -> pd.DataFrame:
     if trades.empty:
         return pd.DataFrame()
     g = trades.groupby("strategy")
-    return pd.DataFrame({"trades": g.size(), "avg_pnl_bp": g["pnl_bp"].mean(), "avg_pnl_mid_bp": g["pnl_mid_bp"].mean(),
+    return pd.DataFrame({"trades": g.size(), "pnl_usd": g["pnl_usd"].sum(), "pnl_mid_usd": g["pnl_mid_usd"].sum(),
+                         "avg_pnl_bp": g["pnl_bp"].mean(), "avg_pnl_mid_bp": g["pnl_mid_bp"].mean(),
+                         "avg_spread_bp": g["spread_bp"].mean(),
                          "hit_rate": g["pnl_bp"].apply(lambda x: (x > 0).mean()),
                          "avg_latency_ms": g["latency_ms"].mean()}).reset_index()
 
 
 def _summary_rows(all_trades: pd.DataFrame) -> list[list]:
-    head = [["Strategy", "Trades", "Avg P&L bp", "Avg P&L mid bp", "Hit rate", "Avg latency ms"]]
+    head = [["Strategy", "Trades", "Net P&L $", "Net P&L mid $", "Avg P&L bp", "Avg P&L mid bp", "Avg spread bp",
+             "Hit rate", "Avg latency ms"]]
     s = summary(all_trades)
-    return head + [[r.strategy, int(r.trades), round(r.avg_pnl_bp, 3), round(r.avg_pnl_mid_bp, 3),
-                    round(r.hit_rate, 3), round(r.avg_latency_ms, 2)] for r in s.itertuples()]
+    rows = [[r.strategy, int(r.trades), round(r.pnl_usd, 2), round(r.pnl_mid_usd, 2), round(r.avg_pnl_bp, 3),
+             round(r.avg_pnl_mid_bp, 3), round(r.avg_spread_bp, 3), round(r.hit_rate, 3), round(r.avg_latency_ms, 2)]
+            for r in s.itertuples()]
+    if len(all_trades):
+        t = all_trades
+        rows.append(["TOTAL", int(len(t)), round(t["pnl_usd"].sum(), 2), round(t["pnl_mid_usd"].sum(), 2),
+                     round(t["pnl_bp"].mean(), 3), round(t["pnl_mid_bp"].mean(), 3), round(t["spread_bp"].mean(), 3),
+                     round((t["pnl_bp"] > 0).mean(), 3), round(t["latency_ms"].mean(), 2)])
+    return head + rows
+
+
+def book_line(all_trades: pd.DataFrame, equity: dict[str, float]) -> str:
+    net = float(all_trades["pnl_usd"].sum()) if len(all_trades) else 0.0
+    eq = sum(equity.values())
+    parts = ", ".join(f"{k} ${v:,.2f}" for k, v in equity.items())
+    return (f"Book: ${BOOK_USD:,.0f} at the open -> equity ${eq:,.2f} (net P&L ${net:+,.2f}, {100 * net / BOOK_USD:+.3f}%). "
+            f"By strategy: {parts}. Each position = 1/{SLOTS} of its strategy's equity.")
 
 
 def _pull(client, url: str, key: str, symbols: list[str], start: pd.Timestamp, end: pd.Timestamp) -> dict:
@@ -258,20 +345,27 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
 
     symbols = symbols or SYMBOLS
     client = AlpacaBars(feed="iex", per_minute=140)     # leaves headroom for other data calls
-    hft = ShadowHFT(symbols, seed=int(time.time()))
-    sheet = None
+    sheet, earlier = None, pd.DataFrame(columns=COLUMNS)
     if os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON") and os.environ.get("HFT_SHEET_ID"):
         try:
             sheet = SheetWriter(os.environ["HFT_SHEET_ID"], os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
-            LOG.info("shadow HFT: writing to the Google Sheet every %.0f s", sheet_every_s)
+            earlier = sheet.todays_trades(pd.Timestamp.now(tz=NY).strftime("%Y-%m-%d"))
+            LOG.info("shadow HFT: writing to the Google Sheet every %.0f s (%d earlier trades today)",
+                     sheet_every_s, len(earlier))
         except Exception as exc:
             LOG.warning("Google Sheet unavailable (%s) - log file only", exc.__class__.__name__)
+    equity = {k: BOOK_USD / len(STRATEGIES) for k in STRATEGIES}
+    if len(earlier):                                   # carry the day's realised P&L into this run
+        for k, v in earlier.groupby("strategy")["pnl_usd"].sum().items():
+            if k in equity:
+                equity[k] += float(v)
+    hft = ShadowHFT(symbols, seed=int(time.time()), equity=equity)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     path = out / f"hft_trades_{pd.Timestamp.now(tz=NY):%Y%m%d_%H%M}.csv"
     stop = time.time() + minutes * 60
     last = pd.Timestamp.now(tz="UTC") - pd.Timedelta(seconds=5)
-    unsent, everything = [], []
+    unsent, everything = [], ([earlier] if len(earlier) else [])
     last_sheet = 0.0
     while time.time() < stop:
         now_ny = pd.Timestamp.now(tz=NY)
@@ -317,12 +411,12 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
                 unsent = []
                 total = pd.concat(everything, ignore_index=True) if everything else pd.DataFrame(columns=COLUMNS)
                 sheet.status(f"Live - last update {pd.Timestamp.now(tz=NY):%Y-%m-%d %H:%M:%S} New York - "
-                             f"{len(total)} trades this run", _summary_rows(total))
+                             f"{len(total)} trades today", book_line(total, hft.equity), _summary_rows(total))
             except Exception as exc:
                 LOG.warning("Google Sheet update failed: %s", exc)
         last = now
         time.sleep(max(0.0, poll_s - (pd.Timestamp.now(tz="UTC") - now).total_seconds()))
-    n = sum(len(d) for d in everything)
+    n = sum(len(d) for d in everything) - len(earlier)
     LOG.info("shadow HFT: %d simulated trades logged to %s", n, path)
     return path if path.exists() else None
 

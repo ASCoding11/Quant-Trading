@@ -56,3 +56,11 @@ def test_step_marks_then_rebalances():
     assert np.isclose(pnl, 2500 * r["S0"] - 2500 * r["S1"])
     assert set(hold["Symbol"]) == {"S0", "S2"} and np.isclose(hold["Position $"].abs().sum(), 5000 + pnl, atol=0.02)
     assert turnover > 0
+
+
+def test_new_capital_is_added_once():
+    old = pd.DataFrame([["2026-10-22", 16.7, "long", 1, 1, 4900, 0, 0, 5000, 4900, ""]], columns=F.LOG_HEADER)
+    assert F.capital_so_far(old) == 5000.0                      # rows from before the column: their start
+    new = pd.concat([old, pd.DataFrame([["2026-10-23", 16, "long", 1, 1, 9700, 12, 0.1, 9738.27, 4800, 9726.27]],
+                                       columns=F.LOG_HEADER)])
+    assert F.capital_so_far(new) == 9726.27                     # after the deposit: no second deposit

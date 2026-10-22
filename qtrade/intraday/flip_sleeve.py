@@ -33,7 +33,7 @@ VIX_FLIP = 20.0
 EVERY = 21
 UNIVERSE_SIZE = 1000
 LOG_HEADER = ["Date", "VIX (prev close)", "Regime", "Longs", "Shorts", "Gross $", "Day P&L $", "Day %", "Equity $",
-              "Turnover $"]
+              "Turnover $", "Capital $"]
 HOLD_HEADER = ["Symbol", "Weight", "Position $", "Mark price"]
 
 
@@ -113,7 +113,7 @@ class FlipSheet:
         return r.json().get("values", [])
 
     def state(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        log = self.get("A6:J100000")
+        log = self.get("A6:K100000")
         hold = self.get("L6:O5000")
         log = pd.DataFrame([r + [""] * (len(LOG_HEADER) - len(r)) for r in log], columns=LOG_HEADER) if log else \
             pd.DataFrame(columns=LOG_HEADER)
@@ -128,9 +128,9 @@ class FlipSheet:
         r = self.s.post(f"{self.base}/values:batchClear", json={"ranges": [f"'{TAB}'!L6:O5000"]}, timeout=30)
         r.raise_for_status()
         data = [{"range": f"'{TAB}'!A1", "values": [[title]]}, {"range": f"'{TAB}'!A3", "values": [[status]]},
-                {"range": f"'{TAB}'!A5:J5", "values": [LOG_HEADER]}, {"range": f"'{TAB}'!L5:O5", "values": [HOLD_HEADER]},
+                {"range": f"'{TAB}'!A5:K5", "values": [LOG_HEADER]}, {"range": f"'{TAB}'!L5:O5", "values": [HOLD_HEADER]},
                 {"range": f"'{TAB}'!L6:O{6 + len(holdings)}", "values": holdings.values.tolist()}]
-        data.append({"range": f"'{TAB}'!A{row}:J{row}", "values": [log_row]})
+        data.append({"range": f"'{TAB}'!A{row}:K{row}", "values": [log_row]})
         r = self.s.post(f"{self.base}/values:batchUpdate", json={"valueInputOption": "RAW", "data": data}, timeout=30)
         r.raise_for_status()
 
@@ -155,6 +155,15 @@ def step(prev_hold: pd.DataFrame, equity: float, close: pd.DataFrame, w: pd.Seri
     return pnl, turnover, hold.sort_values("Weight", ascending=False).reset_index(drop=True)
 
 
+def capital_so_far(log: pd.DataFrame) -> float:
+    """The capital the sleeve held on its last booked day (the first rows predate the column: their start)."""
+    cap = pd.to_numeric(log.get("Capital $", pd.Series(dtype=str)), errors="coerce").dropna()
+    if len(cap):
+        return float(cap.iloc[-1])
+    first = log.iloc[0]
+    return float(pd.to_numeric(first["Equity $"]) - pd.to_numeric(first["Day P&L $"]))
+
+
 def run(sleeve_usd: float, dry_run: bool = False) -> dict:
     now = pd.Timestamp.now(tz=NY)
     today = now.strftime("%Y-%m-%d")
@@ -168,14 +177,15 @@ def run(sleeve_usd: float, dry_run: bool = False) -> dict:
     if len(log) and str(log["Date"].iloc[-1]) == today:
         return {"skipped": "already booked today"}
     equity = float(pd.to_numeric(log["Equity $"], errors="coerce").dropna().iloc[-1]) if len(log) else sleeve_usd
-    pnl, turnover, new_hold = step(hold, equity, close, w)
-    eq = equity + pnl
+    deposit = sleeve_usd - capital_so_far(log) if len(log) else 0.0   # money moved in (or out) of the sleeve
+    pnl, turnover, new_hold = step(hold, equity + deposit, close, w)
+    eq = equity + deposit + pnl
     vix = float(vix_prev.iloc[-1]) if len(vix_prev) and np.isfinite(vix_prev.iloc[-1]) else float("nan")
     row = [today, round(vix, 2), "long momentum" if sign > 0 else "SHORT momentum (VIX > 20)",
            int((w > 0).sum()), int((w < 0).sum()), round(float(new_hold["Position $"].abs().sum()), 2),
-           round(pnl, 2), round(100 * pnl / equity, 4) if equity else 0.0, round(eq, 2), round(turnover, 2)]
+           round(pnl, 2), round(100 * pnl / (equity + deposit), 4) if equity + deposit else 0.0, round(eq, 2), round(turnover, 2), round(sleeve_usd, 2)]
     total = eq - sleeve_usd
-    status = (f"Updated {now:%Y-%m-%d %H:%M} New York - sleeve ${sleeve_usd:,.0f} at the start -> ${eq:,.2f} "
+    status = (f"Updated {now:%Y-%m-%d %H:%M} New York - capital ${sleeve_usd:,.0f} -> equity ${eq:,.2f} "
               f"(P&L ${total:+,.2f}, {100 * total / sleeve_usd:+.2f}%). Today: VIX prev close {vix:.1f} -> "
               f"{'long' if sign > 0 else 'short'} momentum for the sub-book rebalanced today; book = average of the "
               f"last 21 sub-books. Marked at the latest price near the close, 0 bp fees, nothing sent to Alpaca.")

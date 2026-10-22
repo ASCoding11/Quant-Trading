@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tasks:
-        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,hmm (blank = all)"
+        description: "Comma list: quality,spreads,edge,alt,poisson,conditional,combos,garch,glm,strategies,events,survivorship,hmm,consumer,news,flip,multi (blank = all)"
         default: ""
 
 permissions:
@@ -48,6 +48,12 @@ jobs:
           path: data
           key: prices-1000-15-2000-01-01-research-${{ github.run_id }}
           restore-keys: prices-1000-15-2000-01-01-
+      - name: Restore news / media data (media-collect workflow)
+        uses: actions/cache/restore@v4
+        with:
+          path: media_data
+          key: media-none
+          restore-keys: media-
       - name: Select universe
         run: '[ -f data/universe.csv ] || python -m qtrade universe'
       - name: Fetch fundamentals and news

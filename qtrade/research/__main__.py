@@ -60,6 +60,9 @@ def main(argv=None):
             elif task == "consumer":
                 from .consumer_earnings import run
                 summary[task] = run(md, ctx, out, cfg)
+            elif task == "news":
+                from .news_zoo import run
+                summary[task] = run(md, ctx, out, cfg)
             elif task == "flip":
                 from .flip_check import run
                 summary[task] = run(md, ctx, out, cfg)

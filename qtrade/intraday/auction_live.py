@@ -172,7 +172,8 @@ def _earnings_reactions(data: AlpacaBars, acfg, tickers: list[str], today: pd.Ti
         hist = _fetch(data, names + ["SPY"], "1Day", start, _now() - pd.Timedelta(minutes=16), "sip")
         if "SPY" not in hist:
             return {}
-        r = last_reactions(names, _now(), hist, hist["SPY"])
+        stop = _now().normalize() + pd.Timedelta(hours=15, minutes=44)
+        r = last_reactions(names, _now(), hist, hist["SPY"], deadline=stop if _now() < stop else None)
         LOG.info("last_reaction: %d releases tonight, %d with a previous reaction (%d up, %d down)", len(names),
                  len(r), sum(v > 0 for v in r.values()), sum(v < 0 for v in r.values()))
         return r

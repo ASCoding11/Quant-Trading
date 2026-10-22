@@ -114,8 +114,9 @@ def announcement_return(accepted: pd.Timestamp, session: str, bars: pd.DataFrame
 
 
 def last_reactions(tickers: list[str], now: pd.Timestamp, daily: dict[str, pd.DataFrame],
-                   spy: pd.DataFrame, sec=None) -> dict[str, float]:
-    """{ticker: previous release's market-relative announcement return} (SEC filings + daily bars)."""
+                   spy: pd.DataFrame, sec=None, deadline: pd.Timestamp | None = None) -> dict[str, float]:
+    """{ticker: previous release's market-relative announcement return} (SEC filings + daily bars).
+    Stops looking up names at ``deadline`` (the orders must not wait for it)."""
     from ..data.consumer import SUBMISSIONS_URL, _earnings_rows
     from ..data.fundamentals import SecClient, ticker_to_cik
 
@@ -123,6 +124,9 @@ def last_reactions(tickers: list[str], now: pd.Timestamp, daily: dict[str, pd.Da
     ciks = ticker_to_cik(sec)
     out = {}
     for t in tickers:
+        if deadline is not None and pd.Timestamp.now(tz=NY) > deadline:
+            LOG.warning("last_reaction: out of time after %d of %d names", len(out), len(tickers))
+            break
         if t not in ciks or t not in daily:
             continue
         try:

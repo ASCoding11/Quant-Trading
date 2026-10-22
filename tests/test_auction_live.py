@@ -71,3 +71,35 @@ def test_sent_today_sees_earlier_market_on_close_orders():
     assert _sent_today(Client([{"status": "open", "time_in_force": "cls"}]), "cls")
     assert _sent_today(Client([{"status": "closed", "time_in_force": "cls"}]), "cls")
     assert not _sent_today(Client([{"status": "closed", "time_in_force": "day"}]), "cls")
+
+
+def test_keeper_acts_once_per_window(monkeypatch):
+    """The keeper queues the open exactly once in the 9:00-9:27 window, whatever the poll count."""
+    from qtrade.intraday import auction_live as A
+
+    times = iter(pd.date_range("2026-10-22 09:00", periods=6, freq="1min", tz=NY))
+    calls = []
+
+    class Clock:
+        is_open = False
+        next_open = pd.Timestamp("2026-10-22 09:30", tz=NY)
+
+    class Client:
+        def get_clock(self):
+            return Clock()
+
+    clock_now = {"t": None}
+
+    def fake_now():
+        clock_now["t"] = next(times)
+        return clock_now["t"]
+
+    monkeypatch.setattr(A, "_client", lambda: Client())
+    monkeypatch.setattr(A, "_now", fake_now)
+    monkeypatch.setattr(A, "fill_report", lambda **k: None)
+    monkeypatch.setattr(A, "run_open", lambda cfg, **k: calls.append("open") or {"status": "done"})
+    monkeypatch.setattr(A.time, "sleep", lambda s: None)
+    t0 = [0.0]
+    monkeypatch.setattr(A.time, "time", lambda: t0.__setitem__(0, t0[0] + 1) or t0[0])
+    res = A.run_keeper(Config(), [], {}, hours=4 / 3600, dry_run=True)
+    assert calls == ["open"]

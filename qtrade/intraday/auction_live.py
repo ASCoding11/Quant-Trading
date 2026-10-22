@@ -251,6 +251,58 @@ def run_open(cfg, dry_run: bool = True, out_dir: str | Path = "logs") -> dict:
     return {"status": "done", "orders": len(orders), "submitted": len(ids)}
 
 
+def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run: bool = True,
+               out_dir: str | Path = "logs") -> dict:
+    """Stay up for ``hours`` and act at the right moments instead of trusting a scheduler.
+
+    GitHub starts scheduled workflows hours late on busy days, which missed the first
+    market-on-close window. The keeper polls the clock every 30 seconds:
+
+    * 9:00-9:27 on a trading day: queue market-on-open orders that close everything;
+    * 9:31-10:30: if positions are still open (the open phase was missed or rejected),
+      close them with market orders;
+    * 15:40-15:49: build the book and send market-on-close orders (``run_close`` waits
+      until 15:45 and skips if today's orders were already sent).
+
+    Each action runs at most once per day per keeper, and every action is itself guarded
+    against repeats, so overlapping or restarted keepers can't double-trade."""
+    client = _client()
+    if client is None:
+        raise SystemExit("Set ALPACA_API_KEY and ALPACA_SECRET_KEY to run the keeper.")
+    end = time.time() + hours * 3600
+    done: dict[str, pd.Timestamp] = {}
+    actions = []
+    LOG.info("keeper up for %.1f hours (until %s New York)", hours,
+             (_now() + pd.Timedelta(hours=hours)).strftime("%a %H:%M"))
+    while time.time() < end:
+        now = _now()
+        today = now.normalize()
+        hm = now.hour * 60 + now.minute
+        try:
+            clock = client.get_clock()
+            opens_today = pd.Timestamp(clock.next_open).tz_convert(NY).normalize() == today
+            trading_day = clock.is_open or opens_today
+            if trading_day and 9 * 60 <= hm < 9 * 60 + 27 and done.get("open") != today:
+                done["open"] = today
+                fill_report(days=4, out_dir=out_dir)
+                actions.append(("open", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir)))
+            elif clock.is_open and 9 * 60 + 31 <= hm < 10 * 60 + 30 and done.get("late") != today:
+                done["late"] = today
+                pos = _account_state(client)[1]
+                if any(q != 0 for q in pos.values()):
+                    LOG.warning("%d positions still open after the open - closing them", sum(q != 0 for q in pos.values()))
+                    actions.append(("late flatten", str(now), run_open(cfg, dry_run=dry_run, out_dir=out_dir)))
+            elif clock.is_open and 15 * 60 + 40 <= hm < 15 * 60 + 49 and done.get("close") != today:
+                done["close"] = today
+                fill_report(days=4, out_dir=out_dir)
+                actions.append(("close", str(now), run_close(cfg, tickers, signs, dry_run=dry_run, out_dir=out_dir)))
+        except Exception as exc:                  # keep the keeper alive through one bad poll
+            LOG.warning("keeper poll failed: %s", exc)
+        time.sleep(30)
+    LOG.info("keeper done: %s", actions or "no actions in this window")
+    return {"status": "done", "actions": actions}
+
+
 def fill_report(days: int = 5, out_dir: str | Path = "logs") -> pd.DataFrame:
     """Auction fills of the last ``days`` days vs. the official open / close (bp, + = cost)."""
     client = _client()

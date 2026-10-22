@@ -43,6 +43,14 @@ P2 = ("2015-01-01", "2026-12-31")
 INDICES = {"US": "SPY", "Japan": "^N225", "Hong Kong": "^HSI", "China": "000001.SS", "Korea": "^KS11",
            "Taiwan": "^TWII", "Australia": "^AXJO", "India": "^BSESN", "Singapore": "^STI"}
 
+# index ETFs: their open is a traded price; an index's "open" mixes in stocks that haven't opened yet
+# (the ASX opens in alphabetical groups from 10:00 to 10:10), which fakes predictability after the open
+INDEX_ETFS = {"Japan": "1321.T", "Hong Kong": "2800.HK", "Australia": "STW.AX", "Korea": "069500.KS",
+              "Taiwan": "0050.TW", "India": "NIFTYBEES.NS", "Singapore": "ES3.SI", "China": "510300.SS"}
+# round trip for the ETFs (Hong Kong ETFs pay no stamp duty)
+ETF_COST = {"Japan": 10.0, "Hong Kong": 11.0, "Australia": 16.0, "Korea": 5.0, "Taiwan": 13.0, "India": 25.0,
+            "Singapore": 16.0, "China": 6.0}
+
 # ADR / US listing -> (home listing, FX ticker quoted as local currency per USD, or "1/x" for USD per local)
 ADRS = {
     "TSM": ("2330.TW", "TWD=X"), "UMC": ("2303.TW", "TWD=X"), "ASX": ("3711.TW", "TWD=X"),
@@ -151,13 +159,14 @@ def _strategy_rows(name: str, sig: pd.Series, ret: pd.Series, cost_bp: float) ->
             "cost_bp": cost_bp}
 
 
-def lead_lag(L: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def lead_lag(L: dict[str, pd.DataFrame], instruments: dict | None = None, etf: bool = False
+             ) -> tuple[pd.DataFrame, pd.DataFrame]:
     us = L.get(INDICES["US"])
     rows, strats = [], []
     if us is None:
         return pd.DataFrame(), pd.DataFrame()
     asia_cc = {}
-    for mkt, tk in INDICES.items():
+    for mkt, tk in (instruments or INDICES).items():
         if mkt == "US" or tk not in L:
             continue
         a = L[tk]
@@ -174,14 +183,17 @@ def lead_lag(L: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame]:
         ]
         for src, tgt, x, y, tradable in tests:
             target_mkt = "US" if tgt.startswith("US") else mkt
-            row = {"market": mkt, "signal": src, "target": f"{target_mkt}: {tgt}", "tradable": tradable}
+            row = {"market": mkt, "instrument": tk, "signal": src, "target": f"{target_mkt}: {tgt}",
+                   "tradable": tradable}
             for tag, (a0, b0) in (("2006_14", P1), ("2015_26", P2)):
                 row[f"corr_{tag}"], row[f"t_{tag}"], row[f"n_{tag}"] = _corr_t(x[a0:b0], y[a0:b0])
             rows.append(row)
             if tradable:
-                cost = 0.0 if target_mkt == "US" else 2.0          # SPY auctions / Asian index futures
-                strats.append({"market": mkt, **_strategy_rows(f"{src} -> {target_mkt} {tgt}", x, y, cost)})
-    if asia_cc:
+                # SPY auctions; Asian index futures (2 bp) or the ETF at its own costs
+                cost = 0.0 if target_mkt == "US" else (ETF_COST.get(mkt, 20.0) if etf else 2.0)
+                strats.append({"market": mkt, "instrument": tk,
+                               **_strategy_rows(f"{src} -> {target_mkt} {tgt}", x, y, cost)})
+    if asia_cc and not etf:
         comp = pd.DataFrame({m: _align_after(s, us.index, False) for m, s in asia_cc.items()}).mean(axis=1)
         for tgt, y in (("US gap", us["gap"]), ("US after the open", us["intraday"])):
             row = {"market": "Asia (average)", "signal": "Asian markets' average close-to-close (D)",
@@ -203,8 +215,37 @@ def _fx_ret(md, fx: str) -> pd.Series | None:
     return -r if inv else r                      # log change of local currency per USD
 
 
+ADR_VARIANTS = {
+    # Yahoo dates an FX bar by its London / New York close, after the US open: using day D's FX move to
+    # build day D's signal would peek at FX moves during the US session (which also move the ADR).
+    "FX lagged a day (clean)": True,
+    "no FX (home move in local currency)": None,
+    "same-day FX (peeks: shown for comparison only)": False,
+}
+
+
+def _adr_book(p: pd.DataFrame, label: str) -> list[dict]:
+    """Long / short ADRs by the sign of the residual, equal weight, market-on-open in, market-on-close out."""
+    p = p.assign(pos=np.sign(p["resid"]))
+    s1 = p[(p["date"] >= P1[0]) & (p["date"] <= P1[1])]
+    d = np.sign((s1["pos"] * s1["ret"]).mean()) if len(s1) else 1.0
+    if not np.isfinite(d) or d == 0:
+        d = 1.0
+    daily = (d * p["pos"] * p["ret"]).groupby(p["date"]).mean()
+    n = p.groupby("date").size()
+    rows = []
+    for cost in (0.0, 1.0, 3.0):
+        net = daily - cost / 1e4
+        rows.append({"strategy": "ADRs: home-vs-gap residual, MOO in / MOC out", "variant": label,
+                     "direction": "+" if d > 0 else "-", "cost_bp_round_trip": cost,
+                     "sharpe_2006_14": _sharpe(net[P1[0]:P1[1]]), "sharpe_2015_26": _sharpe(net[P2[0]:P2[1]]),
+                     "avg_bp_2015_26": float(daily[P2[0]:P2[1]].mean() * 1e4),
+                     "adrs_per_day_2015_26": float(n[P2[0]:P2[1]].mean())})
+    return rows
+
+
 def adr_study(md, L: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame]:
-    rows, panel = [], []
+    rows, panels = [], {k: [] for k in ADR_VARIANTS}
     for adr, (home, fx) in ADRS.items():
         if adr not in L or home not in L:
             continue
@@ -212,41 +253,28 @@ def adr_study(md, L: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFram
         f = _fx_ret(md, fx)
         if f is None:
             continue
-        home_usd = h["cc"] - _align_after(f, h.index, False).fillna(0.0)
-        x_home = _align_after(home_usd, a.index, False)          # the home session just before the US day
-        resid = x_home - a["gap"]                                # home moved more than the ADR gapped
         y = a["intraday"]
-        late = _align_after(a["intraday"], h.index, True)        # ADR's US day -> home's next session
-        for sig_name, x, yy, tgt in (("home move (USD) minus ADR gap", resid, y, "ADR open-to-close"),
-                                     ("home move (USD)", x_home, y, "ADR open-to-close"),
-                                     ("ADR open-to-close (US day)", late, h["intraday"], "home: after its open"),
-                                     ("ADR open-to-close (US day)", late, h["gap"], "home: gap")):
-            row = {"adr": adr, "home": home, "signal": sig_name, "target": tgt}
-            for tag, (a0, b0) in (("2006_14", P1), ("2015_26", P2)):
-                row[f"corr_{tag}"], row[f"t_{tag}"], row[f"n_{tag}"] = _corr_t(x[a0:b0], yy[a0:b0])
-            rows.append(row)
-        panel.append(pd.DataFrame({"date": a.index, "adr": adr, "resid": resid.to_numpy(), "ret": y.to_numpy()}).dropna())
-    strat = pd.DataFrame()
-    if panel:
-        p = pd.concat(panel, ignore_index=True)
-        # long / short ADRs by the sign of the residual, equal weight, market-on-open in, market-on-close out
-        p["pos"] = np.sign(p["resid"])
-        s1 = p[(p["date"] >= P1[0]) & (p["date"] <= P1[1])]
-        d = np.sign((s1["pos"] * s1["ret"]).mean()) if len(s1) else 1.0
-        if not np.isfinite(d) or d == 0:
-            d = 1.0
-        daily = (d * p["pos"] * p["ret"]).groupby(p["date"]).mean()
-        n = p.groupby("date").size()
-        rows_s = []
-        for cost in (0.0, 1.0, 3.0):
-            net = daily - cost / 1e4
-            rows_s.append({"strategy": "ADRs: trade the home-vs-gap residual, MOO in / MOC out",
-                           "direction": "+" if d > 0 else "-", "cost_bp_round_trip": cost,
-                           "sharpe_2006_14": _sharpe(net[P1[0]:P1[1]]), "sharpe_2015_26": _sharpe(net[P2[0]:P2[1]]),
-                           "avg_bp_2015_26": float(daily[P2[0]:P2[1]].mean() * 1e4),
-                           "adrs_per_day_2015_26": float(n[P2[0]:P2[1]].mean())})
-        strat = pd.DataFrame(rows_s)
-    return pd.DataFrame(rows), strat
+        for label, lag in ADR_VARIANTS.items():
+            fx_move = 0.0 if lag is None else _align_after(f, h.index, lag).fillna(0.0)
+            x_home = _align_after(h["cc"] - fx_move, a.index, False)   # the home session just before the US day
+            resid = x_home - a["gap"]                                  # home moved more than the ADR gapped
+            panels[label].append(pd.DataFrame({"date": a.index, "adr": adr, "resid": resid.to_numpy(),
+                                               "ret": y.to_numpy()}).dropna())
+            if lag is True:
+                late = _align_after(a["intraday"], h.index, True)      # ADR's US day -> home's next session
+                for sig_name, x, yy, tgt in (("home move (USD) minus ADR gap", resid, y, "ADR open-to-close"),
+                                             ("home move (USD)", x_home, y, "ADR open-to-close"),
+                                             ("ADR open-to-close (US day)", late, h["intraday"], "home: after its open"),
+                                             ("ADR open-to-close (US day)", late, h["gap"], "home: gap")):
+                    row = {"adr": adr, "home": home, "signal": sig_name, "target": tgt}
+                    for tag, (a0, b0) in (("2006_14", P1), ("2015_26", P2)):
+                        row[f"corr_{tag}"], row[f"t_{tag}"], row[f"n_{tag}"] = _corr_t(x[a0:b0], yy[a0:b0])
+                    rows.append(row)
+    book = []
+    for label, parts in panels.items():
+        if parts:
+            book += _adr_book(pd.concat(parts, ignore_index=True), label)
+    return pd.DataFrame(rows), pd.DataFrame(book)
 
 
 def _xs_weights(sig: pd.DataFrame, frac: float = 0.2) -> pd.DataFrame:
@@ -322,7 +350,7 @@ def run(md_us, ctx, out: Path, cfg) -> dict:
     from ..data.loader import download_prices
 
     fx = sorted({f.removeprefix("1/") for _, f in ADRS.values()})
-    tickers = list(dict.fromkeys(list(INDICES.values()) + list(ADRS) + [h for h, _ in ADRS.values()] + fx
+    tickers = list(dict.fromkeys(list(INDICES.values()) + list(INDEX_ETFS.values()) + list(ADRS) + [h for h, _ in ADRS.values()] + fx
                                  + [t for v in STOCKS.values() for t in v]))
     md = download_prices(tickers, start="2005-01-01")
     LOG.info("Asia: %d of %d tickers downloaded", md.close.shape[1], len(tickers))
@@ -330,6 +358,8 @@ def run(md_us, ctx, out: Path, cfg) -> dict:
     dq = data_quality(L)
     dq.to_csv(out / "asia_data_quality.csv", index=False)
     ll, ll_s = lead_lag(L)
+    ee, ee_s = lead_lag(L, {"US": INDICES["US"], **INDEX_ETFS}, etf=True)
+    ll, ll_s = pd.concat([ll, ee], ignore_index=True), pd.concat([ll_s, ee_s], ignore_index=True)
     ll.to_csv(out / "asia_leadlag.csv", index=False)
     ll_s.to_csv(out / "asia_leadlag_strategies.csv", index=False)
     adr, adr_s = adr_study(md, L)
@@ -345,14 +375,20 @@ def run(md_us, ctx, out: Path, cfg) -> dict:
              "close are dropped (share per ticker in asia_data_quality.csv).", "",
              "### 1. Lead-lag between the US and Asian indices", "",
              "'gap' = previous close -> open (the news is absorbed here: descriptive); 'after the open' = open -> "
-             "close (tradable: SPY at the auctions, Asian markets through index futures).", "",
+             "close. Each market twice: the index (whose first value of the day still holds yesterday's prices "
+             "for stocks that haven't opened yet - Sydney opens in alphabetical groups over 10 minutes - so "
+             "'after the open' partly repeats the gap and looks predictable) and an index ETF, whose open is a "
+             "price you could actually trade. Only the ETF rows count as tradable evidence; index futures also "
+             "trade overnight, so their open has already absorbed the US day.", "",
              ll.round(3).to_markdown(index=False) if len(ll) else "(no data)", "",
-             "Trading the sign of the signal on the 'after the open' leg (cost: 0 bp SPY auctions, 2 bp Asian "
-             "futures round trip):", "",
+             "Trading the sign of the signal on the 'after the open' leg (cost: 0 bp for SPY at the auctions; "
+             "2 bp for an index (as if futures, flattering - see above); each ETF at its market's round trip):", "",
              ll_s.round(3).to_markdown(index=False) if len(ll_s) else "(no data)", "",
              "### 2. ADRs vs their home listings", "",
              "Residual = the home listing's last session in dollars minus the ADR's opening gap. Pooled long / "
-             "short book on Alpaca (market-on-open in, market-on-close out):", "",
+             "short book on Alpaca (market-on-open in, market-on-close out). Yahoo dates FX bars by their "
+             "London / New York close, after the US open, so the clean variant uses the previous day's FX move; "
+             "the same-day variant is shown only to measure how much the peek was worth:", "",
              adr_s.round(3).to_markdown(index=False) if len(adr_s) else "(no data)", "",
              "Per ADR (correlations):", "", adr.round(3).to_markdown(index=False) if len(adr) else "(no data)", "",
              "### 3. Strategies inside each Asian market (long top fifth / short bottom fifth)", "",

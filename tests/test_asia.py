@@ -78,4 +78,26 @@ def test_adr_residual_book_runs():
     md2 = MarketData(open=o, high=np.maximum(o, c), low=np.minimum(o, c), close=c, volume=c * 0 + 1e6)
     per, book = A.adr_study(md2, A.legs(md2))
     assert set(per["adr"]) == {"TSM"} and len(per) == 4
-    assert len(book) == 3 and book["sharpe_2015_26"].notna().all()
+    assert len(book) == 9 and set(book["variant"]) == set(A.ADR_VARIANTS)
+    assert book["sharpe_2015_26"].notna().all()
+
+
+def test_same_day_fx_is_a_peek_and_the_lagged_variant_removes_it():
+    """FX that moves during the US session moves the ADR too; a same-day FX bar leaks it."""
+    md = _market(seed=2)
+    rng = np.random.default_rng(9)
+    days = md.close.index
+    n = len(days)
+    fx_us_hours = rng.normal(0, 0.004, n)                 # local-per-USD move during the US day
+    fx = 30 * np.exp(np.cumsum(fx_us_hours))
+    home = 500 * np.exp(np.cumsum(rng.normal(0, 0.01, n)))
+    adr_intra = -fx_us_hours + rng.normal(0, 0.002, n)     # a stronger local currency lifts the ADR
+    adr_o = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, n)))
+    adr_c = adr_o * np.exp(adr_intra)
+    c = pd.concat([md.close, pd.DataFrame({"2330.TW": home, "TWD=X": fx, "TSM": adr_c}, index=days)], axis=1)
+    o = pd.concat([md.open, pd.DataFrame({"2330.TW": home * 0.999, "TWD=X": fx, "TSM": adr_o}, index=days)], axis=1)
+    md2 = MarketData(open=o, high=np.maximum(o, c), low=np.minimum(o, c), close=c, volume=c * 0 + 1e6)
+    _, book = A.adr_study(md2, A.legs(md2))
+    b0 = book[book.cost_bp_round_trip == 0].set_index("variant")["sharpe_2015_26"]
+    assert b0["same-day FX (peeks: shown for comparison only)"] > 3
+    assert abs(b0["FX lagged a day (clean)"]) < 1.5

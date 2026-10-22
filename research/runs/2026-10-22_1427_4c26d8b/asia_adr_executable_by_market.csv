@@ -1,0 +1,25 @@
+variant,market,adrs,direction,sharpe_2016_20,sharpe_2021_26,avg_bp_2021_26
+official open (backtest reference; not executable at the open),Australia,1,+,0.8917538934651771,0.8617654541124564,6.423069917460719
+official open (backtest reference; not executable at the open),China,16,+,2.1180354760154425,0.898704117671723,6.623994353871785
+official open (backtest reference; not executable at the open),India,5,+,2.1311249194634283,2.849106228215564,10.868270991501209
+official open (backtest reference; not executable at the open),Japan,10,+,1.3763518381896107,0.7455436553290241,3.062796285396643
+official open (backtest reference; not executable at the open),Korea,8,+,3.2294008059272534,2.843825817948239,11.751217218062287
+official open (backtest reference; not executable at the open),Taiwan,4,+,2.8517786188308514,0.5102150910396245,3.325327750375613
+pre-market price before 9:25 -> market-on-open (else the last close),Australia,1,+,0.1018369659903051,0.3637696896797211,2.7145974544514413
+pre-market price before 9:25 -> market-on-open (else the last close),China,16,+,0.8158437974118212,0.5601245434890191,4.259536265415121
+pre-market price before 9:25 -> market-on-open (else the last close),India,5,+,1.975906826800882,3.2182613780831133,13.120489327711075
+pre-market price before 9:25 -> market-on-open (else the last close),Japan,10,+,2.506396101760039,1.5276376453763914,5.827747984326718
+pre-market price before 9:25 -> market-on-open (else the last close),Korea,8,+,3.8233477924649777,2.7376977258428155,10.843710986485542
+pre-market price before 9:25 -> market-on-open (else the last close),Taiwan,4,+,2.4813769987036682,1.5081616477564503,9.4499708181734
+pre-market price before 9:25 -> market-on-open (names with a pre-market trade),Australia,1,-,,,-25.254487026748915
+pre-market price before 9:25 -> market-on-open (names with a pre-market trade),China,15,-,,-0.3023137308181767,-4.75029866673642
+pre-market price before 9:25 -> market-on-open (names with a pre-market trade),India,5,+,,,37.212312703819144
+pre-market price before 9:25 -> market-on-open (names with a pre-market trade),Japan,10,+,,-0.22948435053380403,-1.527255602518214
+pre-market price before 9:25 -> market-on-open (names with a pre-market trade),Korea,7,+,,,48.565512922571294
+pre-market price before 9:25 -> market-on-open (names with a pre-market trade),Taiwan,4,-,,-0.8658764758236784,-10.454627046866184
+official open -> enter 9:35 with market orders,Australia,1,+,0.6042253227596109,0.9567603568091596,6.7092874186692
+official open -> enter 9:35 with market orders,China,16,-,-0.7749265424047561,-0.3076384734146229,-2.0522285433338743
+official open -> enter 9:35 with market orders,India,5,+,0.3256570135544469,1.6919089750502443,5.942035098064234
+official open -> enter 9:35 with market orders,Japan,10,+,0.21522830462765943,-0.1481020469794993,-0.5678643212961054
+official open -> enter 9:35 with market orders,Korea,8,+,0.8842383217386409,1.1234092384072116,4.351886750089531
+official open -> enter 9:35 with market orders,Taiwan,4,+,0.42978090598491225,-0.3865101643577479,-2.3749346973208283

@@ -1,0 +1,10 @@
+strategy,variant,direction,cost_bp_round_trip,sharpe_2006_14,sharpe_2015_26,avg_bp_2015_26,adrs_per_day_2015_26
+"ADRs: home-vs-gap residual, MOO in / MOC out",FX lagged a day (clean),+,0.0,3.5554010609529163,2.6430007453121207,7.796624768543296,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",FX lagged a day (clean),+,1.0,3.3515954462968267,2.304007806216768,7.796624768543296,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",FX lagged a day (clean),+,3.0,2.943984216984648,1.6260219280260613,7.796624768543296,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",no FX (home move in local currency),+,0.0,3.6070768333093617,3.0870414780522886,9.002753567562236,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",no FX (home move in local currency),+,1.0,3.400189679089074,2.744141780211487,9.002753567562236,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",no FX (home move in local currency),+,3.0,2.9864153706485,2.0583423845298845,9.002753567562236,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",same-day FX (peeks: shown for comparison only),+,0.0,3.8966969193398175,2.6370675932189305,7.959618394069878,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",same-day FX (peeks: shown for comparison only),+,1.0,3.6889100262852286,2.3057618116272387,7.959618394069878,22.056266846361186
+"ADRs: home-vs-gap residual, MOO in / MOC out",same-day FX (peeks: shown for comparison only),+,3.0,3.273336240176052,1.6431502484438545,7.959618394069878,22.056266846361186

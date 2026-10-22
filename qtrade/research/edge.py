@@ -27,6 +27,7 @@ from ..signals import REGISTRY, compute_signals
 from ..utils import LOG, rank_ic
 
 SPLIT = "2015-01-01"
+START_1ST = "2006-01-01"     # period 1 = 2006-2014 (data from 2000 only warms up signals and models)
 HALFLIVES = [0, 5, 20]
 HORIZONS = [1, 5, 21]
 
@@ -49,7 +50,8 @@ def portfolio_stats(w: pd.DataFrame, r1: pd.DataFrame, cost: pd.DataFrame | None
 
 def summarize(daily: pd.DataFrame) -> dict:
     res = {}
-    for name, part in (("1st", daily[daily.index < SPLIT]), ("2nd", daily[daily.index >= SPLIT])):
+    for name, part in (("1st", daily[(daily.index >= START_1ST) & (daily.index < SPLIT)]),
+                       ("2nd", daily[daily.index >= SPLIT])):
         g, u = part["gross"], part["turnover"]
         res[f"gross_ret_{name}"] = g.mean() * 252
         res[f"gross_sharpe_{name}"] = g.mean() / g.std() * np.sqrt(252) if g.std() > 0 else np.nan
@@ -88,7 +90,7 @@ class Bench:
         rows = []
         for h in HORIZONS:
             ic = pd.Series(rank_ic(z.to_numpy(), self.fwd[h]), index=z.index).dropna()
-            a, b = ic[ic.index < SPLIT], ic[ic.index >= SPLIT]
+            a, b = ic[(ic.index >= START_1ST) & (ic.index < SPLIT)], ic[ic.index >= SPLIT]
             rows.append({"signal": name, "horizon": h, "ic_1st": a.mean(), "ic_2nd": b.mean(),
                          "t_1st": a.mean() / a.std() * np.sqrt(len(a) / h) if len(a) > 10 else np.nan,
                          "t_2nd": b.mean() / b.std() * np.sqrt(len(b) / h) if len(b) > 10 else np.nan})

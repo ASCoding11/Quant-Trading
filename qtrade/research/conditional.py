@@ -66,7 +66,7 @@ def run(md, ctx, out: Path, cfg, sigs: dict[str, pd.DataFrame], news_counts: pd.
             ic_out = pd.Series(rank_ic(np.where(~cm, zn, np.nan), fwd), index=z.index)
             mask = pd.DataFrame(cm, index=z.index, columns=z.columns)
             row = {"signal": sname, "condition": cname, "share_in": float(cm.mean())}
-            for per, sel in (("1st", z.index < SPLIT), ("2nd", z.index >= SPLIT)):
+            for per, sel in (("1st", (z.index >= "2006-01-01") & (z.index < SPLIT)), ("2nd", z.index >= SPLIT)):
                 row[f"ic5_in_{per}"] = ic_in[sel].mean()
                 row[f"ic5_out_{per}"] = ic_out[sel].mean()
             for hl in (0, 5):

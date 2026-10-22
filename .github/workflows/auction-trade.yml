@@ -1,35 +1,40 @@
 name: auction-trade
 
 # The auction trader on Alpaca paper (qtrade/intraday/auction_live.py):
-#   close phase  ~15:45 New York: market-on-close orders for the overnight book
-#   open phase   before 9:28:     market-on-open orders that close everything
-#                (a late run after the open closes them with regular market orders)
-# Each phase first reports the previous auction's fills against the official
+#   ~15:45 New York  market-on-close orders for the overnight book
+#   9:00-9:27        market-on-open orders that close everything
+#                    (9:31-10:30: anything still open is closed with market orders)
+# Each action first reports the previous auction's fills against the official
 # open / close (the real cost; the backtest assumes 0 bp).
 #
-# It owns the paper account overnight, so only one trader runs on schedule:
-# this one by default, or the others when the repository variable
-# TRADING_MODE is "daily" (paper-trade) or "intraday" (intraday-trade).
+# GitHub starts scheduled runs hours late on busy days (on 2026-10-21 by 2.5-5
+# hours, which missed the first close), so nothing here depends on the
+# scheduler's timing. A "keeper" job stays up for ~5.4 hours polling the clock
+# and acts at the right minute; before it ends it starts the next keeper, so
+# one is always running. The hourly schedules are only a watchdog that starts a
+# keeper if the chain ever breaks. Every action is guarded against repeats, so
+# overlapping keepers can't double-trade.
 #
-# GitHub's scheduler can start runs late or drop them (it skipped the first
-# close on 2026-10-21), so each phase is scheduled several times, covering
-# summer and winter time. The first close run to start waits inside the job
-# until 15:45 and trades; later runs see today's market-on-close orders and
-# skip. Morning runs skip once market-on-open orders are queued.
+# It owns the paper account overnight: it runs only while the repository
+# variable TRADING_MODE is "auction" or unset ("daily" -> paper-trade,
+# "intraday" -> intraday-trade). Changing the variable stops the chain.
 
 on:
   schedule:
-    - cron: "5 16,17,18,19,20 * * 1-5"   # 12:05-16:05 New York in summer, 11:05-15:05 in winter
-    - cron: "5 11,12,13 * * 1-5"         # 7:05-9:05 New York in summer, 6:05-8:05 in winter
+    - cron: "17 * * * 1-5"        # watchdog only: start a keeper if none is running
   workflow_dispatch:
     inputs:
       phase:
-        description: "close (market-on-close book), open (market-on-open exit) or report"
-        default: "report"
+        description: "keeper (stay up and trade at the right moments), close, open or report"
+        default: "keeper"
       send:
         description: "Send orders to the paper account (false = dry run)"
         type: boolean
         default: false
+
+permissions:
+  contents: read
+  actions: write                  # the keeper starts its successor
 
 concurrency:
   group: paper-account
@@ -37,24 +42,29 @@ concurrency:
 
 jobs:
   trade:
-    if: github.event_name != 'schedule' || (vars.TRADING_MODE || 'auction') == 'auction'
+    if: (vars.TRADING_MODE || 'auction') == 'auction' || (github.event_name == 'workflow_dispatch' && inputs.phase != 'keeper')
     runs-on: ubuntu-latest
-    timeout-minutes: 300           # a close run may wait up to ~4 hours for 15:45
+    timeout-minutes: 350
     env:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
       QTRADE_CONFIG: ${{ vars.AUCTION_CONFIG || 'config/auction_paper.yaml' }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Which phase?
         id: phase
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "phase=${{ inputs.phase }}" >> "$GITHUB_OUTPUT"; exit 0
+          PHASE="${{ inputs.phase || 'keeper' }}"
+          SEND="${{ inputs.send }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            SEND=true
+            # watchdog: stand aside if a keeper is already running
+            RUNNING=$(gh run list -R "${{ github.repository }}" --workflow auction-trade.yml --status in_progress \
+                      --json databaseId -q "[.[] | select(.databaseId != ${{ github.run_id }})] | length")
+            if [ "${RUNNING:-0}" -gt 0 ]; then echo "a keeper is running - nothing to do"; PHASE=none; fi
           fi
-          NOW=$(TZ=America/New_York date +%H%M)
-          if [ "$NOW" -ge 1200 ] && [ "$NOW" -lt 1549 ]; then echo "phase=close" >> "$GITHUB_OUTPUT"
-          elif [ "$NOW" -ge 600 ] && [ "$NOW" -lt 1100 ]; then echo "phase=open" >> "$GITHUB_OUTPUT"
-          else echo "phase=none" >> "$GITHUB_OUTPUT"; echo "New York time $NOW is outside both windows"; fi
+          echo "phase=$PHASE" >> "$GITHUB_OUTPUT"
+          echo "send=$SEND" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.phase.outputs.phase != 'none'
       - uses: actions/setup-python@v5
@@ -72,17 +82,23 @@ jobs:
           git show origin/results:intraday/latest/model.json > data/auction_tickers.json
           git show origin/results:intraday/edge/signs.json > data/auction_signs.json 2>/dev/null \
             || { echo "no signs.json yet - using the default directions"; rm -f data/auction_signs.json; }
-          cat data/auction_signs.json 2>/dev/null || true
       - name: Trade
         if: steps.phase.outputs.phase != 'none'
         run: |
-          SEND=""
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.send }}" = "true" ]; then SEND="--send"; fi
+          SEND=""; [ "${{ steps.phase.outputs.send }}" = "true" ] && SEND="--send"
           python -m qtrade ${QTRADE_CONFIG:+--config "$QTRADE_CONFIG"} auction-paper \
-            --phase "${{ steps.phase.outputs.phase }}" $SEND --out logs
+            --phase "${{ steps.phase.outputs.phase }}" --hours 5.4 $SEND --out logs
+      - name: Start the next keeper
+        # only real (sending) keepers continue the chain; a manual dry run ends after one window
+        if: always() && steps.phase.outputs.phase == 'keeper' && steps.phase.outputs.send == 'true' && (vars.TRADING_MODE || 'auction') == 'auction'
+        run: |
+          gh workflow run auction-trade.yml -R "${{ github.repository }}" --ref "${{ github.ref_name }}" \
+            -f phase=keeper -f send=${{ steps.phase.outputs.send }}
+          echo "next keeper started"
       - uses: actions/upload-artifact@v4
         if: always() && steps.phase.outputs.phase != 'none'
         with:
           name: auction-${{ steps.phase.outputs.phase }}-${{ github.run_id }}
           path: logs
           retention-days: 30
+          if-no-files-found: ignore

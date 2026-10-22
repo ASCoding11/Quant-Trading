@@ -57,6 +57,12 @@ def main(argv=None):
             if task == "quality":
                 from .data_quality import run
                 summary[task] = run(md, ctx, out, cfg.data.cache_dir)
+            elif task == "consumer":
+                from .consumer_earnings import run
+                summary[task] = run(md, ctx, out, cfg)
+            elif task == "flip":
+                from .flip_check import run
+                summary[task] = run(md, ctx, out, cfg)
             elif task == "multi":
                 import pandas as pd
 

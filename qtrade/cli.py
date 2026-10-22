@@ -181,6 +181,11 @@ def cmd_auction_paper(args):
 
     cfg = _cfg(args)
     dry = not args.send
+    if args.phase == "keeper":
+        tickers, signs = A.load_inputs(args.tickers, args.signs)
+        res = A.run_keeper(cfg, tickers, signs, hours=args.hours, dry_run=dry, out_dir=args.out)
+        print(f"auction keeper: {res['status']}, {len(res['actions'])} actions")
+        return
     try:
         A.fill_report(days=4, out_dir=args.out)
     except Exception as exc:          # the report must never block trading
@@ -319,8 +324,10 @@ def main(argv=None):
     p.add_argument("--status-file", help="write done / continue / closed here")
     p.set_defaults(fn=cmd_intraday_paper)
     p = sub.add_parser("auction-paper", help="trade the auction strategies on Alpaca paper")
-    p.add_argument("--phase", choices=["close", "open", "report"], required=True,
-                   help="close: market-on-close book (~15:45); open: market-on-open exit (before 9:28)")
+    p.add_argument("--phase", choices=["keeper", "close", "open", "report"], required=True,
+                   help="keeper: stay up and act at the right moments; close: market-on-close book (~15:45); "
+                        "open: market-on-open exit (before 9:28)")
+    p.add_argument("--hours", type=float, default=5.4, help="keeper: how long to stay up")
     p.add_argument("--tickers", default="data/auction_tickers.json", help="JSON list (or {'tickers': [...]})")
     p.add_argument("--signs", default="data/auction_signs.json", help="strategy directions from the backtest")
     p.add_argument("--send", action="store_true", help="really submit orders (paper account)")

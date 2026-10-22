@@ -1,74 +1,74 @@
 {
-  "date": "2026-10-20",
-  "time": "2026-10-20 19:58 EDT",
-  "equity": 100128.29,
-  "last_equity": 100000.0,
-  "day_pnl": 128.29,
+  "date": "2026-10-21",
+  "time": "2026-10-21 20:03 EDT",
+  "equity": 100131.1,
+  "last_equity": 100066.36,
+  "day_pnl": 64.74,
   "strategy_capital": 10000.0,
-  "day_return_on_capital": 0.012829,
-  "day_return_on_account": 0.001283,
-  "spy_day_return": 0.003248,
+  "day_return_on_capital": 0.006474,
+  "day_return_on_account": 0.000647,
+  "spy_day_return": 0.005253,
   "long_names": 19,
   "short_names": 17,
-  "long_value": 5778.74,
-  "short_value": 3617.1,
-  "gross_on_capital": 0.94,
+  "long_value": 5753.83,
+  "short_value": 3589.29,
+  "gross_on_capital": 0.934,
   "net_on_capital": 0.216,
-  "orders_today": 36,
-  "filled_today": 36,
-  "unrealized_pnl_total": 128.29,
+  "orders_today": 0,
+  "filled_today": 0,
+  "unrealized_pnl_total": 131.19,
   "best_today": [
     {
-      "symbol": "VICR",
+      "symbol": "PDFS",
       "side": "long",
-      "pnl_today": 33.38
+      "pnl_today": 19.32
     },
     {
-      "symbol": "UCTT",
-      "side": "long",
-      "pnl_today": 31.36
-    },
-    {
-      "symbol": "VIAV",
-      "side": "long",
-      "pnl_today": 27.3
+      "symbol": "CELH",
+      "side": "short",
+      "pnl_today": 19.0584
     },
     {
       "symbol": "COHU",
       "side": "long",
-      "pnl_today": 20.55
+      "pnl_today": 12.8
     },
     {
-      "symbol": "AKAM",
+      "symbol": "VECO",
       "side": "long",
-      "pnl_today": 19.575
+      "pnl_today": 10.45
+    },
+    {
+      "symbol": "VICR",
+      "side": "long",
+      "pnl_today": 10.0506
     }
   ],
   "worst_today": [
     {
-      "symbol": "MKSI",
+      "symbol": "TTMI",
       "side": "short",
-      "pnl_today": -21.24
+      "pnl_today": -10.48
+    },
+    {
+      "symbol": "PVH",
+      "side": "long",
+      "pnl_today": -8.73
     },
     {
       "symbol": "CLF",
       "side": "short",
-      "pnl_today": -16.379997
+      "pnl_today": -8.37
     },
     {
-      "symbol": "GLW",
+      "symbol": "MKSI",
       "side": "short",
-      "pnl_today": -15.06
+      "pnl_today": -5.72
     },
     {
-      "symbol": "TTMI",
+      "symbol": "SPSC",
       "side": "short",
-      "pnl_today": -10.22
-    },
-    {
-      "symbol": "ITRI",
-      "side": "short",
-      "pnl_today": -6.6
+      "pnl_today": -2.78
     }
   ]
 }

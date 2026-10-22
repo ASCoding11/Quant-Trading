@@ -3,21 +3,23 @@
 Real high-frequency trading needs colocation and direct exchange feeds; Alpaca's API
 is ~100 ms+ away and its paper simulator fills at will. So nothing here touches the
 account. During market hours it pulls every IEX quote update and trade (Alpaca's free
-real-time feed) for a handful of liquid stocks every two seconds and runs three
+real-time feed) for a handful of liquid stocks every second and runs three
 simulated strategies, logging each trade with its prices and P&L:
 
 * ``imbalance_taker`` - when the book is lopsided (|quote imbalance| >= 0.6: e.g. far
   more shares bid than offered), buy at the ask / sell at the bid, and get out 30 s
   later crossing the spread again;
 * ``market_maker`` - every 10 s, rest one order at the best bid and one at the best
-  ask for 10 s. A resting order fills only if a trade prints *through* it (so the
-  queue ahead of it must have been used up - conservative). Exits 30 s later crossing
-  the spread (``pnl_bp``) and, for reference, marked at the midquote (``pnl_mid_bp``);
+  ask for 10 s; with instant execution it fills as soon as a trade prints at its price
+  (or through it). Exits 30 s later at the quoted price (``pnl_bp``) and, for
+  reference, at the midquote (``pnl_mid_bp``);
 * ``maker_with_signal`` - the same, quoting only the side the imbalance favours.
 
-Costs: no commission (IBKR Lite / Alpaca), the SEC fee on sales (0.278 bp). IEX's own
-book is thinner and wider than the national best bid and offer, so spreads here are
-conservative.
+Assumptions (the Google Sheet's paper book): every order executes instantly at the price
+quoted at that moment, and fees are 0 bp. Nothing is ever sent to Alpaca, which only
+supplies the live IEX quotes and trades. ``pnl_bp`` buys at the ask and sells at the bid
+(the quoted prices); ``pnl_mid_bp`` is the same trade at midquotes (no spread at all).
+IEX's own book is thinner and wider than the national best bid and offer.
 """
 from __future__ import annotations
 
@@ -35,7 +37,7 @@ NY = "America/New_York"
 QUOTES_URL = "https://data.alpaca.markets/v2/stocks/quotes"
 TRADES_URL = "https://data.alpaca.markets/v2/stocks/trades"
 SYMBOLS = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "AMZN", "TSLA", "META", "AMD", "BAC"]
-SEC_FEE_BP = 0.278
+FEE_BP = 0.0                    # the sheet's assumption: no fees at all
 IMB_THRESHOLD = 0.6
 HOLD_S = 30
 MM_EVERY_S = 10
@@ -93,7 +95,7 @@ class ShadowHFT:
         for o in list(self.resting):                 # a trade through a resting order fills it
             if o["symbol"] != sym or t <= o["placed"] or t > o["expires"]:
                 continue
-            if (o["side"] == "buy" and price < o["price"]) or (o["side"] == "sell" and price > o["price"]):
+            if (o["side"] == "buy" and price <= o["price"]) or (o["side"] == "sell" and price >= o["price"]):
                 self.resting.remove(o)
                 self.held.append({**o, "entry_time": t, "exit_due": t + pd.Timedelta(seconds=HOLD_S)})
 
@@ -128,8 +130,8 @@ class ShadowHFT:
                 continue
             exit_px = b.bid if pos["side"] == "buy" else b.ask        # get out crossing the spread
             d = 1.0 if pos["side"] == "buy" else -1.0
-            pnl = d * (exit_px / pos["entry_price"] - 1) * 1e4 - SEC_FEE_BP / 2
-            pnl_mid = d * (b.mid / pos["entry_price"] - 1) * 1e4 - SEC_FEE_BP / 2
+            pnl = d * (exit_px / pos["entry_price"] - 1) * 1e4 - FEE_BP
+            pnl_mid = d * (b.mid / pos["entry_price"] - 1) * 1e4 - FEE_BP
             self.closed.append({"strategy": pos["strategy"], "symbol": pos["symbol"], "side": pos["side"],
                                 "entry_time": pos["entry_time"], "entry_price": pos["entry_price"],
                                 "exit_time": now, "exit_price": exit_px, "pnl_bp": pnl, "pnl_mid_bp": pnl_mid,
@@ -157,12 +159,12 @@ def _pull(client, url: str, key: str, symbols: list[str], start: pd.Timestamp, e
 
 
 def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | None = None,
-        poll_s: float = 2.0) -> Path | None:
+        poll_s: float = 1.0) -> Path | None:
     """Trade in the shadow until ``minutes`` have passed or the market closes; returns the trade log."""
     from ..data.intraday import AlpacaBars
 
     symbols = symbols or SYMBOLS
-    client = AlpacaBars(feed="iex", per_minute=90)      # leaves headroom for the auction trader's calls
+    client = AlpacaBars(feed="iex", per_minute=140)     # leaves headroom for other data calls
     hft = ShadowHFT(symbols)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)

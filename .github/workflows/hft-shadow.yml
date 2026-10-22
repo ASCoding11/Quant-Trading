@@ -1,7 +1,7 @@
 name: hft-shadow
 
 # Shadow high-frequency trader (qtrade/intraday/hft_shadow.py): simulated trades on
-# live IEX quotes for liquid stocks, every trade logged with its prices and P&L. It
+# live IEX quotes for liquid stocks (instant fills, 0 bp fees), every trade logged. It
 # never touches the paper account. The trade log is encrypted to
 # config/ledger_public_key.pem (quotes are market data) and kept on the results
 # branch under paper/hft/; the research session copies it into the Google Sheet.

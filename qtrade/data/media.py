@@ -179,13 +179,20 @@ def parse_gdelt(payload: dict, field: str = "value", total: bool = False) -> pd.
     return s.groupby(level=0).sum(min_count=1)
 
 
-def _gdelt(api: Paced, url: str, query: str, mode: str, start: str = START, end: str | None = None) -> dict | None:
+FAILED = "failed"     # a request GDELT refused or that timed out: try the key again later
+
+
+def _gdelt(api: Paced, url: str, query: str, mode: str, start: str = START, end: str | None = None):
+    """The parsed timeline; None when GDELT answers but won't run the query (its error text,
+    e.g. a name too short to search); FAILED when it throttles or the request fails."""
     end = end or pd.Timestamp.today().strftime("%Y-%m-%d")
     params = {"query": query, "mode": mode, "format": "json",
               "startdatetime": pd.Timestamp(start).strftime("%Y%m%d000000"),
               "enddatetime": pd.Timestamp(end).strftime("%Y%m%d235959")}
-    r = api.get(url, params)
-    if r is None or r.status_code != 200 or not r.text.strip().startswith("{"):
+    r = api.get(url, params, tries=2)
+    if r is None or r.status_code != 200:
+        return FAILED
+    if not r.text.strip().startswith("{"):
         return None
     try:
         return r.json()
@@ -193,18 +200,23 @@ def _gdelt(api: Paced, url: str, query: str, mode: str, start: str = START, end:
         return None
 
 
-def _gdelt_daily(api: Paced, url: str, query: str, mode: str) -> tuple[pd.Series | None, pd.Series | None]:
-    """(daily values, daily total articles for volraw); falls back to yearly windows when the
-    whole span comes back coarser than daily."""
+def _gdelt_daily(api: Paced, url: str, query: str, mode: str):
+    """(daily values, daily total articles for volraw), or (FAILED, None). Falls back to yearly
+    windows only when the whole span comes back coarser than daily - never after a refusal, which
+    turned one throttled key into ten throttled requests."""
     p = _gdelt(api, url, query, mode)
-    if p is not None and (p.get("query_details") or {}).get("date_resolution", "day") == "day":
+    if p is FAILED:
+        return FAILED, None
+    if p is None:
+        return None, None
+    if (p.get("query_details") or {}).get("date_resolution", "day") == "day":
         return parse_gdelt(p), (parse_gdelt(p, total=True) if mode == "timelinevolraw" else None)
     vals, tots = [], []
     for y in range(pd.Timestamp(START).year, pd.Timestamp.today().year + 1):
         q = _gdelt(api, url, query, mode, f"{y}-01-01", f"{y}-12-31")
-        if q is None:
-            continue
-        v = parse_gdelt(q)
+        if q is FAILED:
+            return FAILED, None
+        v = parse_gdelt(q) if q else None
         if v is not None:
             vals.append(v)
             if mode == "timelinevolraw":
@@ -216,11 +228,14 @@ def _gdelt_daily(api: Paced, url: str, query: str, mode: str) -> tuple[pd.Series
 
 def collect_gdelt(keys: dict[str, str], name: str, url: str, modes: tuple[str, ...], root, deadline: float,
                   api: Paced) -> int:
-    """{key: GDELT query} -> ``<name>_<mode>.parquet`` per mode; returns keys still to fetch."""
+    """{key: GDELT query} -> ``<name>_<mode>.parquet`` per mode; returns keys still to fetch.
+    A refused request leaves the key to fetch later (it is never recorded as having no data); after
+    three refusals in a row the collector pauses, longer each time, since GDELT is throttling."""
     left = 0
     for mode in modes:
         st = Store(media_root(root) / f"{name}_{mode}.parquet")
         tot = Store(media_root(root) / "gdelt_total_articles.parquet") if mode == "timelinevolraw" else None
+        fails, got = 0, 0
         for k, q in keys.items():
             if st.has(k):
                 continue
@@ -228,10 +243,22 @@ def collect_gdelt(keys: dict[str, str], name: str, url: str, modes: tuple[str, .
                 left += 1
                 continue
             v, t = _gdelt_daily(api, url, q, mode)
+            if v is FAILED:
+                fails += 1
+                left += 1
+                if fails >= 3:
+                    pause = min(120 * (fails - 2), 900)
+                    LOG.warning("GDELT is refusing requests (%d in a row) - pausing %d s", fails, pause)
+                    time.sleep(max(0.0, min(pause, deadline - time.time())))
+                continue
+            fails = 0
+            got += 1
             st.add(k, v if v is not None and v.abs().sum() > 0 else None)
             if tot is not None and t is not None and not tot.has("all"):
                 tot.add("all", t)
                 tot.save()
+            if got % 25 == 0:
+                LOG.info("GDELT %s %s: %d fetched this run", name, mode, got)
         st.save()
         LOG.info("GDELT %s %s: %d keys with data, %d without", name, mode, st.df.shape[1], len(st.empty))
     return left
@@ -473,7 +500,7 @@ def collect_all(tickers: list[str], budget_min: float, root=None, data_root: str
         except Exception as exc:
             LOG.warning("%s collection failed: %s", label, exc)
             left[label] = -1
-    api = Paced(6.0)
+    api = Paced(8.0)                                          # GDELT: one request per 5 s at most
     themes = {t: (f'"{t}"' if " " in t else t) for t in THEMES}
     comp = {t: f'"{n}"' for t, n in names.items()}
     tv_comp = dict(list(comp.items())[:n_tv])                  # tickers come most liquid first

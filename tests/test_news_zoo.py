@@ -104,3 +104,28 @@ def test_collect_gdelt_resumes(tmp_path, monkeypatch):
     left = M.collect_gdelt({"CCC": '"C"'}, "gdelt_company", M.GDELT_DOC, ("timelinevolraw",), tmp_path,
                            time.time() - 1, None)
     assert left == 1                                            # out of time: reported as still to fetch
+
+
+def test_gdelt_refusals_are_retried_not_recorded_as_empty(tmp_path, monkeypatch):
+    import time
+
+    from qtrade.data import media as M
+
+    calls = []
+
+    def fake(api, url, query, mode, start=M.START, end=None):
+        calls.append(query)
+        if query == '"Throttled"':
+            return M.FAILED                       # 429: no yearly fallback, no "empty" record
+        if query == '"X"':
+            return None                           # GDELT's error text: genuinely nothing to fetch
+        return {"query_details": {"date_resolution": "day"},
+                "timeline": [{"data": [{"date": "20170101T000000Z", "value": 5, "norm": 900}]}]}
+
+    monkeypatch.setattr(M, "_gdelt", fake)
+    monkeypatch.setattr(M.time, "sleep", lambda s: None)
+    keys = {"THR": '"Throttled"', "X": '"X"', "OK": '"Fine"'}
+    left = M.collect_gdelt(keys, "gdelt_company", M.GDELT_DOC, ("timelinevolraw",), tmp_path, time.time() + 60, None)
+    assert left == 1 and calls.count('"Throttled"') == 1           # one request, not 1 + 10 yearly ones
+    st = M.Store(tmp_path / "gdelt_company_timelinevolraw.parquet")
+    assert not st.has("THR") and st.has("X") and st.has("OK")

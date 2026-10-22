@@ -1,74 +1,74 @@
 {
-  "date": "2026-10-21",
-  "time": "2026-10-21 20:03 EDT",
-  "equity": 100131.1,
-  "last_equity": 100066.36,
-  "day_pnl": 64.74,
+  "date": "2026-10-22",
+  "time": "2026-10-22 10:01 EDT",
+  "equity": 100080.08,
+  "last_equity": 100149.4,
+  "day_pnl": -69.32,
   "strategy_capital": 10000.0,
-  "day_return_on_capital": 0.006474,
-  "day_return_on_account": 0.000647,
-  "spy_day_return": 0.005253,
-  "long_names": 19,
-  "short_names": 17,
-  "long_value": 5753.83,
-  "short_value": 3589.29,
-  "gross_on_capital": 0.934,
-  "net_on_capital": 0.216,
-  "orders_today": 0,
-  "filled_today": 0,
-  "unrealized_pnl_total": 131.19,
+  "day_return_on_capital": -0.006932,
+  "day_return_on_account": -0.000692,
+  "spy_day_return": -0.007631,
+  "long_names": 17,
+  "short_names": 16,
+  "long_value": 4649.57,
+  "short_value": 3042.6,
+  "gross_on_capital": 0.769,
+  "net_on_capital": 0.161,
+  "orders_today": 36,
+  "filled_today": 3,
+  "unrealized_pnl_total": 57.64,
   "best_today": [
-    {
-      "symbol": "PDFS",
-      "side": "long",
-      "pnl_today": 19.32
-    },
-    {
-      "symbol": "CELH",
-      "side": "short",
-      "pnl_today": 19.0584
-    },
-    {
-      "symbol": "COHU",
-      "side": "long",
-      "pnl_today": 12.8
-    },
-    {
-      "symbol": "VECO",
-      "side": "long",
-      "pnl_today": 10.45
-    },
-    {
-      "symbol": "VICR",
-      "side": "long",
-      "pnl_today": 10.0506
-    }
-  ],
-  "worst_today": [
     {
       "symbol": "TTMI",
       "side": "short",
-      "pnl_today": -10.48
-    },
-    {
-      "symbol": "PVH",
-      "side": "long",
-      "pnl_today": -8.73
+      "pnl_today": 22.355
     },
     {
       "symbol": "CLF",
       "side": "short",
-      "pnl_today": -8.37
+      "pnl_today": 14.725
     },
     {
-      "symbol": "MKSI",
+      "symbol": "GLW",
       "side": "short",
-      "pnl_today": -5.72
+      "pnl_today": 12.56
     },
     {
-      "symbol": "SPSC",
-      "side": "short",
-      "pnl_today": -2.78
+      "symbol": "FISV",
+      "side": "long",
+      "pnl_today": 9.77
+    },
+    {
+      "symbol": "EFX",
+      "side": "long",
+      "pnl_today": 6.835
+    }
+  ],
+  "worst_today": [
+    {
+      "symbol": "VIAV",
+      "side": "long",
+      "pnl_today": -36.68
+    },
+    {
+      "symbol": "VICR",
+      "side": "long",
+      "pnl_today": -36.26
+    },
+    {
+      "symbol": "UCTT",
+      "side": "long",
+      "pnl_today": -34.16
+    },
+    {
+      "symbol": "COHU",
+      "side": "long",
+      "pnl_today": -18.625
+    },
+    {
+      "symbol": "VECO",
+      "side": "long",
+      "pnl_today": -11.2
     }
   ]
 }

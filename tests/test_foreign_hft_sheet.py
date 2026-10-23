@@ -17,7 +17,8 @@ def test_session_rows_and_summary():
     c = pd.DataFrame(100 * np.exp(np.cumsum(rng.normal(0, 0.002, (len(idx), 30)), 0)), index=idx,
                      columns=[f"S{i}" for i in range(30)])
     o = c.shift(1).fillna(100.0)
-    rows = T.session_rows("Germany", "reversal k=3 h=12", o, c, days[1].date())
+    rows = T.session_rows("Germany", "reversal k=3 h=12", o, c, days[1].date(), 10_000 / 9)
+    assert np.isclose(rows[0][10], round(10_000 / 9 * rows[0][9] / 1e4, 2), atol=0.011)
     assert rows and all(r[0] == "2026-10-23" for r in rows) and len(rows[0]) == len(T.HEADER)
     assert all(len(r[5].split()) == 6 and len(r[6].split()) == 6 for r in rows)    # a fifth of 30 each side
     s = T.summarise(rows)

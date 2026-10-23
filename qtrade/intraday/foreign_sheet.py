@@ -1,4 +1,5 @@
-"""Overnight persistence on foreign stock exchanges, as a sleeve of the simulated $10,000 sheet book.
+"""Overnight persistence on foreign stock exchanges (Asia and Europe), as a sleeve of the simulated
+$10,000 sheet book.
 
 In each market (``MARKETS``: picked because the strategy worked there on 2006-2014, the period
 that also fixed its direction - see ``qtrade.research.foreign``), long the fifth of 30-40 large
@@ -8,7 +9,7 @@ in each market, equal capital per market, 0 bp fees, nothing sent to any broker.
 local currency (each market's book is long and short the same currency, so the dollar exposure
 is only its P&L).
 
-Once a day after Europe closes (``python -m qtrade.intraday.foreign_sheet``): every open book is
+Once a day after Europe closes (17:11 UTC) (``python -m qtrade.intraday.foreign_sheet``): every open book is
 settled at the first official open after its entry, and each market that traded today opens
 tonight's book at today's close. Prices are Yahoo's dividend-adjusted daily open and close, so a
 dividend shows as income, not as an overnight drop. The sheet holds the state: a daily log in
@@ -22,11 +23,15 @@ import os
 import numpy as np
 import pandas as pd
 
-from ..research.asia import STOCKS, _xs_weights
+from ..research.asia import _xs_weights
+from ..research.foreign import MARKETS as STOCKS
 from ..utils import LOG
 
 TAB, TRADES_TAB = "Foreign book", "Foreign trades"
-MARKETS = ["Hong Kong", "Korea", "Taiwan", "Australia", "India"]
+MARKETS = ["Hong Kong", "Korea", "Taiwan", "Australia", "India", "UK", "Germany", "France"]
+# latest official close in UTC minutes (the later of summer / winter time), plus the closing auction
+CLOSE_UTC = {"Hong Kong": 8 * 60 + 10, "Korea": 6 * 60 + 40, "Taiwan": 5 * 60 + 40, "Australia": 6 * 60 + 20,
+             "India": 10 * 60 + 10, "UK": 16 * 60 + 40, "Germany": 16 * 60 + 40, "France": 16 * 60 + 45}
 LOG_HEADER = ["Date", "Day P&L $", "Day %", "Equity $", "Markets settled", "Positions opened", "Gross $",
               "Capital $"]
 HOLD_HEADER = ["Market", "Symbol", "Entry date", "Entry (official close)", "Position $"]
@@ -82,9 +87,13 @@ def open_books(data: dict[str, tuple[pd.DataFrame, pd.DataFrame]], day: pd.Times
     return pd.DataFrame(rows, columns=HOLD_HEADER)
 
 
-def download(markets: list[str]) -> dict[str, tuple[pd.DataFrame, pd.DataFrame]]:
+def download(markets: list[str], now: pd.Timestamp | None = None) -> dict[str, tuple[pd.DataFrame, pd.DataFrame]]:
+    """Adjusted daily opens / closes; today's bar is dropped for a market whose session isn't over
+    (Yahoo shows the latest price as today's "close" while the market is open)."""
     import yfinance as yf
 
+    now = now or pd.Timestamp.now(tz="UTC")
+    today = now.tz_localize(None).normalize()
     out = {}
     for m in markets:
         raw = yf.download(STOCKS[m], period="3mo", interval="1d", group_by="ticker", auto_adjust=True,
@@ -93,7 +102,10 @@ def download(markets: list[str]) -> dict[str, tuple[pd.DataFrame, pd.DataFrame]]
         c = pd.DataFrame({t: raw[t]["Close"] for t in STOCKS[m] if t in raw.columns.get_level_values(0)})
         o.index = c.index = pd.to_datetime(c.index).tz_localize(None).normalize()
         live = c.notna().sum(axis=1) >= max(10, c.shape[1] // 3)
-        out[m] = (o[live], c[live])
+        o, c = o[live], c[live]
+        if len(c) and c.index[-1] == today and now.hour * 60 + now.minute < CLOSE_UTC[m] + 20:
+            o, c = o.iloc[:-1], c.iloc[:-1]
+        out[m] = (o, c)
     return out
 
 
@@ -131,7 +143,7 @@ class ForeignSheet:
     def write(self, status: str, log_row: list, n_log: int, holdings: pd.DataFrame, trades: pd.DataFrame) -> None:
         self.s.post(f"{self.base}/values:batchClear", json={"ranges": [f"'{TAB}'!J6:N5000"]},
                     timeout=30).raise_for_status()
-        title = ("Foreign book sleeve - overnight persistence on Asian exchanges (" + ", ".join(MARKETS) + "): long "
+        title = ("Foreign book sleeve - overnight persistence on foreign exchanges (" + ", ".join(MARKETS) + "): long "
                  "the top fifth / short the bottom fifth by the last 21 overnight returns, official close -> next "
                  "official open, 0 bp fees, nothing sent to a broker.")
         row = 6 + n_log

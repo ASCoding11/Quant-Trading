@@ -106,56 +106,64 @@ def strategies(md) -> pd.DataFrame:
 def intraday_open_check(md) -> pd.DataFrame:
     """Last ~60 days: the daily bar's open vs the first 5-minute bar's open, and the overnight
     persistence book's daily P&L computed both ways."""
-    import yfinance as yf
-
     rows = []
     for mkt, tickers in MARKETS.items():
         try:
-            raw = yf.download(tickers, period="60d", interval="5m", group_by="ticker", progress=False,
-                              auto_adjust=False, threads=True)
-        except Exception as exc:
-            LOG.warning("%s: 5-minute data failed (%s)", mkt, exc)
+            rows.append(_open_check_market(md, mkt, tickers))
+        except Exception as exc:                          # one market's data problem shouldn't sink the study
+            LOG.warning("%s: open check failed (%s)", mkt, exc)
+    return pd.DataFrame([r for r in rows if r])
+
+
+def _open_check_market(md, mkt: str, tickers: list[str]) -> dict | None:
+    import yfinance as yf
+
+    try:
+        raw = yf.download(tickers, period="60d", interval="5m", group_by="ticker", progress=False,
+                          auto_adjust=False, threads=True)
+    except Exception as exc:
+        LOG.warning("%s: 5-minute data failed (%s)", mkt, exc)
+        return None
+    first = {}
+    for t in tickers:
+        if raw is None or raw.empty or t not in raw.columns.get_level_values(0):
             continue
-        first = {}
-        for t in tickers:
-            if raw is None or raw.empty or t not in raw.columns.get_level_values(0):
-                continue
-            f = raw[t].dropna(how="all")
-            if f.empty:
-                continue
-            idx = f.index.tz_convert(f.index.tz) if f.index.tz is not None else f.index
-            day = pd.DatetimeIndex(idx.date)
-            first[t] = f["Open"].groupby(day).first()
-        if len(first) < 10:
+        f = raw[t].dropna(how="all")
+        if f.empty:
             continue
-        o5 = pd.DataFrame(first)
-        c, o, on, intra, cc, bad = panels(md, tickers)
-        days = o5.index.intersection(o.index)
-        if len(days) < 20:
-            continue
-        # the daily panels are dividend-adjusted; the 5-minute bars are not: compare in raw prices
-        raw_c = getattr(md, "raw_close", None)
-        factor = (raw_c[c.columns].reindex(c.index) / c) if raw_c is not None else 1.0
-        o_raw = o * factor
-        od, o5d = o_raw.loc[days, o5.columns], o5.loc[days]
-        diff = (np.log(od / o5d)).abs() * 1e4
-        prev = (c * factor).shift(1)[o5.columns]
-        on5 = np.log(o5.reindex(c.index) / prev)
-        on_d = on[o5.columns]
-        # the book decided at each close from the daily-bar history, filled at either open
-        sig = on_d.rolling(21, min_periods=15).sum()
-        g_daily, _ = book_pnl(sig, on_d.shift(-1))
-        g_5m, _ = book_pnl(sig, on5.shift(-1))
-        dd = g_daily.reindex(days[:-1]).dropna()
-        d5 = g_5m.reindex(days[:-1]).dropna()
-        common = dd.index.intersection(d5.index)
-        rows.append({"market": mkt, "days": len(days), "stocks": o5.shape[1],
-                     "median_open_gap_bp": float(np.nanmedian(diff.values)),
-                     "share_open_differs_over_10bp": float((diff > 10).mean().mean()),
-                     "book_bp_per_day_daily_open": float(dd.loc[common].mean() * 1e4) if len(common) else np.nan,
-                     "book_bp_per_day_5min_open": float(d5.loc[common].mean() * 1e4) if len(common) else np.nan,
-                     "corr_daily_vs_5min": float(dd.loc[common].corr(d5.loc[common])) if len(common) > 5 else np.nan})
-    return pd.DataFrame(rows)
+        idx = f.index.tz_convert(f.index.tz) if f.index.tz is not None else f.index
+        day = pd.DatetimeIndex(idx.date)
+        first[t] = f["Open"].groupby(day).first()
+    if len(first) < 10:
+        return None
+    o5 = pd.DataFrame(first)
+    c, o, on, intra, cc, bad = panels(md, tickers)
+    o5 = o5[[t for t in o5.columns if t in c.columns]]
+    days = o5.index.intersection(o.index)
+    if len(days) < 20:
+        return None
+    # the daily panels are dividend-adjusted; the 5-minute bars are not: compare in raw prices
+    raw_c = getattr(md, "raw_close", None)
+    factor = (raw_c[c.columns].reindex(c.index) / c) if raw_c is not None else 1.0
+    o_raw = o * factor
+    od, o5d = o_raw.loc[days, o5.columns], o5.loc[days]
+    diff = (np.log(od / o5d)).abs() * 1e4
+    prev = (c * factor).shift(1)[o5.columns]
+    on5 = np.log(o5.reindex(c.index) / prev)
+    on_d = on[o5.columns]
+    # the book decided at each close from the daily-bar history, filled at either open
+    sig = on_d.rolling(21, min_periods=15).sum()
+    g_daily, _ = book_pnl(sig, on_d.shift(-1))
+    g_5m, _ = book_pnl(sig, on5.shift(-1))
+    dd = g_daily.reindex(days[:-1]).dropna()
+    d5 = g_5m.reindex(days[:-1]).dropna()
+    common = dd.index.intersection(d5.index)
+    return {"market": mkt, "days": len(days), "stocks": o5.shape[1],
+                 "median_open_gap_bp": float(np.nanmedian(diff.values)),
+                 "share_open_differs_over_10bp": float((diff > 10).mean().mean()),
+                 "book_bp_per_day_daily_open": float(dd.loc[common].mean() * 1e4) if len(common) else np.nan,
+                 "book_bp_per_day_5min_open": float(d5.loc[common].mean() * 1e4) if len(common) else np.nan,
+                 "corr_daily_vs_5min": float(dd.loc[common].corr(d5.loc[common])) if len(common) > 5 else np.nan}
 
 
 def run(out: Path) -> dict:

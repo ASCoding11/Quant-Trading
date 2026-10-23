@@ -1,5 +1,6 @@
 {
-  "_comment": "The simulated $10,000 Google Sheet book, split between sleeves (dollars). hft = the shadow HFT (qtrade/intraday/hft_shadow.py), momentum_flip = Nico's momentum flip (qtrade/intraday/flip_sleeve.py). 2026-10-22: the HFT replay found no strategy that made money on its test days, so what was left of the HFT sleeve ($5,000 - $273.73 lost on 2026-10-22 = $4,726.27) moved into the flip: $5,000 + $4,726.27.",
+  "_comment": "The simulated $10,000 Google Sheet book, split between sleeves (dollars of capital). momentum_flip = Nico's momentum flip (qtrade/intraday/flip_sleeve.py); auction = the auction strategies filled at the official open / close (qtrade/intraday/auction_sheet.py); hft = the shadow HFT (off: no strategy passed the replay). History: $10,000 split $5,000 HFT / $5,000 flip on 2026-10-22; the HFT lost $273.73 and was switched off; the remaining $9,726.27 is split equally between the flip and the auction book from 2026-10-23.",
   "hft": 0,
-  "momentum_flip": 9726.27
+  "momentum_flip": 4863.14,
+  "auction": 4863.13
 }

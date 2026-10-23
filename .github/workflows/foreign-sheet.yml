@@ -11,6 +11,10 @@ on:
   schedule:
     - cron: "11 17 * * 1-5"
   workflow_dispatch:
+    inputs:
+      part:
+        description: "both, or tracker (only the $0 HFT tracker - safe to run before Europe closes)"
+        default: "both"
 
 permissions:
   contents: read
@@ -33,7 +37,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python -m qtrade.intraday.foreign_sheet
+      - if: inputs.part != 'tracker'
+        run: python -m qtrade.intraday.foreign_sheet
       - name: Foreign HFT tracker ($0 allocated)
         if: always()
         run: |

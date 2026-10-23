@@ -244,11 +244,11 @@ def main(argv=None):
     ap.add_argument("--tickers", default="data/auction_tickers.json")
     ap.add_argument("--signs", default="data/auction_signs.json")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--force", action="store_true", help="run outside 16:20-19:00 New York")
+    ap.add_argument("--force", action="store_true", help="run outside 16:20-24:00 New York")
     args = ap.parse_args(argv)
     setup_logging()
     now = pd.Timestamp.now(tz=NY)
-    if not args.force and not (now.weekday() < 5 and 16 * 60 + 20 <= now.hour * 60 + now.minute < 19 * 60):
+    if not args.force and not (now.weekday() < 5 and 16 * 60 + 20 <= now.hour * 60 + now.minute < 24 * 60):
         print({"skipped": f"outside the window ({now:%H:%M} NY)"})
         return
     sleeve = book_split().get("auction", 0.0)

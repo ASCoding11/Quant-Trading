@@ -11,6 +11,8 @@ name: hft-shadow
 on:
   schedule:
     - cron: "25 13 * * 1-5"       # 9:25 New York in summer (8:25 in winter: it waits for the open)
+    - cron: "52 13-20 * * 1-5"    # watchdog: GitHub sometimes skips the 9:25 start; an extra run only queues
+                                  # behind a running one (concurrency group) and exits after the close
   workflow_dispatch:
   push:
     branches: ["claude/**"]

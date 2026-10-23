@@ -118,3 +118,17 @@ def test_broken_wide_quotes_are_not_traded():
     h.on_quote("AAA", at(0), 380.0, 900, 393.0, 100)           # 336 bp wide and lopsided: no taker
     h.step(at(1))                                              # ... and no maker quotes either
     assert not h.pending and not h.resting
+
+
+def test_tracker_mode_loads_the_replay_picks_even_when_disabled(tmp_path):
+    import json
+    picks = {"market_maker": {"enabled": False, "rules": {"exit_timeout_s": 600.0, "mm_min_ticks": 3,
+                                                          "strategies": ["market_maker"]}},
+             "imbalance_taker": {"enabled": False, "reason": "too few trades"}}
+    f = tmp_path / "rules.json"
+    f.write_text(json.dumps(picks))
+    assert S.load_rules(f) == {}
+    r = S.load_rules(f, include_disabled=True)
+    assert list(r) == ["market_maker"] and r["market_maker"].exit_timeout_s == 600.0
+    assert r["market_maker"].strategies == ("market_maker",)
+    assert "TRACKER" in S.book_line(pd.DataFrame(columns=S.COLUMNS), {"market_maker": 10_000.0}, 10_000.0, "TRACKER")

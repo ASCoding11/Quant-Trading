@@ -98,16 +98,16 @@ def book_split(path: Path = BOOK_FILE) -> dict[str, float]:
         return {"hft": BOOK_USD, "momentum_flip": 0.0}
 
 
-def load_rules(path: Path = RULES_FILE) -> dict[str, Rules]:
-    """Per-strategy rules chosen by the replay (``qtrade.research.hft_replay``); only enabled strategies.
-    Without the file: rule set 2 for its four strategies."""
+def load_rules(path: Path = RULES_FILE, include_disabled: bool = False) -> dict[str, Rules]:
+    """Per-strategy rules chosen by the replay (``qtrade.research.hft_replay``); only enabled strategies
+    (or every pick with ``include_disabled``, for the $0 tracker). Without the file: rule set 2."""
     try:
         chosen = json.loads(Path(path).read_text())
     except FileNotFoundError:
         return {k: replace(RULES, strategies=(k,)) for k in RULES.strategies}
     fields = set(Rules.__dataclass_fields__) - {"strategies"}
     return {k: Rules(**{f: v for f, v in c["rules"].items() if f in fields}, strategies=(k,))
-            for k, c in chosen.items() if c.get("enabled")}
+            for k, c in chosen.items() if c.get("enabled") or (include_disabled and "rules" in c)}
 COLUMNS = ["strategy", "symbol", "side", "decision_time", "entry_time", "entry_price", "exit_time", "exit_price",
            "notional", "pnl_usd", "pnl_mid_usd", "pnl_bp", "pnl_mid_bp", "spread_bp", "imbalance", "latency_ms",
            "exit_by"]
@@ -444,12 +444,16 @@ def _summary_rows(all_trades: pd.DataFrame) -> list[list]:
     return head + rows
 
 
-def book_line(all_trades: pd.DataFrame, equity: dict[str, float], book_usd: float = BOOK_USD) -> str:
+TRACKER_USD = 10_000.0          # the $0 tracker's hypothetical book when no strategy passed the replay
+
+
+def book_line(all_trades: pd.DataFrame, equity: dict[str, float], book_usd: float = BOOK_USD,
+              label: str = "HFT sleeve") -> str:
     net = float(all_trades["pnl_usd"].sum()) if len(all_trades) else 0.0
     eq = sum(equity.values())
     parts = ", ".join(f"{k} ${v:,.2f}" for k, v in equity.items()) or "none (no strategy passed the replay test)"
     pct = 100 * net / book_usd if book_usd else 0.0
-    return (f"HFT sleeve: ${book_usd:,.0f} at the open -> equity ${eq:,.2f} (net P&L ${net:+,.2f}, {pct:+.3f}%). "
+    return (f"{label}: ${book_usd:,.0f} at the open -> equity ${eq:,.2f} (net P&L ${net:+,.2f}, {pct:+.3f}%). "
             f"By strategy: {parts}. Each position = 1/{SLOTS} of its strategy's equity.")
 
 
@@ -525,19 +529,18 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
             if k in equity:
                 equity[k] += float(v)
     LOG.info("shadow HFT: strategies %s, VIX %s", list(rules), vix)
-    if not rules:                                      # nothing passed the replay test: stay out, but keep the
-        if sheet is not None:                          # run alive so the workflow chain doesn't respawn at once
-            try:
-                sheet.status(f"Paused {pd.Timestamp.now(tz=NY):%Y-%m-%d %H:%M} New York - no HFT strategy made money "
-                             f"on the replay's test days (config/hft_rules.json); the sleeve's money is in the "
-                             f"momentum flip.", book_line(earlier, {}, book_usd), _summary_rows(earlier))
-            except Exception as exc:
-                LOG.warning("Google Sheet update failed: %s", exc)
-        LOG.info("shadow HFT: no enabled strategy - idle")
-        stop = time.time() + minutes * 60
-        while time.time() < stop and pd.Timestamp.now(tz=NY).hour < 16:
-            time.sleep(30)
-        return None
+    tracker = not rules
+    if tracker:                                        # nothing passed the replay test: keep trading the replay's
+        rules = load_rules(include_disabled=True)      # picks live, as a $0 tracker on a hypothetical book
+        book_usd = TRACKER_USD
+        vix = previous_vix() if "imbalance_flip" in rules else None
+        equity = {k: book_usd / len(rules) for k in rules}
+        if len(earlier):
+            for k, v in earlier.groupby("strategy")["pnl_usd"].sum().items():
+                if k in equity:
+                    equity[k] += float(v)
+        LOG.info("shadow HFT: tracker mode ($0 allocated) with %s", list(rules))
+    label = "TRACKER ($0 allocated, NOT part of the $10,000 book) - hypothetical book" if tracker else "HFT sleeve"
     sims = {k: ShadowHFT(symbols, seed=int(time.time()) + i, equity={k: equity[k]}, rules=r, vix=vix)
             for i, (k, r) in enumerate(rules.items())}
     out = Path(out_dir)
@@ -593,8 +596,10 @@ def run(minutes: float, out_dir: str | Path = "logs/hft", symbols: list[str] | N
                 sheet.append(new)
                 unsent = []
                 total = pd.concat(everything, ignore_index=True) if everything else pd.DataFrame(columns=COLUMNS)
-                sheet.status(f"Live - last update {pd.Timestamp.now(tz=NY):%Y-%m-%d %H:%M:%S} New York - "
-                             f"{len(total)} trades today", book_line(total, {k: h.equity[k] for k, h in sims.items()}, book_usd), _summary_rows(total))
+                sheet.status(f"Live{' TRACKER ($0 allocated)' if tracker else ''} - last update "
+                             f"{pd.Timestamp.now(tz=NY):%Y-%m-%d %H:%M:%S} New York - "
+                             f"{len(total)} trades today", book_line(total, {k: h.equity[k] for k, h in sims.items()}, book_usd, label),
+                             _summary_rows(total))
             except Exception as exc:
                 LOG.warning("Google Sheet update failed: %s", exc)
         last = now

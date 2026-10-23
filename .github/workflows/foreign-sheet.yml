@@ -4,6 +4,8 @@ name: foreign-sheet
 # book (qtrade/intraday/foreign_sheet.py): after the European closes (17:11 UTC), each open book
 # is settled at the official open and each market that traded today opens tonight's book at its
 # official close - in the sheet's "Foreign book" and "Foreign trades" tabs. Nothing goes to a broker.
+# Then the foreign HFT tracker (qtrade/intraday/foreign_hft_sheet.py, $0 allocated) logs the day's
+# minute-level trades in the "Foreign HFT tracker" tab.
 
 on:
   schedule:
@@ -32,3 +34,10 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m qtrade.intraday.foreign_sheet
+      - name: Foreign HFT tracker ($0 allocated)
+        if: always()
+        run: |
+          git fetch -q --depth 1 origin results
+          mkdir -p data
+          git show origin/results:research/foreign/foreign_hft_rules.json > data/foreign_hft_rules.json
+          python -m qtrade.intraday.foreign_hft_sheet

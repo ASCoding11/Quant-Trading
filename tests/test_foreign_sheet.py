@@ -40,3 +40,20 @@ def test_step_compounds_and_takes_deposits():
     o, c = _market()
     r = F.step(pd.DataFrame(columns=F.HOLD_HEADER), {"Korea": (o, c)}, c.index[-1], 0.0, 3242.09)
     assert r["pnl"] == 0 and np.isclose(r["equity"], 3242.09) and r["opened"] > 0
+
+
+def test_a_session_still_open_is_not_used_as_a_close(monkeypatch):
+    import sys
+    import types
+
+    idx = pd.bdate_range("2026-09-01", "2026-10-23")
+    raw = {}
+    for t in F.STOCKS["Germany"]:
+        raw[(t, "Open")] = np.linspace(100, 110, len(idx))
+        raw[(t, "Close")] = np.linspace(100.5, 110.5, len(idx))
+    frame = pd.DataFrame(raw, index=idx)
+    monkeypatch.setitem(sys.modules, "yfinance", types.SimpleNamespace(download=lambda *a, **k: frame))
+    during = F.download(["Germany"], pd.Timestamp("2026-10-23 12:00", tz="UTC"))
+    after = F.download(["Germany"], pd.Timestamp("2026-10-23 17:11", tz="UTC"))
+    assert during["Germany"][1].index[-1] == pd.Timestamp("2026-10-22")
+    assert after["Germany"][1].index[-1] == pd.Timestamp("2026-10-23")

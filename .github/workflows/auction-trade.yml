@@ -22,7 +22,7 @@ name: auction-trade
 
 on:
   schedule:
-    - cron: "17 * * * 1-5"        # watchdog only: start a keeper if none is running
+    - cron: "17 * * * 1-5"        # watchdog only: start a keeper if none is running (it stops at once when flat)
   workflow_dispatch:
     inputs:
       phase:
@@ -94,6 +94,9 @@ jobs:
         # only real (sending) keepers continue the chain; a manual dry run ends after one window
         if: always() && steps.phase.outputs.phase == 'keeper' && steps.phase.outputs.send == 'true' && (vars.TRADING_MODE || 'auction') == 'auction'
         run: |
+          if [ "$(cat logs/keeper_state.txt 2>/dev/null)" = "stop" ]; then
+            echo "the account is flat and the auction book now lives in the sheet - chain stopped"; exit 0
+          fi
           gh workflow run auction-trade.yml -R "${{ github.repository }}" --ref "${{ github.ref_name }}" \
             -f phase=keeper -f send=${{ steps.phase.outputs.send }}
           echo "next keeper started"

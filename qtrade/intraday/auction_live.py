@@ -185,6 +185,9 @@ def _earnings_reactions(data: AlpacaBars, acfg, tickers: list[str], today: pd.Ti
 def run_close(cfg, tickers: list[str], signs: dict, dry_run: bool = True, out_dir: str | Path = "logs") -> dict:
     """Send the evening book as market-on-close orders."""
     acfg = cfg.auction
+    if acfg.alpaca_flatten_only and not dry_run:
+        LOG.info("alpaca_flatten_only: the auction book is simulated in the sheet - no market-on-close orders")
+        return {"status": "flatten only"}
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     client = _client()
@@ -422,8 +425,14 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
     actions = []
     from .adr_book import ADRS
 
-    adr_mode = cfg.auction.adr_mode if cfg.auction.adr_enabled else None
+    flatten_only = cfg.auction.alpaca_flatten_only
+    adr_mode = cfg.auction.adr_mode if cfg.auction.adr_enabled and not flatten_only else None
     adr_names = set(ADRS) if adr_mode else set()        # held during the day, closed at the close
+    if flatten_only and not any(q != 0 for q in _account_state(client)[1].values()):
+        LOG.info("alpaca_flatten_only and the account is flat - nothing left to do, the chain stops here")
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        (Path(out_dir) / "keeper_state.txt").write_text("stop")
+        return {"status": "flat - stopped", "actions": []}
     open_start = 9 * 60 + 18 if adr_mode == "premarket" else 9 * 60   # pre-market prices as late as possible
     last_try = pd.Timestamp(0, tz=NY)
     LOG.info("keeper up for %.1f hours (until %s New York)", hours,
@@ -456,7 +465,13 @@ def run_keeper(cfg, tickers: list[str], signs: dict, hours: float = 5.4, dry_run
                                                                        keep=adr_names)))
                 else:
                     done["late"] = today
-            elif clock.is_open and 15 * 60 + 40 <= hm < 15 * 60 + 49 and done.get("close") != today:
+                    if flatten_only:
+                        LOG.info("alpaca_flatten_only: the account is flat - the keeper stops here")
+                        Path(out_dir).mkdir(parents=True, exist_ok=True)
+                        (Path(out_dir) / "keeper_state.txt").write_text("stop")
+                        break
+            elif clock.is_open and 15 * 60 + 40 <= hm < 15 * 60 + 49 and done.get("close") != today \
+                    and not flatten_only:
                 done["close"] = today
                 fill_report(days=4, out_dir=out_dir)
                 actions.append(("close", str(now), run_close(cfg, tickers, signs, dry_run=dry_run, out_dir=out_dir)))

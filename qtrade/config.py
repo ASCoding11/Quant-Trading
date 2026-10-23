@@ -152,6 +152,9 @@ class AuctionConfig:
     adr_sign: float = 1.0             # +1: follow the home move the ADR hasn't priced yet (research direction)
     adr_min_residual: float = 0.0     # skip names whose residual is smaller than this (log return)
     adr_markets: list = field(default_factory=lambda: ["China", "Japan", "Korea", "India"])
+    # true: the auction strategies are simulated in the Google Sheet (qtrade.intraday.auction_sheet); on Alpaca
+    # the keeper only closes what is left open and sends nothing new, then stops its chain once the account is flat
+    alpaca_flatten_only: bool = False
 
 
 @dataclass

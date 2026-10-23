@@ -70,9 +70,11 @@ def simulate(o: pd.DataFrame, c: pd.DataFrame, k: int, h: int, sign: float, spre
                 ps, rs = past[ok], r[ok]
                 order = np.argsort(ps, kind="stable")
                 g = 0.5 * rs[order[-q:]].mean() - 0.5 * rs[order[:q]].mean()
-                rows.append((dates[i], o.index[i + 1], g, g - spread_bp / 1e4))   # in and out: one spread
+                names = np.asarray(o.columns)[ok]
+                rows.append((dates[i], o.index[i + 1], o.index[i + 1 + h], g, g - spread_bp / 1e4,   # in and out: one spread
+                             " ".join(names[order[-q:]]), " ".join(names[order[:q]])))
             t += h
-    return pd.DataFrame(rows, columns=["day", "time", "gross", "net"])
+    return pd.DataFrame(rows, columns=["day", "time", "exit_time", "gross", "net", "longs", "shorts"])
 
 
 def study(markets: dict[str, list[str]]) -> tuple[pd.DataFrame, pd.DataFrame]:

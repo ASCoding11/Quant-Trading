@@ -1,0 +1,10 @@
+market,pick,net_bp_per_day_train,net_bp_per_day_test,test_days_positive,passes,best_at_0bp,gross_bp_per_trade_test_at_0bp,spread_bp
+Japan,momentum k=1 h=12,-2.17,-8.37,0.43,False,momentum k=1 h=12,2.29,4.0
+Hong Kong,reversal k=12 h=12,-25.31,-37.49,0.03,False,reversal k=12 h=12,-1.37,8.0
+Korea,reversal k=12 h=12,-10.33,-41.82,0.2,False,reversal k=12 h=12,-4.72,6.0
+Taiwan,momentum k=1 h=12,-10.63,-38.92,0.23,False,momentum k=1 h=12,-1.73,8.0
+Australia,reversal k=6 h=12,-0.48,-14.82,0.37,False,reversal k=6 h=12,0.97,4.0
+India,reversal k=3 h=12,-3.72,-18.83,0.23,False,reversal k=3 h=12,-0.77,3.0
+UK,momentum k=12 h=12,-21.67,-15.96,0.33,False,momentum k=12 h=12,1.72,4.0
+Germany,reversal k=3 h=12,-7.93,-18.94,0.47,False,reversal k=3 h=12,0.63,3.0
+France,momentum k=1 h=12,-6.56,-18.77,0.37,False,momentum k=1 h=12,0.65,3.0

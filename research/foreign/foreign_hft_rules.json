@@ -1,0 +1,101 @@
+[
+ {
+  "market": "Japan",
+  "pick": "momentum k=1 h=12",
+  "net_bp_per_day_train": -2.17,
+  "net_bp_per_day_test": -8.37,
+  "test_days_positive": 0.43,
+  "passes": false,
+  "best_at_0bp": "momentum k=1 h=12",
+  "gross_bp_per_trade_test_at_0bp": 2.29,
+  "spread_bp": 4.0
+ },
+ {
+  "market": "Hong Kong",
+  "pick": "reversal k=12 h=12",
+  "net_bp_per_day_train": -25.31,
+  "net_bp_per_day_test": -37.49,
+  "test_days_positive": 0.03,
+  "passes": false,
+  "best_at_0bp": "reversal k=12 h=12",
+  "gross_bp_per_trade_test_at_0bp": -1.37,
+  "spread_bp": 8.0
+ },
+ {
+  "market": "Korea",
+  "pick": "reversal k=12 h=12",
+  "net_bp_per_day_train": -10.33,
+  "net_bp_per_day_test": -41.82,
+  "test_days_positive": 0.2,
+  "passes": false,
+  "best_at_0bp": "reversal k=12 h=12",
+  "gross_bp_per_trade_test_at_0bp": -4.72,
+  "spread_bp": 6.0
+ },
+ {
+  "market": "Taiwan",
+  "pick": "momentum k=1 h=12",
+  "net_bp_per_day_train": -10.63,
+  "net_bp_per_day_test": -38.92,
+  "test_days_positive": 0.23,
+  "passes": false,
+  "best_at_0bp": "momentum k=1 h=12",
+  "gross_bp_per_trade_test_at_0bp": -1.73,
+  "spread_bp": 8.0
+ },
+ {
+  "market": "Australia",
+  "pick": "reversal k=6 h=12",
+  "net_bp_per_day_train": -0.48,
+  "net_bp_per_day_test": -14.82,
+  "test_days_positive": 0.37,
+  "passes": false,
+  "best_at_0bp": "reversal k=6 h=12",
+  "gross_bp_per_trade_test_at_0bp": 0.97,
+  "spread_bp": 4.0
+ },
+ {
+  "market": "India",
+  "pick": "reversal k=3 h=12",
+  "net_bp_per_day_train": -3.72,
+  "net_bp_per_day_test": -18.83,
+  "test_days_positive": 0.23,
+  "passes": false,
+  "best_at_0bp": "reversal k=3 h=12",
+  "gross_bp_per_trade_test_at_0bp": -0.77,
+  "spread_bp": 3.0
+ },
+ {
+  "market": "UK",
+  "pick": "momentum k=12 h=12",
+  "net_bp_per_day_train": -21.67,
+  "net_bp_per_day_test": -15.96,
+  "test_days_positive": 0.33,
+  "passes": false,
+  "best_at_0bp": "momentum k=12 h=12",
+  "gross_bp_per_trade_test_at_0bp": 1.72,
+  "spread_bp": 4.0
+ },
+ {
+  "market": "Germany",
+  "pick": "reversal k=3 h=12",
+  "net_bp_per_day_train": -7.93,
+  "net_bp_per_day_test": -18.94,
+  "test_days_positive": 0.47,
+  "passes": false,
+  "best_at_0bp": "reversal k=3 h=12",
+  "gross_bp_per_trade_test_at_0bp": 0.63,
+  "spread_bp": 3.0
+ },
+ {
+  "market": "France",
+  "pick": "momentum k=1 h=12",
+  "net_bp_per_day_train": -6.56,
+  "net_bp_per_day_test": -18.77,
+  "test_days_positive": 0.37,
+  "passes": false,
+  "best_at_0bp": "momentum k=1 h=12",
+  "gross_bp_per_trade_test_at_0bp": 0.65,
+  "spread_bp": 3.0
+ }
+]

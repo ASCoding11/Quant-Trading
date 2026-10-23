@@ -1,74 +1,22 @@
 {
-  "date": "2026-10-22",
-  "time": "2026-10-22 20:02 EDT",
-  "equity": 100046.82,
-  "last_equity": 100149.4,
-  "day_pnl": -102.58,
+  "date": "2026-10-23",
+  "time": "2026-10-23 19:53 EDT",
+  "equity": 100049.5,
+  "last_equity": 100014.69,
+  "day_pnl": 34.81,
   "strategy_capital": 10000.0,
-  "day_return_on_capital": -0.010258,
-  "day_return_on_account": -0.001024,
-  "spy_day_return": -0.01177,
-  "long_names": 39,
-  "short_names": 39,
-  "long_value": 13173.5,
-  "short_value": 10237.49,
-  "gross_on_capital": 2.341,
-  "net_on_capital": 0.294,
-  "orders_today": 277,
-  "filled_today": 30,
-  "unrealized_pnl_total": 30.59,
-  "best_today": [
-    {
-      "symbol": "DECK",
-      "side": "short",
-      "pnl_today": 57.78
-    },
-    {
-      "symbol": "WCC",
-      "side": "short",
-      "pnl_today": 50.48
-    },
-    {
-      "symbol": "NEE",
-      "side": "long",
-      "pnl_today": 43.44
-    },
-    {
-      "symbol": "ROP",
-      "side": "long",
-      "pnl_today": 36.27
-    },
-    {
-      "symbol": "AEIS",
-      "side": "short",
-      "pnl_today": 33.18
-    }
-  ],
-  "worst_today": [
-    {
-      "symbol": "UCTT",
-      "side": "long",
-      "pnl_today": -69.0344
-    },
-    {
-      "symbol": "VICR",
-      "side": "long",
-      "pnl_today": -66.84
-    },
-    {
-      "symbol": "VIAV",
-      "side": "long",
-      "pnl_today": -50.72
-    },
-    {
-      "symbol": "COHU",
-      "side": "long",
-      "pnl_today": -43.85
-    },
-    {
-      "symbol": "VECO",
-      "side": "long",
-      "pnl_today": -26.25
-    }
-  ]
+  "day_return_on_capital": 0.003481,
+  "day_return_on_account": 0.000348,
+  "spy_day_return": -0.005497,
+  "long_names": 0,
+  "short_names": 0,
+  "long_value": 0,
+  "short_value": 0,
+  "gross_on_capital": 0.0,
+  "net_on_capital": 0.0,
+  "orders_today": 149,
+  "filled_today": 78,
+  "unrealized_pnl_total": 0,
+  "best_today": [],
+  "worst_today": []
 }

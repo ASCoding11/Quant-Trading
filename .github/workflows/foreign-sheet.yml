@@ -9,7 +9,7 @@ name: foreign-sheet
 
 on:
   schedule:
-    - cron: "11 17 * * 1-5"
+    - cron: "11 17,18,19,20,21 * * 1-5"   # GitHub often fires late or skips; a booked day is skipped
   workflow_dispatch:
     inputs:
       part:

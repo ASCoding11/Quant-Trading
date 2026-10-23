@@ -205,12 +205,12 @@ def main(argv=None):
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--force", action="store_true", help="run outside 15:40-16:00 New York")
+    ap.add_argument("--force", action="store_true", help="run outside 15:40-24:00 New York")
     args = ap.parse_args(argv)
     setup_logging()
     now = pd.Timestamp.now(tz=NY)
-    if not args.force and not (now.weekday() < 5 and 15 * 60 + 40 <= now.hour * 60 + now.minute < 16 * 60):
-        print({"skipped": f"outside the window ({now:%H:%M} NY)"})
+    if not args.force and not (now.weekday() < 5 and 15 * 60 + 40 <= now.hour * 60 + now.minute < 24 * 60):
+        print({"skipped": f"outside the window 15:40-24:00 ({now:%H:%M} NY)"})
         return
     sleeve = book_split().get("momentum_flip", 0.0)
     if sleeve <= 0:

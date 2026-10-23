@@ -25,7 +25,7 @@ _YF_FIELDS = {"open": "Open", "high": "High", "low": "Low", "close": "Close", "v
 
 
 # exchange suffixes Yahoo writes with a dot (Tokyo, Hong Kong, Korea, Taiwan, Sydney, India, China, Singapore)
-_EXCHANGE_SUFFIX = re.compile(r"^(.+)\.(T|HK|KS|KQ|TW|TWO|AX|NS|BO|SS|SZ|SI)$")
+_EXCHANGE_SUFFIX = re.compile(r"^(.+)\.(T|HK|KS|KQ|TW|TWO|AX|NS|BO|SS|SZ|SI|L|DE|PA|AS|MI|SW|ST|CO|OL|HE|BR|LS|TO)$")
 
 
 def to_yahoo(ticker: str) -> str:

@@ -133,9 +133,13 @@ def intraday_open_check(md) -> pd.DataFrame:
         days = o5.index.intersection(o.index)
         if len(days) < 20:
             continue
-        od, o5d = o.loc[days, o5.columns], o5.loc[days]
+        # the daily panels are dividend-adjusted; the 5-minute bars are not: compare in raw prices
+        raw_c = getattr(md, "raw_close", None)
+        factor = (raw_c[c.columns].reindex(c.index) / c) if raw_c is not None else 1.0
+        o_raw = o * factor
+        od, o5d = o_raw.loc[days, o5.columns], o5.loc[days]
         diff = (np.log(od / o5d)).abs() * 1e4
-        prev = c.shift(1)[o5.columns]
+        prev = (c * factor).shift(1)[o5.columns]
         on5 = np.log(o5.reindex(c.index) / prev)
         on_d = on[o5.columns]
         # the book decided at each close from the daily-bar history, filled at either open

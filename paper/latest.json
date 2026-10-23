@@ -1,74 +1,74 @@
 {
   "date": "2026-10-22",
-  "time": "2026-10-22 16:07 EDT",
-  "equity": 100081.77,
+  "time": "2026-10-22 20:02 EDT",
+  "equity": 100046.82,
   "last_equity": 100149.4,
-  "day_pnl": -67.63,
+  "day_pnl": -102.58,
   "strategy_capital": 10000.0,
-  "day_return_on_capital": -0.006763,
-  "day_return_on_account": -0.000675,
+  "day_return_on_capital": -0.010258,
+  "day_return_on_account": -0.001024,
   "spy_day_return": -0.01177,
   "long_names": 39,
   "short_names": 39,
-  "long_value": 13198.52,
-  "short_value": 10227.56,
-  "gross_on_capital": 2.343,
-  "net_on_capital": 0.297,
+  "long_value": 13173.5,
+  "short_value": 10237.49,
+  "gross_on_capital": 2.341,
+  "net_on_capital": 0.294,
   "orders_today": 277,
   "filled_today": 30,
-  "unrealized_pnl_total": 65.54,
+  "unrealized_pnl_total": 30.59,
   "best_today": [
     {
       "symbol": "DECK",
       "side": "short",
-      "pnl_today": 63.54
+      "pnl_today": 57.78
     },
     {
-      "symbol": "CTSH",
-      "side": "long",
-      "pnl_today": 29.19
-    },
-    {
-      "symbol": "TTMI",
+      "symbol": "WCC",
       "side": "short",
-      "pnl_today": 28.1204
+      "pnl_today": 50.48
     },
     {
-      "symbol": "EFX",
+      "symbol": "NEE",
       "side": "long",
-      "pnl_today": 23.14
+      "pnl_today": 43.44
     },
     {
-      "symbol": "FISV",
+      "symbol": "ROP",
       "side": "long",
-      "pnl_today": 22.3
+      "pnl_today": 36.27
+    },
+    {
+      "symbol": "AEIS",
+      "side": "short",
+      "pnl_today": 33.18
     }
   ],
   "worst_today": [
     {
-      "symbol": "VICR",
-      "side": "long",
-      "pnl_today": -66.86
-    },
-    {
       "symbol": "UCTT",
       "side": "long",
-      "pnl_today": -60.32
+      "pnl_today": -69.0344
     },
     {
-      "symbol": "COHU",
+      "symbol": "VICR",
       "side": "long",
-      "pnl_today": -45.15
+      "pnl_today": -66.84
     },
     {
       "symbol": "VIAV",
       "side": "long",
-      "pnl_today": -39.3568
+      "pnl_today": -50.72
+    },
+    {
+      "symbol": "COHU",
+      "side": "long",
+      "pnl_today": -43.85
     },
     {
       "symbol": "VECO",
       "side": "long",
-      "pnl_today": -27.55
+      "pnl_today": -26.25
     }
   ]
 }

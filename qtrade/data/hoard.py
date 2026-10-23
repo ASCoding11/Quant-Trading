@@ -6,6 +6,8 @@
   latest filings, USGS earthquakes, weather in the financial centres (Open-Meteo), GDELT's latest
   15-minute event file summarised by country and event type, the crypto fear & greed index; daily: Wikipedia's most-viewed articles, US Treasury yields, NY Fed reference rates
   (SOFR etc.), ECB euro reference rates;
+* end of day (``--eod``): the session's consolidated 1-minute bars for the largest ~1,000 US stocks,
+  encrypted, straight to the monthly release (too big for git);
 * market prices, which are licensed and so never published in the clear: Alpaca (IEX) snapshots of
   ~150 US stocks and ETFs, Yahoo 1-minute bars of indices, futures, FX, commodities, Asian stocks,
   Coinbase crypto tickers, Polymarket prediction-market prices, Google's trending searches (Google's
@@ -211,12 +213,34 @@ def fred(s, now):
     return out
 
 
+def coinbase_books(s, now):
+    """Top 50 levels of the order book for the biggest crypto pairs."""
+    return {p: _json(s, f"https://api.exchange.coinbase.com/products/{p}/book", params={"level": 2})
+            for p in COINBASE[:4]}
+
+
+def cftc_cot(s, now):
+    """CFTC Commitments of Traders, financial futures (weekly; public domain)."""
+    return {"txt": _text(s, "https://www.cftc.gov/dea/newcot/FinFutWk.txt")}
+
+
+def finra_short_volume(s, now):
+    """FINRA Reg SHO daily short volume (consolidated), the latest file published."""
+    for k in range(0, 6):
+        d = now - timedelta(days=k)
+        r = s.get(f"https://cdn.finra.org/equity/regsho/daily/CNMSshvol{d:%Y%m%d}.txt", timeout=30)
+        if r.status_code == 200 and r.text.strip():
+            return {"date": f"{d:%Y-%m-%d}", "txt": r.text}
+    raise RuntimeError("no Reg SHO file in the last 6 days")
+
+
 OPEN = {"hackernews": hackernews, "sec_filings": sec_filings, "earthquakes": earthquakes, "weather": weather,
         "gdelt": gdelt, "fear_greed_crypto": fear_greed_crypto}
-OPEN_DAILY = {"wiki_top": wiki_top, "treasury_yields": treasury_yields, "nyfed_rates": nyfed_rates, "ecb_fx": ecb_fx}
+OPEN_DAILY = {"wiki_top": wiki_top, "treasury_yields": treasury_yields, "nyfed_rates": nyfed_rates, "ecb_fx": ecb_fx,
+              "cftc_cot": cftc_cot}
 MARKET = {"google_trending": google_trending, "alpaca_snapshots": alpaca_snapshots, "yahoo_bars": yahoo_bars, "coinbase": coinbase,
-          "polymarket": polymarket}
-MARKET_DAILY = {"fred": fred}
+          "polymarket": polymarket, "coinbase_books": coinbase_books}
+MARKET_DAILY = {"fred": fred, "finra_short_volume": finra_short_volume}
 
 
 def _gz(obj, now) -> bytes:
@@ -269,14 +293,55 @@ def collect(out: Path, daily: bool = False, public_key: str | None = None, now: 
     return status
 
 
+def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: int = 1000) -> dict:
+    """End of day: the session's consolidated 1-minute bars for the ``n`` largest US stocks plus the
+    ETFs above, one encrypted parquet (``<day>/eod_1min_bars.parquet.enc``; too big for git - it goes
+    to the monthly release)."""
+    from ..data.intraday import AlpacaBars, bars_to_frame
+
+    day = (day or pd.Timestamp.now(tz="America/New_York")).normalize()
+    try:
+        from ..intraday.flip_sleeve import universe
+
+        names = [t.replace("-", ".") for t in universe()][:n]
+    except Exception as exc:
+        LOG.warning("universe unavailable (%s) - the hoard's own list", exc)
+        names = []
+    syms = list(dict.fromkeys(STOCKS + names))
+    data = AlpacaBars(feed="sip")
+    start, end = day + pd.Timedelta(hours=4), day + pd.Timedelta(hours=20)
+    frames = []
+    for i in range(0, len(syms), 200):
+        got = data.bars(syms[i:i + 200], "1Min", start.isoformat(), end.isoformat())
+        for sym, rows in got.items():
+            if rows:
+                f = bars_to_frame(rows, regular_hours=False)
+                f["symbol"] = sym
+                frames.append(f.reset_index())
+    if not frames:
+        return {"eod": "no bars (holiday?)"}
+    bars = pd.concat(frames, ignore_index=True)
+    p = out / f"{day:%Y-%m-%d}" / "eod_1min_bars.parquet"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    bars.to_parquet(p, compression="zstd")
+    if public_key:
+        from ..live.ledger import encrypt
+        encrypt(p, public_key)
+    elif os.environ.get("GITHUB_ACTIONS"):
+        raise RuntimeError("refusing to store market data unencrypted in CI")
+    LOG.info("eod: %d bars for %d symbols", len(bars), bars["symbol"].nunique())
+    return {"eod": f"{len(bars)} bars, {bars['symbol'].nunique()} symbols"}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
+    ap.add_argument("--eod", action="store_true", help="end-of-day 1-minute bars instead of the snapshot")
     ap.add_argument("--out", default="hoard_run")
     ap.add_argument("--daily", action="store_true", help="also collect the once-a-day sources")
     ap.add_argument("--public-key", default=None, help="encrypt the market-data tar to this RSA public key")
     args = ap.parse_args(argv)
     setup_logging()
-    status = collect(Path(args.out), args.daily, args.public_key)
+    status = eod(Path(args.out), args.public_key) if args.eod else collect(Path(args.out), args.daily, args.public_key)
     print(json.dumps(status, indent=1))
 
 

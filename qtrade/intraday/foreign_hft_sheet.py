@@ -73,15 +73,18 @@ class TrackerSheet:
         title = ("Foreign HFT tracker - $0 allocated, NOT part of the $10,000 book. Minute-level reversal / momentum "
                  "on 5-minute bars (each market's pick from the foreign_hft study, which found no edge after the "
                  "spread); P&L after an estimated spread, in dollars on a hypothetical $1,000 per market.")
+        # the summary sits beside the trade rows: append without inserting rows (that would shift it down)
+        if new:
+            self.s.post(f"{self.base}/values/'{TAB}'!A6:K:append",
+                        params={"valueInputOption": "RAW", "insertDataOption": "OVERWRITE"},
+                        json={"values": new}, timeout=60).raise_for_status()
+        self.s.post(f"{self.base}/values:batchClear", json={"ranges": [f"'{TAB}'!M6:R100000"]},
+                    timeout=30).raise_for_status()
         data = [{"range": f"'{TAB}'!A1", "values": [[title]]}, {"range": f"'{TAB}'!A3", "values": [[status]]},
                 {"range": f"'{TAB}'!A5:K5", "values": [HEADER]},
                 {"range": f"'{TAB}'!M5:R{5 + len(summary)}", "values": summary}]
         self.s.post(f"{self.base}/values:batchUpdate", json={"valueInputOption": "RAW", "data": data},
                     timeout=30).raise_for_status()
-        if new:
-            self.s.post(f"{self.base}/values/'{TAB}'!A6:K:append",
-                        params={"valueInputOption": "RAW", "insertDataOption": "INSERT_ROWS"},
-                        json={"values": new}, timeout=60).raise_for_status()
 
 
 def summarise(rows: list[list]) -> list[list]:

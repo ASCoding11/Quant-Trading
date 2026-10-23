@@ -4,7 +4,8 @@ name: hoard-archive
 # each day one asset.
 #   eod      (weekdays after the close) - the session's consolidated 1-minute bars for the
 #            largest ~1,000 US stocks, encrypted to config/ledger_public_key.pem, uploaded as
-#            eod-1min-<day>.parquet.enc (+ .key.enc). Too big for git.
+#            eod-1min-<day>.parquet.enc (+ .key.enc); plus the latest session's 1-minute bars of
+#            the foreign markets (Yahoo keeps them 7 days) as foreign-1min-<day>. Too big for git.
 #   archive  (every night) - each finished day on the "data-hoard" branch is packed into
 #            hoard-<day>.tar and uploaded; days older than 7 that are safely in a release are
 #            then dropped from the branch (a fresh one-commit branch), so the repository stays small.
@@ -48,11 +49,12 @@ jobs:
       - name: Upload to the month's release
         run: |
           shopt -s nullglob
-          for f in eod/*/eod_1min_bars.parquet*.enc; do
+          for f in eod/*/*_1min_bars.parquet*.enc; do
             day=$(basename "$(dirname "$f")"); tag="data-hoard-${day:0:7}"
+            kind=$(basename "$f" | sed 's/_1min_bars.*//')               # eod (US) or foreign
             gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Data hoard ${day:0:7}" \
               --notes "Daily archives of the data hoard (see .github/workflows/hoard-archive.yml). Market data is encrypted to config/ledger_public_key.pem."
-            name="eod-1min-${day}.$(basename "$f" | sed 's/^eod_1min_bars\.//')"
+            name="${kind}-1min-${day}.$(basename "$f" | sed 's/^[a-z]*_1min_bars\.//')"
             cp "$f" "$name"; gh release upload "$tag" "$name" --clobber; echo "uploaded $name to $tag"
           done
 

@@ -2,11 +2,16 @@ name: foreign-research
 
 # Foreign stock exchanges at the sheet's rules (qtrade/research/foreign.py): auction strategies in
 # Asian and European markets at 0 bp and after real costs, plus checks that the overnight edge is
-# not an artefact of stale Yahoo opening prices. The report goes to the results branch under
+# not an artefact of stale Yahoo opening prices; and the minute-level version (foreign_hft.py:
+# cross-sectional reversal / momentum on 5-minute bars, after an estimated spread). The report goes to the results branch under
 # research/foreign/.
 
 on:
   workflow_dispatch:
+    inputs:
+      study:
+        description: "daily (auction strategies), minute (foreign_hft) or both"
+        default: "both"
 
 permissions:
   contents: write
@@ -24,12 +29,15 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python -m qtrade.research.foreign --out reports/foreign
+      - if: inputs.study != 'minute'
+        run: python -m qtrade.research.foreign --out reports/foreign
+      - if: inputs.study != 'daily'
+        run: python -m qtrade.research.foreign_hft --out reports/foreign
       - name: Store the report
         if: always()
         run: |
           ls reports/foreign/* >/dev/null 2>&1 || exit 0
-          cat reports/foreign/foreign.md >> "$GITHUB_STEP_SUMMARY"
+          cat reports/foreign/*.md >> "$GITHUB_STEP_SUMMARY"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3 4 5; do

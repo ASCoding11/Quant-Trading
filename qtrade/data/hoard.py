@@ -321,6 +321,12 @@ def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: i
     if not frames:
         return {"eod": "no bars (holiday?)"}
     bars = pd.concat(frames, ignore_index=True)
+    status = {}
+    try:                                                 # foreign markets: Yahoo keeps 1-minute bars for 7 days only
+        status["foreign"] = foreign_minutes(out / f"{day:%Y-%m-%d}" / "foreign_1min_bars.parquet", public_key)
+    except Exception as exc:
+        LOG.warning("foreign 1-minute bars failed: %s", exc)
+        status["foreign"] = f"failed: {exc}"
     p = out / f"{day:%Y-%m-%d}" / "eod_1min_bars.parquet"
     p.parent.mkdir(parents=True, exist_ok=True)
     bars.to_parquet(p, compression="zstd")
@@ -330,7 +336,41 @@ def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: i
     elif os.environ.get("GITHUB_ACTIONS"):
         raise RuntimeError("refusing to store market data unencrypted in CI")
     LOG.info("eod: %d bars for %d symbols", len(bars), bars["symbol"].nunique())
-    return {"eod": f"{len(bars)} bars, {bars['symbol'].nunique()} symbols"}
+    return {"eod": f"{len(bars)} bars, {bars['symbol'].nunique()} symbols", **status}
+
+
+def foreign_minutes(path: Path, public_key: str | None) -> str:
+    """The latest session's 1-minute bars of the foreign sleeve's markets (Yahoo), encrypted."""
+    import yfinance as yf
+
+    from ..research.foreign import MARKETS
+
+    frames = []
+    for mkt, tickers in MARKETS.items():
+        raw = yf.download(tickers, period="5d", interval="1m", group_by="ticker", auto_adjust=False,
+                          progress=False, threads=True)
+        for t in tickers:
+            if raw is None or raw.empty or t not in raw.columns.get_level_values(0):
+                continue
+            f = raw[t].dropna(how="all")
+            if f.empty:
+                continue
+            f = f[pd.DatetimeIndex(f.index.date) == pd.Timestamp(max(f.index.date))]   # the latest session
+            f = f.rename(columns=str.lower).reset_index().rename(columns={f.index.name or "index": "time"})
+            f["time"] = f["time"].astype(str)
+            f["symbol"], f["market"] = t, mkt
+            frames.append(f)
+    if not frames:
+        return "no bars"
+    df = pd.concat(frames, ignore_index=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path, compression="zstd")
+    if public_key:
+        from ..live.ledger import encrypt
+        encrypt(path, public_key)
+    elif os.environ.get("GITHUB_ACTIONS"):
+        raise RuntimeError("refusing to store market data unencrypted in CI")
+    return f"{len(df)} bars, {df['symbol'].nunique()} symbols"
 
 
 def main(argv=None):

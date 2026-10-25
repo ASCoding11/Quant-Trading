@@ -4,18 +4,21 @@ Every collected news / media dataset turned into per-stock daily features (dated
 
 ### Data collected
 
-| dataset                    |    rows |   columns | first      | last       |   megabytes |
-|:---------------------------|--------:|----------:|:-----------|:-----------|------------:|
-| gdelt_theme_timelinevolraw |    3541 |        21 | 2017-01-01 | 2026-10-22 |         0.3 |
-| gdelt_total_articles       |    3541 |         1 | 2017-01-01 | 2026-10-22 |         0.1 |
-| hn_stories                 |  538065 |         6 |            |            |        33.1 |
-| sec_filings                | 1709772 |         4 |            |            |        23.5 |
-| sec_phrase_hits            |  486597 |         6 |            |            |         8.5 |
-| wiki_extra_pageviews       |    4131 |       137 | 2015-07-01 | 2026-10-21 |         0.8 |
+| dataset                      |    rows |   columns | first      | last       |   megabytes |
+|:-----------------------------|--------:|----------:|:-----------|:-----------|------------:|
+| gdelt_company_timelinevolraw |    3543 |       333 | 2017-01-01 | 2026-10-24 |         1.6 |
+| gdelt_theme_timelinetone     |    3543 |        91 | 2017-01-01 | 2026-10-24 |         2.2 |
+| gdelt_theme_timelinevolraw   |    3543 |        92 | 2017-01-01 | 2026-10-24 |         1.1 |
+| gdelt_total_articles         |    3541 |         1 | 2017-01-01 | 2026-10-22 |         0.1 |
+| hn_stories                   |  538374 |         6 |            |            |        35.6 |
+| sec_filings                  | 1709772 |         4 |            |            |        23.5 |
+| sec_phrase_hits              |  487004 |         6 |            |            |         6.3 |
+| tv_theme_timelinevol         |    2841 |        92 | 2017-01-01 | 2024-10-11 |         1.5 |
+| wiki_extra_pageviews         |    4131 |       137 | 2015-07-01 | 2026-10-21 |         0.8 |
 
 ### Per-stock features
 
-1200 feature-target pairs. |t| > 2 over the whole period: 340 (about 60 expected by luck). Same sign and |t| > 2 in both halves: 186 (about 1.6 expected by luck).
+1224 feature-target pairs. |t| > 2 over the whole period: 351 (about 61 expected by luck). Same sign and |t| > 2 in both halves: 191 (about 1.6 expected by luck).
 
 #### Predict the next move (tradable)
 
@@ -28,54 +31,54 @@ Every collected news / media dataset turned into per-stock daily features (dated
 | sec_filings        | sec_10q                          | intraday |             5.2 | -0.0028 | -2.7684 | -0.0048 | -3.5911 |       -6.1467 |       -9.2526 |          2.7684 |
 | benzinga_headlines | headline:buyback                 | next_1d  |             0.7 |  0.0051 |  4.4403 |  0.0035 |  2.7062 |       24.9016 |       23.6227 |          2.7062 |
 | benzinga_headlines | headline:buyback:last_5d         | intraday |             3.3 |  0.0024 |  2.6442 |  0.0033 |  3.021  |        7.833  |        9.9198 |          2.6442 |
-| sec_phrases        | 8k_says:tender offer:last_5d     | intraday |             3.6 | -0.0024 | -2.7282 | -0.0023 | -2.2965 |       -2.805  |       -2.9223 |          2.2965 |
 | sec_filings        | sec_8k_5.02                      | intraday |             4.3 | -0.0018 | -2.2914 | -0.007  | -7.1043 |       -2.5742 |      -12.9967 |          2.2914 |
+| sec_phrases        | 8k_says:tender offer:last_5d     | intraday |             3.6 | -0.0024 | -2.7282 | -0.0022 | -2.2818 |       -2.805  |       -2.7698 |          2.2818 |
 | sec_filings        | sec_8k_5.02                      | next_1d  |             4.3 | -0.0017 | -2.1995 | -0.0062 | -6.422  |       -3.0311 |      -13.2729 |          2.1995 |
 | benzinga_headlines | headline:dividend_up             | next_1d  |             0.3 |  0.0034 |  2.1674 |  0.0032 |  2.2501 |        9.4589 |       18.6133 |          2.1674 |
 | benzinga_headlines | headline:deal:last_5d            | intraday |            17.4 | -0.002  | -2.0087 | -0.0025 | -2.1026 |       -1.1708 |       -2.0747 |          2.0087 |
+| sec_phrases        | 8k_says:merger agreement:last_5d | intraday |             2.7 | -0.0019 | -2.0035 | -0.0041 | -4.2591 |       -2.4477 |       -8.6295 |          2.0035 |
 | benzinga_headlines | headline:dividend_up             | intraday |             0.3 |  0.0032 |  1.9693 |  0.004  |  2.8701 |        8.7293 |       18.7751 |          1.9693 |
-| sec_phrases        | 8k_says:merger agreement:last_5d | intraday |             2.7 | -0.0018 | -1.9547 | -0.0042 | -4.3057 |       -2.4029 |       -8.8537 |          1.9547 |
+| sec_phrases        | 8k_says:merger agreement:last_5d | next_5d  |             2.7 | -0.0045 | -2.2004 | -0.004  | -1.937  |      -16.1188 |      -16.8317 |          1.937  |
 | sec_filings        | sec_form144                      | next_1d  |             4.7 | -0.0031 | -1.8996 | -0.0051 | -3.7432 |       -5.064  |       -7.2552 |          1.8996 |
-| sec_phrases        | 8k_says:merger agreement:last_5d | next_5d  |             2.7 | -0.0044 | -2.1836 | -0.0038 | -1.8248 |      -16.0643 |      -15.0054 |          1.8248 |
-| sec_phrases        | 8k_says:merger agreement:last_5d | next_1d  |             2.7 | -0.0017 | -1.8043 | -0.0033 | -3.3776 |       -2.5825 |       -7.7265 |          1.8043 |
-| sec_phrases        | 8k_says:tariffs:last_5d          | intraday |             7.5 | -0.0018 | -1.7972 | -0.0022 | -2.0428 |       -0.5976 |       -1.1299 |          1.7972 |
+| sec_phrases        | 8k_says:merger agreement:last_5d | next_1d  |             2.7 | -0.0017 | -1.8468 | -0.0032 | -3.3331 |       -2.6201 |       -7.509  |          1.8468 |
+| gdelt_news         | gdelt_news:level                 | next_20d |           102.5 |  0.0235 |  1.9492 |  0.0207 |  1.8035 |      nan      |      nan      |          1.8035 |
+| gdelt_news         | gdelt_news:level                 | next_5d  |           102.5 |  0.0148 |  2.3575 |  0.0115 |  1.7994 |      nan      |      nan      |          1.7994 |
+| sec_phrases        | 8k_says:tariffs:last_5d          | intraday |             7.5 | -0.0018 | -1.7972 | -0.0022 | -2.0354 |       -0.5976 |       -1.1342 |          1.7972 |
 | benzinga_headlines | headline:deal:last_5d            | next_1d  |            17.4 | -0.0018 | -1.8332 | -0.0022 | -1.7895 |       -1.0549 |       -2.1381 |          1.7895 |
-| sec_phrases        | 8k_says:tariffs                  | intraday |             1.5 | -0.0031 | -2.387  | -0.0021 | -1.7014 |       -0.9266 |       -4.6331 |          1.7014 |
-| sec_phrases        | 8k_says:work stoppage:last_5d    | intraday |             0.9 | -0.0017 | -1.6627 | -0.0036 | -3.2902 |       -5.4836 |      -17.1565 |          1.6627 |
-| sec_filings        | sec_13g:last_5d                  | next_1d  |            23.4 | -0.0015 | -1.672  | -0.0024 | -1.6426 |       -1.656  |       -2.3642 |          1.6426 |
-| benzinga_headlines | headline:halt                    | next_1d  |             0.2 | -0.0037 | -1.9201 | -0.0034 | -1.6418 |      -33.8559 |      -21.7852 |          1.6418 |
-| sec_filings        | sec_10q:last_5d                  | intraday |            26   | -0.0024 | -2.5206 | -0.002  | -1.6268 |       -1.022  |       -0.4801 |          1.6268 |
-| sec_filings        | sec_10q:last_5d                  | next_1d  |            26   | -0.0032 | -3.4404 | -0.002  | -1.6071 |       -1.9758 |       -1.5342 |          1.6071 |
+| gdelt_news         | gdelt_news:level                 | intraday |           102.5 |  0.0052 |  1.7659 |  0.006  |  2.0857 |      nan      |      nan      |          1.7659 |
+| sec_phrases        | 8k_says:tariffs                  | intraday |             1.5 | -0.0031 | -2.387  | -0.0021 | -1.704  |       -0.9266 |       -4.6052 |          1.704  |
+| gdelt_news         | gdelt_news:abnormal_5d           | next_20d |           115.4 | -0.0111 | -1.7033 | -0.0108 | -1.8127 |      -11.314  |      -14.8913 |          1.7033 |
+| sec_phrases        | 8k_says:work stoppage:last_5d    | intraday |             0.9 | -0.0017 | -1.6627 | -0.0036 | -3.2773 |       -5.4836 |      -17.1152 |          1.6627 |
 
 #### Predict the size of the next move (volatility)
 
-| source             | feature                             | target      |   names_per_day |    ic_A |      t_A |    ic_B |      t_B |   spread_bp_A |   spread_bp_B |   weaker_half_t |
-|:-------------------|:------------------------------------|:------------|----------------:|--------:|---------:|--------:|---------:|--------------:|--------------:|----------------:|
-| benzinga           | benzinga_articles:spike             | abs_next_1d |            40   |  0.0607 |  42.4927 |  0.0621 |  33.5802 |       44.9453 |       48.6285 |         33.5802 |
-| benzinga           | benzinga_solo_articles:spike        | abs_next_1d |            35   |  0.0565 |  42.0706 |  0.0535 |  30.9725 |       43.5025 |       41.9644 |         30.9725 |
-| benzinga_headlines | headline:beat                       | abs_next_1d |             4.6 |  0.0425 |  30.7872 |  0.0656 |  35.477  |      104.08   |      150.948  |         30.7872 |
-| benzinga           | benzinga_articles:level             | abs_next_1d |            77.2 |  0.0501 |  33.5764 |  0.0585 |  29.4886 |      218.677  |      nan      |         29.4886 |
-| benzinga           | benzinga_solo_articles:level        | abs_next_1d |            49.7 |  0.0537 |  39.1763 |  0.0502 |  27.7038 |      nan      |      nan      |         27.7038 |
-| benzinga_headlines | headline:miss                       | abs_next_1d |             2.1 |  0.0371 |  27.6612 |  0.0504 |  32.0081 |      126.332  |      168.443  |         27.6612 |
-| benzinga_headlines | headline:beat:last_5d               | abs_next_1d |            21.4 |  0.0282 |  25.8422 |  0.0482 |  31.9771 |       33.821  |       48.4118 |         25.8422 |
-| benzinga_headlines | headline:miss:last_5d               | abs_next_1d |             9.9 |  0.025  |  24.131  |  0.0338 |  27.6571 |       44.9913 |       50.5912 |         24.131  |
-| wikipedia          | wiki_views:level                    | abs_next_1d |            36.4 |  0.0259 |  24.3424 |  0.0301 |  23.1782 |      nan      |      nan      |         23.1782 |
-| benzinga           | benzinga_solo_articles:abnormal     | abs_next_1d |           389.4 |  0.0371 |  25.3265 |  0.0424 |  22.4674 |       22.5897 |       28.1715 |         22.4674 |
-| benzinga           | benzinga_articles:abnormal          | abs_next_1d |           393.1 |  0.0343 |  24.1463 |  0.0418 |  21.8263 |       24.789  |       32.1775 |         21.8263 |
-| benzinga           | benzinga_articles:abnormal_5d       | abs_next_1d |           390.1 |  0.0335 |  27.9216 |  0.0336 |  21.3203 |       18.9668 |       21.5907 |         21.3203 |
-| sec_filings        | sec_8k_7.01                         | abs_next_1d |             5.5 |  0.0215 |  25.5511 |  0.0224 |  20.1453 |       38.1598 |       42.6514 |         20.1453 |
-| benzinga           | benzinga_solo_articles:abnormal_5d  | abs_next_1d |           387.4 |  0.0367 |  31.6152 |  0.0291 |  18.9052 |       18.8059 |       18.5678 |         18.9052 |
-| benzinga_headlines | headline:guidance_up                | abs_next_1d |             0.6 |  0.0298 |  20.0505 |  0.0344 |  18.7852 |      120.036  |      152.437  |         18.7852 |
-| sec_filings        | sec_10q                             | abs_next_1d |             5.2 |  0.0178 |  18.1458 |  0.026  |  18.4764 |       40.3886 |       62.0431 |         18.1458 |
-| benzinga_headlines | headline:guidance_down              | abs_next_1d |             0.2 |  0.0309 |  16.8807 |  0.034  |  18.8891 |      188.223  |      217.839  |         16.8807 |
-| sec_filings        | sec_424b:last_5d                    | abs_next_1d |             9.7 | -0.0159 | -16.4758 | -0.0228 | -19.032  |      -15.7018 |      -25.9026 |         16.4758 |
-| sec_phrases        | 8k_says:tariffs                     | abs_next_1d |             1.5 |  0.0195 |  16.3501 |  0.0242 |  19.1964 |       60.9238 |       65.6136 |         16.3501 |
-| benzinga_headlines | headline:pt_cut                     | abs_next_1d |             6.3 |  0.0168 |  15.9326 |  0.0215 |  17.1081 |       43.3686 |       26.7853 |         15.9326 |
-| sec_phrases        | 8k_says:share repurchase program    | abs_next_1d |             1   |  0.018  |  15.7174 |  0.0209 |  16.9289 |       62.3136 |       72.2384 |         15.7174 |
-| sec_phrases        | 8k_says:goodwill impairment         | abs_next_1d |             0.5 |  0.0171 |  13.6332 |  0.0209 |  15.851  |       80.4465 |       87.3818 |         13.6332 |
-| benzinga_headlines | headline:pt_cut:last_5d             | abs_next_1d |            25.3 |  0.0163 |  15.228  |  0.0199 |  13.3945 |       20.0415 |       10.6569 |         13.3945 |
-| sec_phrases        | 8k_says:goodwill impairment:last_5d | abs_next_1d |             2.6 |  0.0123 |  13.2563 |  0.0147 |  14.3804 |       34.4592 |       38.0907 |         13.2563 |
-| sec_filings        | sec_8k_7.01:last_5d                 | abs_next_1d |            26.2 |  0.0164 |  19.7639 |  0.0138 |  13.1444 |       12.0614 |       10.3149 |         13.1444 |
+| source             | feature                            | target      |   names_per_day |    ic_A |      t_A |    ic_B |      t_B |   spread_bp_A |   spread_bp_B |   weaker_half_t |
+|:-------------------|:-----------------------------------|:------------|----------------:|--------:|---------:|--------:|---------:|--------------:|--------------:|----------------:|
+| benzinga           | benzinga_articles:spike            | abs_next_1d |            40   |  0.0607 |  42.4927 |  0.0621 |  33.5802 |       44.9453 |       48.6285 |         33.5802 |
+| benzinga           | benzinga_solo_articles:spike       | abs_next_1d |            35   |  0.0565 |  42.0706 |  0.0535 |  30.9725 |       43.5025 |       41.9644 |         30.9725 |
+| benzinga_headlines | headline:beat                      | abs_next_1d |             4.6 |  0.0425 |  30.7872 |  0.0656 |  35.477  |      104.08   |      150.948  |         30.7872 |
+| benzinga           | benzinga_articles:level            | abs_next_1d |            77.2 |  0.0501 |  33.5764 |  0.0585 |  29.4886 |      218.677  |      nan      |         29.4886 |
+| benzinga           | benzinga_solo_articles:level       | abs_next_1d |            49.7 |  0.0537 |  39.1763 |  0.0502 |  27.7038 |      nan      |      nan      |         27.7038 |
+| benzinga_headlines | headline:miss                      | abs_next_1d |             2.1 |  0.0371 |  27.6612 |  0.0504 |  32.0081 |      126.332  |      168.443  |         27.6612 |
+| benzinga_headlines | headline:beat:last_5d              | abs_next_1d |            21.4 |  0.0282 |  25.8422 |  0.0482 |  31.9771 |       33.821  |       48.4118 |         25.8422 |
+| benzinga_headlines | headline:miss:last_5d              | abs_next_1d |             9.9 |  0.025  |  24.131  |  0.0338 |  27.6571 |       44.9913 |       50.5912 |         24.131  |
+| wikipedia          | wiki_views:level                   | abs_next_1d |            36.4 |  0.0259 |  24.3424 |  0.0301 |  23.1782 |      nan      |      nan      |         23.1782 |
+| benzinga           | benzinga_solo_articles:abnormal    | abs_next_1d |           389.4 |  0.0371 |  25.3269 |  0.0424 |  22.4685 |       22.5905 |       28.166  |         22.4685 |
+| benzinga           | benzinga_articles:abnormal         | abs_next_1d |           393.1 |  0.0343 |  24.147  |  0.0418 |  21.8305 |       24.7841 |       32.1952 |         21.8305 |
+| benzinga           | benzinga_articles:abnormal_5d      | abs_next_1d |           390.1 |  0.0335 |  27.9352 |  0.0336 |  21.3553 |       18.9538 |       21.6091 |         21.3553 |
+| sec_filings        | sec_8k_7.01                        | abs_next_1d |             5.5 |  0.0215 |  25.5511 |  0.0224 |  20.1453 |       38.1598 |       42.6514 |         20.1453 |
+| gdelt_news         | gdelt_news:level                   | abs_next_1d |           102.5 | -0.0599 | -31.2652 | -0.038  | -19.2422 |      nan      |      nan      |         19.2422 |
+| benzinga           | benzinga_solo_articles:abnormal_5d | abs_next_1d |           387.4 |  0.0367 |  31.6118 |  0.0291 |  18.9105 |       18.8055 |       18.5603 |         18.9105 |
+| benzinga_headlines | headline:guidance_up               | abs_next_1d |             0.6 |  0.0298 |  20.0505 |  0.0344 |  18.7852 |      120.036  |      152.437  |         18.7852 |
+| sec_filings        | sec_10q                            | abs_next_1d |             5.2 |  0.0178 |  18.1458 |  0.026  |  18.4764 |       40.3886 |       62.0431 |         18.1458 |
+| benzinga_headlines | headline:guidance_down             | abs_next_1d |             0.2 |  0.0309 |  16.8807 |  0.034  |  18.8891 |      188.223  |      217.839  |         16.8807 |
+| gdelt_news         | gdelt_news:abnormal                | abs_next_1d |           115.6 |  0.0264 |  17.8353 |  0.0251 |  16.8511 |        6.9927 |       11.2738 |         16.8511 |
+| sec_filings        | sec_424b:last_5d                   | abs_next_1d |             9.7 | -0.0159 | -16.4758 | -0.0228 | -19.032  |      -15.7018 |      -25.9026 |         16.4758 |
+| sec_phrases        | 8k_says:tariffs                    | abs_next_1d |             1.5 |  0.0195 |  16.3501 |  0.0242 |  19.2153 |       60.9238 |       65.6683 |         16.3501 |
+| benzinga_headlines | headline:pt_cut                    | abs_next_1d |             6.3 |  0.0168 |  15.9326 |  0.0215 |  17.1081 |       43.3686 |       26.7853 |         15.9326 |
+| sec_phrases        | 8k_says:share repurchase program   | abs_next_1d |             1   |  0.018  |  15.7174 |  0.0209 |  16.9289 |       62.3136 |       72.2384 |         15.7174 |
+| sec_phrases        | 8k_says:goodwill impairment        | abs_next_1d |             0.5 |  0.0171 |  13.6332 |  0.0209 |  15.851  |       80.4465 |       87.3818 |         13.6332 |
+| benzinga_headlines | headline:pt_cut:last_5d            | abs_next_1d |            25.3 |  0.0163 |  15.228  |  0.0199 |  13.3945 |       20.0415 |       10.6569 |         13.3945 |
 
 #### Move together with the news (same window: descriptive, not tradable)
 
@@ -109,65 +112,65 @@ Every collected news / media dataset turned into per-stock daily features (dated
 
 ### Market-wide news themes vs ETFs
 
-4047 theme-asset-horizon pairs; same sign and |t| > 2 in both halves: 2 (about 5.3 expected by luck).
+28542 theme-asset-horizon pairs; same sign and |t| > 2 in both halves: 17 (about 37.1 expected by luck).
 
 #### Predictive (from the next close on)
 
-| feature                          | asset   | horizon   |   corr_A |     t_A |   corr_B |     t_B |   weaker_half_t |
-|:---------------------------------|:--------|:----------|---------:|--------:|---------:|--------:|----------------:|
-| 8k_says:FDA approval             | HYG     | next_1d   |  -0.0599 | -2.3118 |  -0.0644 | -2.2348 |          2.2348 |
-| 8k_says:tender offer             | UUP     | next_1d   |   0.0692 |  2.6719 |   0.0565 |  1.9591 |          1.9591 |
-| 8k_says:complete response letter | HYG     | next_1d   |  -0.0471 | -1.8169 |  -0.0644 | -2.2326 |          1.8169 |
-| 8k_says:class action             | HYG     | next_1d   |  -0.0598 | -2.3081 |  -0.0508 | -1.7618 |          1.7618 |
-| 8k_says:preliminary results      | HYG     | next_1d   |  -0.0643 | -2.4791 |  -0.047  | -1.6323 |          1.6323 |
-| 8k_says:going concern            | TLT     | next_1d   |  -0.0411 | -1.5858 |  -0.0603 | -2.0931 |          1.5858 |
-| 8k_says:Department of Justice    | HYG     | next_1d   |  -0.0713 | -2.7525 |  -0.0442 | -1.5342 |          1.5342 |
-| 8k_says:work stoppage            | GLD     | next_1d   |  -0.0435 | -1.6791 |  -0.0437 | -1.5163 |          1.5163 |
-| news_share:inflation             | HYG     | next_1d   |  -0.043  | -1.5128 |  -0.0504 | -1.7334 |          1.5128 |
-| 8k_says:work stoppage            | UUP     | next_1d   |   0.0615 |  2.3758 |   0.0433 |  1.5028 |          1.5028 |
-| 8k_says:merger agreement         | HYG     | next_1d   |  -0.0385 | -1.4861 |  -0.0581 | -2.0169 |          1.4861 |
-| 8k_says:covenant waiver          | HYG     | next_1d   |  -0.0385 | -1.4779 |  -0.0655 | -2.271  |          1.4779 |
-| 8k_says:preliminary results      | HYG     | next_5d   |  -0.1047 | -1.8069 |  -0.089  | -1.3789 |          1.3789 |
-| news_share:election              | GLD     | next_5d   |  -0.0869 | -1.3672 |  -0.11   | -1.6885 |          1.3672 |
-| news_share:government shutdown   | GLD     | next_5d   |   0.0893 |  1.4056 |   0.088  |  1.352  |          1.352  |
-| news_share:impeachment           | TLT     | next_1d   |  -0.0381 | -1.3398 |  -0.056  | -1.9266 |          1.3398 |
-| 8k_says:material weakness        | HYG     | next_1d   |  -0.0419 | -1.6175 |  -0.0386 | -1.3386 |          1.3386 |
-| 8k_says:subpoena                 | TLT     | next_1d   |  -0.0337 | -1.2998 |  -0.0544 | -1.8876 |          1.2998 |
-| 8k_says:tender offer             | HYG     | next_1d   |  -0.0336 | -1.2985 |  -0.0749 | -2.5995 |          1.2985 |
-| 8k_says:special dividend         | XLP     | next_1d   |   0.0335 |  1.2945 |   0.0378 |  1.3121 |          1.2945 |
-| news_share:debt ceiling          | XLP     | next_1d   |  -0.0407 | -1.2644 |  -0.0516 | -1.7727 |          1.2644 |
-| news_share:terrorist attack      | GLD     | next_1d   |   0.0459 |  1.6167 |   0.0365 |  1.2546 |          1.2546 |
-| 8k_says:FDA approval             | XLY     | next_5d   |  -0.0833 | -1.4372 |  -0.08   | -1.2391 |          1.2391 |
-| news_share:coronavirus           | TLT     | next_20d  |   0.2283 |  1.796  |   0.1825 |  1.2246 |          1.2246 |
-| news_share:government shutdown   | GLD     | next_1d   |   0.0605 |  2.1286 |   0.0354 |  1.2183 |          1.2183 |
+| feature                                  | asset   | horizon   |   corr_A |     t_A |   corr_B |     t_B |   weaker_half_t |
+|:-----------------------------------------|:--------|:----------|---------:|--------:|---------:|--------:|----------------:|
+| news_tone:volatility                     | ^VIX    | next_5d   |   0.143  |  2.2687 |   0.215  |  3.3032 |          2.2687 |
+| 8k_says:FDA approval                     | HYG     | next_1d   |  -0.0599 | -2.3118 |  -0.0645 | -2.2401 |          2.2401 |
+| news_share:unemployment                  | USO     | next_1d   |  -0.0887 | -3.1212 |  -0.0613 | -2.1108 |          2.1108 |
+| tv_airtime:sanctions                     | USO     | next_1d   |   0.0618 |  2.1748 |   0.0775 |  2.049  |          2.049  |
+| news_tone_change:artificial intelligence | HYG     | next_1d   |  -0.0574 | -2.029  |  -0.0614 | -2.1134 |          2.029  |
+| news_tone_change:artificial intelligence | XLB     | next_1d   |  -0.062  | -2.1898 |  -0.0577 | -1.9859 |          1.9859 |
+| tv_airtime:acquisition                   | USO     | next_1d   |   0.0754 |  2.6533 |   0.0749 |  1.9789 |          1.9789 |
+| 8k_says:tender offer                     | UUP     | next_1d   |   0.0692 |  2.6719 |   0.0562 |  1.952  |          1.952  |
+| news_tone_change:consumer confidence     | XLI     | next_1d   |   0.0547 |  1.9319 |   0.0749 |  2.5762 |          1.9319 |
+| news_tone_change:Iran                    | IWM     | next_1d   |   0.0531 |  1.8763 |   0.0583 |  2.0069 |          1.8763 |
+| news_tone:artificial intelligence        | QQQ     | next_1d   |  -0.0581 | -2.0613 |  -0.0545 | -1.8744 |          1.8744 |
+| tv_airtime:stimulus                      | XLU     | next_1d   |  -0.0532 | -1.8729 |  -0.0753 | -1.9904 |          1.8729 |
+| news_tone:jobs report                    | ^VIX    | next_5d   |   0.1175 |  1.863  |   0.1237 |  1.9009 |          1.863  |
+| news_share:volatility                    | ^VIX    | next_5d   |  -0.1159 | -1.8236 |  -0.1542 | -2.3686 |          1.8236 |
+| 8k_says:complete response letter         | HYG     | next_1d   |  -0.0471 | -1.817  |  -0.0639 | -2.2203 |          1.817  |
+| tv_airtime:antitrust                     | XLK     | next_1d   |   0.085  |  2.9937 |   0.0685 |  1.81   |          1.81   |
+| news_tone:rate hike                      | ^VIX    | next_5d   |   0.1113 |  1.7662 |   0.1523 |  2.339  |          1.7662 |
+| 8k_says:class action                     | HYG     | next_1d   |  -0.0598 | -2.3081 |  -0.0508 | -1.7659 |          1.7659 |
+| news_share:meme stock                    | TLT     | next_1d   |  -0.0777 | -2.7334 |  -0.0508 | -1.7474 |          1.7474 |
+| news_share:rate hike                     | XLB     | next_1d   |  -0.0528 | -1.8592 |  -0.0508 | -1.7473 |          1.7473 |
+| news_tone:inflation                      | ^VIX    | next_1d   |   0.0491 |  1.7412 |   0.0679 |  2.3349 |          1.7412 |
+| news_tone_change:artificial intelligence | ^VIX    | next_1d   |   0.0556 |  1.9642 |   0.0502 |  1.7257 |          1.7257 |
+| tv_airtime:Federal Reserve               | XLF     | next_1d   |  -0.0604 | -2.1259 |  -0.0649 | -1.7155 |          1.7155 |
+| news_tone_change:electric vehicle        | UUP     | next_1d   |  -0.0486 | -1.7154 |  -0.0512 | -1.7602 |          1.7154 |
+| news_share:rate hike                     | HYG     | next_1d   |  -0.0487 | -1.7149 |  -0.0671 | -2.3074 |          1.7149 |
 
 #### Same day (descriptive)
 
-| feature                          | asset   | horizon   |   corr_A |     t_A |   corr_B |     t_B |   weaker_half_t |
-|:---------------------------------|:--------|:----------|---------:|--------:|---------:|--------:|----------------:|
-| hacker_news:stories              | ^VIX    | same_day  |   0.1101 |  4.2532 |   0.1003 |  3.4819 |          3.4819 |
-| news_share:bankruptcy            | ^VIX    | same_day  |  -0.0535 | -1.8817 |  -0.058  | -1.9954 |          1.8817 |
-| 8k_says:data breach              | USO     | same_day  |   0.0622 |  2.3972 |   0.0538 |  1.8667 |          1.8667 |
-| 8k_says:going concern            | TLT     | same_day  |  -0.0478 | -1.8452 |  -0.0663 | -2.3026 |          1.8452 |
-| news_share:layoffs               | GLD     | same_day  |   0.0637 |  1.9801 |   0.0701 |  1.7969 |          1.7969 |
-| 8k_says:class action             | HYG     | same_day  |  -0.0764 | -2.9497 |  -0.0511 | -1.7741 |          1.7741 |
-| hacker_news:stories              | HYG     | same_day  |  -0.0455 | -1.7564 |  -0.0869 | -3.0158 |          1.7564 |
-| 8k_says:cybersecurity incident   | XLE     | same_day  |   0.052  |  2.0055 |   0.0504 |  1.7507 |          1.7507 |
-| 8k_says:reverse stock split      | UUP     | same_day  |   0.0604 |  2.3332 |   0.0501 |  1.739  |          1.739  |
-| 8k_says:going concern            | XLE     | same_day  |   0.0489 |  1.886  |   0.0487 |  1.6913 |          1.6913 |
-| 8k_says:complete response letter | HYG     | same_day  |  -0.0491 | -1.8951 |  -0.0436 | -1.5106 |          1.5106 |
-| 8k_says:tender offer             | UUP     | same_day  |   0.0387 |  1.4955 |   0.0554 |  1.9219 |          1.4955 |
-| news_share:layoffs               | XLP     | same_day  |   0.0502 |  1.562  |   0.0578 |  1.4816 |          1.4816 |
-| 8k_says:subpoena                 | TLT     | same_day  |  -0.0378 | -1.4584 |  -0.0732 | -2.5396 |          1.4584 |
-| 8k_says:tender offer             | HYG     | same_day  |  -0.0356 | -1.3756 |  -0.0538 | -1.8661 |          1.3756 |
-| 8k_says:merger agreement         | HYG     | same_day  |  -0.0337 | -1.3011 |  -0.0442 | -1.5342 |          1.3011 |
-| news_share:layoffs               | XLI     | same_day  |   0.054  |  1.6778 |   0.0505 |  1.2955 |          1.2955 |
-| 8k_says:restatement              | UUP     | same_day  |   0.0519 |  2.0046 |   0.0368 |  1.2768 |          1.2768 |
-| hacker_news:stories              | XLB     | same_day  |  -0.0327 | -1.2629 |  -0.0424 | -1.4734 |          1.2629 |
-| 8k_says:material weakness        | HYG     | same_day  |  -0.0615 | -2.3755 |  -0.0358 | -1.2442 |          1.2442 |
-| 8k_says:merger agreement         | TLT     | same_day  |  -0.031  | -1.1959 |  -0.041  | -1.4221 |          1.1959 |
-| news_share:hurricane             | XLE     | same_day  |   0.034  |  1.1948 |   0.0466 |  1.6014 |          1.1948 |
-| 8k_says:FDA approval             | HYG     | same_day  |  -0.0527 | -2.0343 |  -0.0344 | -1.1939 |          1.1939 |
-| news_share:inflation             | ^VIX    | same_day  |  -0.0414 | -1.4555 |  -0.0344 | -1.1818 |          1.1818 |
-| 8k_says:covenant waiver          | HYG     | same_day  |  -0.0459 | -1.7612 |  -0.033  | -1.1441 |          1.1441 |
+| feature                            | asset   | horizon   |   corr_A |     t_A |   corr_B |     t_B |   weaker_half_t |
+|:-----------------------------------|:--------|:----------|---------:|--------:|---------:|--------:|----------------:|
+| hacker_news:stories                | ^VIX    | same_day  |   0.1101 |  4.2532 |   0.0993 |  3.4505 |          3.4505 |
+| news_share:volatility              | ^VIX    | same_day  |  -0.0846 | -2.9765 |  -0.1276 | -4.3938 |          2.9765 |
+| news_share:acquisition             | HYG     | same_day  |   0.0824 |  2.8979 |   0.0774 |  2.6655 |          2.6655 |
+| news_share:antitrust               | ^VIX    | same_day  |  -0.0935 | -3.2901 |  -0.0756 | -2.6033 |          2.6033 |
+| news_share:acquisition             | ^VIX    | same_day  |  -0.1084 | -3.8149 |  -0.0739 | -2.5436 |          2.5436 |
+| news_share:regulation              | ^VIX    | same_day  |  -0.0672 | -2.3655 |  -0.0678 | -2.3322 |          2.3322 |
+| news_share:artificial intelligence | ^VIX    | same_day  |  -0.07   | -2.4618 |  -0.0639 | -2.1982 |          2.1982 |
+| news_tone:rate hike                | ^VIX    | same_day  |   0.0652 |  2.3141 |   0.0635 |  2.1874 |          2.1874 |
+| news_share:cryptocurrency          | UUP     | same_day  |  -0.0738 | -2.5983 |  -0.062  | -2.1336 |          2.1336 |
+| news_tone:bull market              | ^VIX    | same_day  |   0.059  |  2.0928 |   0.1014 |  3.4892 |          2.0928 |
+| news_tone_change:downgrade         | XLU     | same_day  |   0.0592 |  2.0925 |   0.0782 |  2.6933 |          2.0925 |
+| news_tone_change:acquisition       | HYG     | same_day  |   0.0574 |  2.0273 |   0.0699 |  2.4055 |          2.0273 |
+| news_tone:volatility               | ^VIX    | same_day  |   0.0553 |  1.9621 |   0.0823 |  2.834  |          1.9621 |
+| tv_airtime:stock market crash      | XLU     | same_day  |  -0.0557 | -1.9608 |  -0.097  | -2.5659 |          1.9608 |
+| news_tone:Taiwan                   | IWM     | same_day  |   0.0603 |  2.1381 |   0.057  |  1.9607 |          1.9607 |
+| tv_airtime:drought                 | IWM     | same_day  |   0.066  |  2.3236 |   0.0739 |  1.9536 |          1.9536 |
+| news_tone:downgrade                | XLU     | same_day  |   0.0544 |  1.93   |   0.0681 |  2.3432 |          1.93   |
+| 8k_says:data breach                | USO     | same_day  |   0.0622 |  2.3972 |   0.0552 |  1.9175 |          1.9175 |
+| tv_airtime:tax cut                 | IWM     | same_day  |  -0.0584 | -2.0569 |  -0.0718 | -1.8979 |          1.8979 |
+| news_tone:Taiwan                   | XLI     | same_day  |   0.0609 |  2.1588 |   0.0551 |  1.8964 |          1.8964 |
+| news_tone:Federal Reserve          | ^VIX    | same_day  |   0.0531 |  1.8849 |   0.0662 |  2.2779 |          1.8849 |
+| news_share:bankruptcy              | ^VIX    | same_day  |  -0.0535 | -1.8817 |  -0.0571 | -1.9644 |          1.8817 |
+| news_tone:Taiwan                   | XLF     | same_day  |   0.0696 |  2.4675 |   0.0547 |  1.8816 |          1.8816 |
+| tv_airtime:cryptocurrency          | GLD     | same_day  |   0.058  |  2.0415 |   0.0711 |  1.8796 |          1.8796 |
+| news_share:acquisition             | XLB     | same_day  |   0.0533 |  1.8766 |   0.055  |  1.8936 |          1.8766 |
 

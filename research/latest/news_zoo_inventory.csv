@@ -1,7 +1,10 @@
 dataset,rows,columns,first,last,megabytes
-gdelt_theme_timelinevolraw,3541,21,2017-01-01,2026-10-22,0.3
+gdelt_company_timelinevolraw,3543,333,2017-01-01,2026-10-24,1.6
+gdelt_theme_timelinetone,3543,91,2017-01-01,2026-10-24,2.2
+gdelt_theme_timelinevolraw,3543,92,2017-01-01,2026-10-24,1.1
 gdelt_total_articles,3541,1,2017-01-01,2026-10-22,0.1
-hn_stories,538065,6,,,33.1
+hn_stories,538374,6,,,35.6
 sec_filings,1709772,4,,,23.5
-sec_phrase_hits,486597,6,,,8.5
+sec_phrase_hits,487004,6,,,6.3
+tv_theme_timelinevol,2841,92,2017-01-01,2024-10-11,1.5
 wiki_extra_pageviews,4131,137,2015-07-01,2026-10-21,0.8

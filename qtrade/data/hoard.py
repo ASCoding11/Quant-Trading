@@ -299,7 +299,9 @@ def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: i
     to the monthly release)."""
     from ..data.intraday import AlpacaBars, bars_to_frame
 
-    day = (day or pd.Timestamp.now(tz="America/New_York")).normalize()
+    now = pd.Timestamp.now(tz="America/New_York")
+    day = (pd.Timestamp(day).tz_localize("America/New_York") if day is not None and pd.Timestamp(day).tzinfo is None
+           else (day or now)).normalize()
     try:
         from ..intraday.flip_sleeve import universe
 
@@ -309,7 +311,8 @@ def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: i
         names = []
     syms = list(dict.fromkeys(STOCKS + names))
     data = AlpacaBars(feed="sip")
-    start, end = day + pd.Timedelta(hours=4), day + pd.Timedelta(hours=20)
+    # the free plan refuses consolidated (SIP) data less than 15 minutes old
+    start, end = day + pd.Timedelta(hours=4), min(day + pd.Timedelta(hours=20), now - pd.Timedelta(minutes=16))
     frames = []
     for i in range(0, len(syms), 200):
         got = data.bars(syms[i:i + 200], "1Min", start.isoformat(), end.isoformat())
@@ -323,7 +326,8 @@ def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: i
     bars = pd.concat(frames, ignore_index=True)
     status = {}
     try:                                                 # foreign markets: Yahoo keeps 1-minute bars for 7 days only
-        status["foreign"] = foreign_minutes(out / f"{day:%Y-%m-%d}" / "foreign_1min_bars.parquet", public_key)
+        status["foreign"] = foreign_minutes(out / f"{day:%Y-%m-%d}" / "foreign_1min_bars.parquet", public_key,
+                                            day.tz_localize(None))
     except Exception as exc:
         LOG.warning("foreign 1-minute bars failed: %s", exc)
         status["foreign"] = f"failed: {exc}"
@@ -339,15 +343,15 @@ def eod(out: Path, public_key: str | None, day: pd.Timestamp | None = None, n: i
     return {"eod": f"{len(bars)} bars, {bars['symbol'].nunique()} symbols", **status}
 
 
-def foreign_minutes(path: Path, public_key: str | None) -> str:
-    """The latest session's 1-minute bars of the foreign sleeve's markets (Yahoo), encrypted."""
+def foreign_minutes(path: Path, public_key: str | None, day: pd.Timestamp) -> str:
+    """The session ``day``'s 1-minute bars of the foreign sleeve's markets (Yahoo, which keeps 7 days), encrypted."""
     import yfinance as yf
 
     from ..research.foreign import MARKETS
 
     frames = []
     for mkt, tickers in MARKETS.items():
-        raw = yf.download(tickers, period="5d", interval="1m", group_by="ticker", auto_adjust=False,
+        raw = yf.download(tickers, period="7d", interval="1m", group_by="ticker", auto_adjust=False,
                           progress=False, threads=True)
         for t in tickers:
             if raw is None or raw.empty or t not in raw.columns.get_level_values(0):
@@ -355,7 +359,9 @@ def foreign_minutes(path: Path, public_key: str | None) -> str:
             f = raw[t].dropna(how="all")
             if f.empty:
                 continue
-            f = f[pd.DatetimeIndex(f.index.date) == pd.Timestamp(max(f.index.date))]   # the latest session
+            f = f[pd.DatetimeIndex(f.index.date) == pd.Timestamp(day).normalize()]   # that session (local date)
+            if f.empty:
+                continue
             f = f.rename(columns=str.lower).reset_index().rename(columns={f.index.name or "index": "time"})
             f["time"] = f["time"].astype(str)
             f["symbol"], f["market"] = t, mkt
@@ -376,12 +382,13 @@ def foreign_minutes(path: Path, public_key: str | None) -> str:
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--eod", action="store_true", help="end-of-day 1-minute bars instead of the snapshot")
+    ap.add_argument("--day", default=None, help="with --eod: the session (YYYY-MM-DD, default today New York)")
     ap.add_argument("--out", default="hoard_run")
     ap.add_argument("--daily", action="store_true", help="also collect the once-a-day sources")
     ap.add_argument("--public-key", default=None, help="encrypt the market-data tar to this RSA public key")
     args = ap.parse_args(argv)
     setup_logging()
-    status = eod(Path(args.out), args.public_key) if args.eod else collect(Path(args.out), args.daily, args.public_key)
+    status = eod(Path(args.out), args.public_key, pd.Timestamp(args.day) if args.day else None) if args.eod else collect(Path(args.out), args.daily, args.public_key)
     print(json.dumps(status, indent=1))
 
 

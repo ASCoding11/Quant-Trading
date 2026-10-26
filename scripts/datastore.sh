@@ -86,7 +86,8 @@ publish_manifest() {
       for f in manifest.json manifest.csv symbols.csv; do
         [ -f "$GITHUB_WORKSPACE/data/$dir/$f" ] && cp "$GITHUB_WORKSPACE/data/$dir/$f" "datasets/$name/"
       done
-      [ "$name" = intraday_5min ] && [ -d intraday ] && git rm -rq intraday
+      # (this used to delete intraday/ whenever the 5-minute dataset changed, which also removed the
+      # auction trader's universe and directions - intraday/latest/model.json, intraday/edge/signs.json)
       git add -A
       git commit -q -m "Dataset manifest: $name (run ${GITHUB_RUN_ID})" || exit 0
       git push -q origin results

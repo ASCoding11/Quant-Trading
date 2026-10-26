@@ -1,0 +1,47 @@
+name: clock
+
+# Starts the daily jobs at the right minute (qtrade/clock.py): GitHub's own schedules for this
+# repository fire late or not at all. A clock run stays up ~5.5 hours and dispatches each job
+# once per slot; before it ends it starts the next clock, so one is always running. The hourly
+# schedule is only a watchdog that restarts the chain if it ever breaks.
+
+on:
+  schedule:
+    - cron: "3 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write                  # dispatches the jobs and the next clock
+
+jobs:
+  clock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Stand aside if a clock is already running
+        id: check
+        run: |
+          RUNNING=$(gh run list -R "${{ github.repository }}" --workflow clock.yml --status in_progress \
+                    --json databaseId -q "[.[] | select(.databaseId != ${{ github.run_id }})] | length")
+          if [ "${RUNNING:-0}" -gt 0 ]; then echo "a clock is running - nothing to do"; echo "run=false" >> "$GITHUB_OUTPUT"
+          else echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.run == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.run == 'true'
+        with:
+          python-version: "3.11"
+          cache: pip
+      - if: steps.check.outputs.run == 'true'
+        run: pip install -r requirements.txt
+      - name: Tick
+        if: steps.check.outputs.run == 'true'
+        run: python -m qtrade.clock --hours 5.5
+      - name: Start the next clock
+        if: always() && steps.check.outputs.run == 'true'
+        run: |
+          gh workflow run clock.yml -R "${{ github.repository }}" --ref "${{ github.ref_name }}"
+          echo "next clock started"

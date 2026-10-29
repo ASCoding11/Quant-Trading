@@ -57,3 +57,14 @@ def test_a_session_still_open_is_not_used_as_a_close(monkeypatch):
     after = F.download(["Germany"], pd.Timestamp("2026-10-23 17:11", tz="UTC"))
     assert during["Germany"][1].index[-1] == pd.Timestamp("2026-10-22")
     assert after["Germany"][1].index[-1] == pd.Timestamp("2026-10-23")
+
+
+def test_a_second_pass_opens_only_markets_without_a_book():
+    o, c = _market()
+    day = c.index[-1]
+    first = F.step(pd.DataFrame(columns=F.HOLD_HEADER), {"Korea": (o, c)}, day, 0.0, 3000.0)
+    # later the same day Hong Kong's bar arrives: Korea (already opened today) is left alone
+    second = F.step(first["holdings"], {"Korea": (o, c), "Hong Kong": (o, c)}, day, first["equity"], 0.0)
+    assert second["pnl"] == 0 and len(second["trades"]) == 0
+    assert set(second["holdings"]["Market"]) == {"Korea", "Hong Kong"}
+    assert (second["holdings"]["Market"] == "Korea").sum() == (first["holdings"]["Market"] == "Korea").sum()

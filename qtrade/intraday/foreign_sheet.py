@@ -9,7 +9,8 @@ in each market, equal capital per market, 0 bp fees, nothing sent to any broker.
 local currency (each market's book is long and short the same currency, so the dollar exposure
 is only its P&L).
 
-Once a day after Europe closes (17:11 UTC) (``python -m qtrade.intraday.foreign_sheet``): every open book is
+Each weekday after Europe closes (17:15 UTC, and again at 23:30 UTC for markets whose bars Yahoo
+posted late) (``python -m qtrade.intraday.foreign_sheet``): every open book is
 settled at the first official open after its entry, and each market that traded today opens
 tonight's book at today's close. Prices are Yahoo's dividend-adjusted daily open and close, so a
 dividend shows as income, not as an overnight drop. The sheet holds the state: a daily log in
@@ -177,13 +178,16 @@ def run(sleeve_usd: float, dry_run: bool = False) -> dict:
     day = now.tz_localize(None).normalize()
     sheet = None if dry_run else ForeignSheet(os.environ["HFT_SHEET_ID"], os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
     log, hold = sheet.state() if sheet else (pd.DataFrame(columns=LOG_HEADER), pd.DataFrame(columns=HOLD_HEADER))
-    if len(log) and str(log["Date"].iloc[-1]) == f"{day:%Y-%m-%d}":
-        return {"skipped": "already booked today"}
+    # no once-a-day guard: Yahoo sometimes posts an Asian market's daily bar hours late, so a second run
+    # the same day settles / opens whatever the first one couldn't (settling is idempotent, and a market
+    # with a book already open is never opened twice)
     data = download(MARKETS)
     equity = float(pd.to_numeric(log["Equity $"], errors="coerce").dropna().iloc[-1]) if len(log) else 0.0
     cap = pd.to_numeric(log.get("Capital $", pd.Series(dtype=str)), errors="coerce").dropna()
     deposit = sleeve_usd - (float(cap.iloc[-1]) if len(cap) else 0.0)
     res = step(hold, data, day, equity, deposit)
+    if not len(res["trades"]) and not res["opened"] and len(log):
+        return {"skipped": "nothing new to settle or open"}
     h = res["holdings"]
     row = [f"{day:%Y-%m-%d}", round(res["pnl"], 2),
            round(100 * res["pnl"] / res["capital_base"], 4) if res["capital_base"] else 0.0, round(res["equity"], 2),

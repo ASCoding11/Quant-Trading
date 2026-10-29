@@ -38,7 +38,7 @@ JOBS = [
     Job("flip-sleeve.yml", NY, ("15:45",), window_min=400),
     Job("auction-sheet.yml", NY, ("16:30",), window_min=400),
     Job("hoard-archive.yml", NY, ("16:45",), inputs=(("job", "eod"),), window_min=400),
-    Job("foreign-sheet.yml", "UTC", ("17:15",), window_min=240),
+    Job("foreign-sheet.yml", "UTC", ("17:15", "23:30"), window_min=200),   # 23:30: Asian bars Yahoo posted late
     Job("hoard-archive.yml", "UTC", ("07:15",), weekdays=False, inputs=(("job", "archive"),), window_min=300),
 ]
 

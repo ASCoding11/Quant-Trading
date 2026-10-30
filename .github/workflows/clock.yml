@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: "3 * * * *"
   workflow_dispatch:
+    inputs:
+      successor:
+        description: "started by the previous clock (never stands aside)"
+        default: "false"
 
 permissions:
   contents: read
@@ -24,6 +28,9 @@ jobs:
       - name: Stand aside if a clock is already running
         id: check
         run: |
+          # the previous clock starts this one while it is itself still finishing, so it would always look
+          # "running": a successor never stands aside (on 2026-10-30 the chain died exactly that way)
+          if [ "${{ inputs.successor }}" = "true" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           RUNNING=$(gh run list -R "${{ github.repository }}" --workflow clock.yml --status in_progress \
                     --json databaseId -q "[.[] | select(.databaseId != ${{ github.run_id }})] | length")
           if [ "${RUNNING:-0}" -gt 0 ]; then echo "a clock is running - nothing to do"; echo "run=false" >> "$GITHUB_OUTPUT"
@@ -43,5 +50,5 @@ jobs:
       - name: Start the next clock
         if: always() && steps.check.outputs.run == 'true'
         run: |
-          gh workflow run clock.yml -R "${{ github.repository }}" --ref "${{ github.ref_name }}"
+          gh workflow run clock.yml -R "${{ github.repository }}" --ref "${{ github.ref_name }}" -f successor=true
           echo "next clock started"

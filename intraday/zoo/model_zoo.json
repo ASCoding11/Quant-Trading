@@ -24,7 +24,7 @@
     "gap_x_day",
     "vwap_x_vol"
   ],
-  "trained_through":"2026-10-19",
+  "trained_through":"2026-10-30",
   "ic":0.0147003399,
   "zoo":{
     "model":"gbm",

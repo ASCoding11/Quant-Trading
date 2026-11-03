@@ -1,0 +1,79 @@
+name: crm-research
+
+# Critical raw materials vs satellite data (qtrade/data/satellite.py, qtrade/research/crm_satellite.py):
+# MODIS daily thermal anomalies at ~25 smelters / refineries from Microsoft's Planetary Computer (no key),
+# 2012 to today, cached per year; then whether the plants' activity predicts copper, platinum, palladium,
+# aluminium futures (and the nickel / rare-earth ETFs). The satellite data (NASA, public domain) is kept
+# as assets of the "satellite-modis" release; the report goes to research/crm/ on the results branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "first day of satellite data"
+        default: "2012-01-01"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crm-research
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt rasterio
+      - name: Satellite cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/satellite
+          key: satellite-${{ github.run_id }}
+          restore-keys: satellite-
+      - name: Collect MODIS thermal anomalies
+        run: timeout 300m python -m qtrade.data.satellite --start "${{ inputs.start || '2012-01-01' }}" --end "$(date -u +%F)" --cache data/satellite
+      - name: Save the cache (also after a timeout)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/satellite
+          key: satellite-${{ github.run_id }}
+      - name: Keep the satellite data in a release
+        if: always()
+        run: |
+          ls data/satellite/*.parquet >/dev/null 2>&1 || exit 0
+          gh release view satellite-modis >/dev/null 2>&1 || gh release create satellite-modis --title "Satellite: MODIS thermal anomalies at CRM plants" \
+            --notes "Daily MODIS (Terra + Aqua) fire pixels and fire radiative power around critical-raw-material smelters and refineries (qtrade/data/satellite.py). NASA data, public domain; source: Microsoft Planetary Computer, modis-14A1-061."
+          gh release upload satellite-modis data/satellite/*.parquet --clobber
+      - name: Study
+        run: python -m qtrade.research.crm_satellite --sat-cache data/satellite --out reports/crm
+      - name: Store the report
+        if: always()
+        run: |
+          ls reports/crm/* >/dev/null 2>&1 || exit 0
+          cat reports/crm/crm_satellite.md >> "$GITHUB_STEP_SUMMARY"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            RES=$(mktemp -d)
+            (
+              cd "$RES" && git init -q
+              git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+              git fetch -q --depth 1 origin results && git checkout -q -B results FETCH_HEAD
+              mkdir -p research/crm
+              cp "$GITHUB_WORKSPACE"/reports/crm/* research/crm/
+              git add -A research/crm
+              git commit -q -m "CRM satellite study (run ${GITHUB_RUN_ID})" || exit 0
+              git push -q origin results
+            ) && break
+            sleep $((attempt * 5))
+          done

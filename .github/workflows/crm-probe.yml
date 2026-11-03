@@ -33,16 +33,3 @@ jobs:
           done
           code=$(curl -sS -m 60 -o /tmp/a.txt -w "%{http_code}" "https://firms.modaps.eosdis.nasa.gov/api/area/csv/NOKEY/VIIRS_SNPP_SP/122,-3,123,-2/1/2024-01-10" || echo ERR)
           echo "area API without a key -> HTTP $code: $(head -c 200 /tmp/a.txt)"
-      - name: Yahoo futures
-        run: |
-          python - <<'PY'
-          import yfinance as yf
-          for t in ["HG=F", "ALI=F", "PL=F", "PA=F", "GC=F", "SI=F", "LTH=F", "LIT", "COPX", "REMX", "PICK", "URA", "SLX", "NICKEL=F"]:
-              try:
-                  d = yf.download(t, start="2012-01-01", progress=False, auto_adjust=False)
-                  c = d["Close"].squeeze().dropna() if len(d) else []
-                  print(f"{t:10s} rows={len(c):5d} first={c.index[0].date() if len(c) else '-'} last={c.index[-1].date() if len(c) else '-'} "
-                        f"vol_med={float(d['Volume'].squeeze().tail(250).median()) if len(d) else 0:.0f}")
-              except Exception as e:
-                  print(t, "error", e)
-          PY

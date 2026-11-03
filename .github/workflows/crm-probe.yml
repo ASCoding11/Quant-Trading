@@ -1,0 +1,48 @@
+name: crm-probe
+
+# One-off: is NASA FIRMS (satellite thermal anomalies) reachable from a runner, and which
+# critical-raw-material futures does Yahoo carry?
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [".github/workflows/crm-probe.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: FIRMS
+        run: |
+          for u in suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv noaa-20-viirs-c2/csv/J1_VIIRS_C2_Global_24h.csv \
+                   noaa-21-viirs-c2/csv/J2_VIIRS_C2_Global_24h.csv modis-c6.1/csv/MODIS_C6_1_Global_24h.csv \
+                   suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_7d.csv; do
+            code=$(curl -sS -m 120 -o /tmp/f.csv -w "%{http_code}" "https://firms.modaps.eosdis.nasa.gov/data/active_fire/$u" || echo ERR)
+            echo "$u -> HTTP $code, $(wc -l < /tmp/f.csv) lines"; head -2 /tmp/f.csv
+          done
+          code=$(curl -sS -m 60 -o /tmp/a.txt -w "%{http_code}" "https://firms.modaps.eosdis.nasa.gov/api/area/csv/NOKEY/VIIRS_SNPP_SP/122,-3,123,-2/1/2024-01-10" || echo ERR)
+          echo "area API without a key -> HTTP $code: $(head -c 200 /tmp/a.txt)"
+      - name: Yahoo futures
+        run: |
+          python - <<'PY'
+          import yfinance as yf
+          for t in ["HG=F", "ALI=F", "PL=F", "PA=F", "GC=F", "SI=F", "LTH=F", "LIT", "COPX", "REMX", "PICK", "URA", "SLX", "NICKEL=F"]:
+              try:
+                  d = yf.download(t, start="2012-01-01", progress=False, auto_adjust=False)
+                  c = d["Close"].squeeze().dropna() if len(d) else []
+                  print(f"{t:10s} rows={len(c):5d} first={c.index[0].date() if len(c) else '-'} last={c.index[-1].date() if len(c) else '-'} "
+                        f"vol_med={float(d['Volume'].squeeze().tail(250).median()) if len(d) else 0:.0f}")
+              except Exception as e:
+                  print(t, "error", e)
+          PY

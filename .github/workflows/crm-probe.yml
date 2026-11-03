@@ -1,7 +1,6 @@
 name: crm-probe
 
-# One-off: is NASA FIRMS (satellite thermal anomalies) reachable from a runner, and which
-# critical-raw-material futures does Yahoo carry?
+# One-off: can a runner read MODIS daily thermal anomalies (MOD14A1) from Microsoft's Planetary Computer?
 
 on:
   push:
@@ -17,19 +16,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - name: FIRMS
+      - run: pip install requests rasterio numpy
+      - name: Planetary Computer
         run: |
-          for u in suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv noaa-20-viirs-c2/csv/J1_VIIRS_C2_Global_24h.csv \
-                   noaa-21-viirs-c2/csv/J2_VIIRS_C2_Global_24h.csv modis-c6.1/csv/MODIS_C6_1_Global_24h.csv \
-                   suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_7d.csv; do
-            code=$(curl -sS -m 120 -o /tmp/f.csv -w "%{http_code}" "https://firms.modaps.eosdis.nasa.gov/data/active_fire/$u" || echo ERR)
-            echo "$u -> HTTP $code, $(wc -l < /tmp/f.csv) lines"; head -2 /tmp/f.csv
-          done
-          code=$(curl -sS -m 60 -o /tmp/a.txt -w "%{http_code}" "https://firms.modaps.eosdis.nasa.gov/api/area/csv/NOKEY/VIIRS_SNPP_SP/122,-3,123,-2/1/2024-01-10" || echo ERR)
-          echo "area API without a key -> HTTP $code: $(head -c 200 /tmp/a.txt)"
+          python - <<'PY'
+          import requests, numpy as np, rasterio
+          from rasterio.warp import transform
+          S = "https://planetarycomputer.microsoft.com/api/stac/v1"
+          for coll in ["modis-14A1-061", "modis-14A2-061"]:
+              r = requests.get(f"{S}/collections/{coll}", timeout=60); print(coll, r.status_code)
+          # Morowali (IMIP) nickel smelters, Indonesia; Norilsk
+          for name, lon, lat in [("IMIP Morowali", 122.16, -2.83), ("Norilsk", 88.20, 69.35)]:
+              body = {"collections": ["modis-14A1-061"], "intersects": {"type": "Point", "coordinates": [lon, lat]},
+                      "datetime": "2024-01-01/2024-01-20", "limit": 5}
+              r = requests.post(f"{S}/search", json=body, timeout=60); feats = r.json().get("features", [])
+              print(name, "search", r.status_code, len(feats), "items")
+              if not feats: continue
+              it = feats[0]; print(" item", it["id"], "assets", list(it["assets"])[:12])
+              tok = requests.get("https://planetarycomputer.microsoft.com/api/sas/v1/token/modis-14A1-061", timeout=60).json()["token"]
+              for key in [k for k in it["assets"] if "FRP" in k or "FireMask" in k][:2]:
+                  href = it["assets"][key]["href"] + "?" + tok
+                  with rasterio.open(href) as ds:
+                      xs, ys = transform("EPSG:4326", ds.crs, [lon], [lat])
+                      row, col = ds.index(xs[0], ys[0])
+                      win = ds.read(1, window=((max(row-10,0), row+10), (max(col-10,0), col+10)))
+                      print(" ", key, ds.count, "bands", ds.shape, ds.dtypes[0], "window max", int(win.max()), "nonzero", int((win > 0).sum()))
+          PY

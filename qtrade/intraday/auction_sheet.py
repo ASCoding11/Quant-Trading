@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,7 @@ from ..utils import LOG
 
 NY = "America/New_York"
 TAB, TRADES_TAB = "Auction book", "Auction trades"
+ADR_TRIES, ADR_RETRY_S = 4, 120
 LOG_HEADER = ["Date", "Overnight P&L $", "ADR P&L $", "Day P&L $", "Day %", "Equity $", "Overnight longs",
               "Overnight shorts", "Overnight gross $", "ADR names", "Capital $"]
 HOLD_HEADER = ["Symbol", "Shares", "Entry (official close)", "Position $"]
@@ -102,7 +104,13 @@ def day_inputs(cfg, tickers: list[str], signs: dict, day: pd.Timestamp) -> dict:
     adr_w, adr_tab = {}, pd.DataFrame()
     if adr_names:
         try:
-            moves = home_moves(day, adr_names)
+            moves = pd.DataFrame()
+            for attempt in range(ADR_TRIES):        # Yahoo sometimes serves the Asian daily bars late
+                moves = home_moves(day, adr_names)  # (2026-11-03: none at 21:31 UTC, 24 at 21:50)
+                LOG.info("ADR book: %d ADRs with a home session today (try %d)", len(moves), attempt + 1)
+                if len(moves) or day.weekday() >= 5:
+                    break
+                time.sleep(ADR_RETRY_S)
             if len(moves):
                 names = list(moves["adr"])
                 prev_close = {}

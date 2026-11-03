@@ -1,0 +1,46 @@
+name: adr-probe
+
+# One-off diagnosis: why home_moves finds no home sessions after the US close.
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [".github/workflows/adr-probe.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Probe
+        run: |
+          python - 2>/dev/null <<'PY'
+          import pandas as pd, numpy as np
+          from qtrade.intraday import adr_book as B
+          from qtrade.data.loader import download_prices
+          from qtrade.config import Config
+          acfg = Config.load("config/auction_paper.yaml").auction
+          print("adr_enabled", acfg.adr_enabled, "markets", acfg.adr_markets)
+          names = [t for t, (_, _, m) in B.ADRS.items() if not acfg.adr_markets or m in acfg.adr_markets]
+          day = pd.Timestamp.now(tz="America/New_York").tz_localize(None).normalize()
+          print("day", day, "names", len(names))
+          homes = sorted({B.ADRS[t][0] for t in names}); fxs = sorted({B.ADRS[t][1].removeprefix("1/") for t in names})
+          md = download_prices(homes + fxs, start=(day - pd.Timedelta(days=15)).strftime("%Y-%m-%d"))
+          print("index tail", md.close.index[-4:].tolist())
+          for h in ["9988.HK", "7203.T", "005930.KS", "INFY.NS", "2330.TW"]:
+              if h in md.close:
+                  c = md.close[h].dropna(); print(h, c.index[-3:].tolist(), c.iloc[-3:].round(2).tolist())
+              else:
+                  print(h, "MISSING from md.close")
+          m = B.home_moves(day, names)
+          print("home_moves rows:", len(m)); print(m.head(10))
+          PY

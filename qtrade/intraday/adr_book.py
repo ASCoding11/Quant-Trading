@@ -115,6 +115,9 @@ def home_moves(today: pd.Timestamp, tickers: list[str] | None = None) -> pd.Data
         if home not in md.close:
             continue
         c = md.close[home].dropna()
+        # after the US close Yahoo already lists the next Asian session (Sydney, Tokyo and Seoul open
+        # around then), so look for today's bar among the rows up to today, not at the end
+        c = c[c.index.normalize() <= day]
         if len(c) < 2 or c.index[-1].normalize() != day:
             continue                                       # the home market didn't trade today
         fxt = fx.removeprefix("1/")

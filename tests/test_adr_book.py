@@ -39,6 +39,20 @@ def test_home_moves_needs_todays_home_session(monkeypatch):
     assert np.isclose(m["fx_ret_prev"].iloc[0], fx.iloc[-2])              # yesterday's FX, not today's
 
 
+def test_home_moves_ignores_the_next_sessions_row(monkeypatch):
+    """After the US close Yahoo already lists the next Asian session; today's bar must still be found
+    (on 2026-11-02 its absence left the ADR book empty)."""
+    from qtrade.data import loader
+
+    days = pd.bdate_range("2026-10-26", "2026-11-03")              # 11-03 = tomorrow's session already listed
+    close = pd.DataFrame({"9988.HK": np.linspace(100, 107, len(days)), "HKD=X": 7.8}, index=days)
+    md = MarketData(open=close, high=close, low=close, close=close, volume=close * 0 + 1)
+    monkeypatch.setattr(loader, "download_prices", lambda t, start=None: md)
+    m = B.home_moves(pd.Timestamp("2026-11-02"), ["BABA"])
+    assert list(m["adr"]) == ["BABA"]
+    assert np.isclose(m["home_ret"].iloc[0], np.log(close.loc["2026-11-02", "9988.HK"] / close.loc["2026-10-30", "9988.HK"]))
+
+
 def test_build_targets_end_to_end():
     acfg = Config().auction
     moves = pd.DataFrame([{"adr": "BABA", "market": "China", "home_ret": 0.04, "fx_ret_prev": 0.0},

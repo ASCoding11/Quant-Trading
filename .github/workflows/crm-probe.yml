@@ -29,6 +29,7 @@ jobs:
           for coll in ["modis-14A1-061", "modis-14A2-061"]:
               r = requests.get(f"{S}/collections/{coll}", timeout=60); print(coll, r.status_code)
           # Morowali (IMIP) nickel smelters, Indonesia; Norilsk
+          import os; os.environ["GDAL_HTTP_MAX_RETRY"] = "3"
           for name, lon, lat in [("IMIP Morowali", 122.16, -2.83), ("Norilsk", 88.20, 69.35)]:
               body = {"collections": ["modis-14A1-061"], "intersects": {"type": "Point", "coordinates": [lon, lat]},
                       "datetime": "2024-01-01/2024-01-20", "limit": 5}
@@ -36,9 +37,9 @@ jobs:
               print(name, "search", r.status_code, len(feats), "items")
               if not feats: continue
               it = feats[0]; print(" item", it["id"], "assets", list(it["assets"])[:12])
-              tok = requests.get("https://planetarycomputer.microsoft.com/api/sas/v1/token/modis-14A1-061", timeout=60).json()["token"]
               for key in [k for k in it["assets"] if "FRP" in k or "FireMask" in k][:2]:
-                  href = it["assets"][key]["href"] + "?" + tok
+                  raw = it["assets"][key]["href"]; print("  raw href", raw[:120])
+                  href = requests.get("https://planetarycomputer.microsoft.com/api/sas/v1/sign", params={"href": raw}, timeout=60).json()["href"]
                   with rasterio.open(href) as ds:
                       xs, ys = transform("EPSG:4326", ds.crs, [lon], [lat])
                       row, col = ds.index(xs[0], ys[0])

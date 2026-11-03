@@ -34,3 +34,32 @@ def test_first_day_and_deposit():
 def test_missing_exit_price_closes_flat():
     t = A.round_trips("overnight", {"AAA": 3.0}, {"AAA": 20.0}, {}, "a", "b")
     assert t.iloc[0]["P&L $"] == 0 and t.iloc[0]["Exit price"] == 20.0
+
+
+def test_adr_book_retries_when_yahoo_has_no_home_bars_yet(monkeypatch):
+    import types
+
+    from qtrade.config import Config
+    from qtrade.intraday import adr_book, auction_live
+
+    calls = {"n": 0}
+
+    def moves(day, names):
+        calls["n"] += 1
+        return pd.DataFrame() if calls["n"] < 3 else pd.DataFrame(
+            [{"adr": "BABA", "market": "China", "home_ret": 0.02, "fx_ret_prev": 0.0}])
+
+    day = pd.Timestamp("2026-11-03")
+    bars = pd.DataFrame({"open": [100.0, 101.0], "close": [100.5, 102.0]},
+                        index=pd.DatetimeIndex(["2026-11-02 05:00", "2026-11-03 05:00"], tz="UTC"))
+    monkeypatch.setattr(adr_book, "home_moves", moves)
+    monkeypatch.setattr(auction_live, "_fetch", lambda *a, **k: {"BABA": bars})
+    monkeypatch.setattr(auction_live, "_earnings_reactions", lambda *a, **k: {})
+    monkeypatch.setattr(auction_live, "build_book", lambda *a, **k: {"weights": {}, "strategies": []})
+    monkeypatch.setattr(auction_live, "_adr_prices", lambda *a, **k: {"BABA": 100.0})
+    monkeypatch.setattr(A, "ADR_RETRY_S", 0)
+    import qtrade.data.intraday as di
+    monkeypatch.setattr(di, "AlpacaBars", lambda **k: types.SimpleNamespace())
+    cfg = Config.load("config/auction_paper.yaml")
+    out = A.day_inputs(cfg, ["AAPL"], {}, day)
+    assert calls["n"] == 3 and out["adr_weights"]           # third try found the home bars

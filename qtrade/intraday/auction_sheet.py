@@ -32,7 +32,7 @@ from ..utils import LOG
 
 NY = "America/New_York"
 TAB, TRADES_TAB = "Auction book", "Auction trades"
-ADR_TRIES, ADR_RETRY_S = 4, 120
+ADR_TRIES, ADR_RETRY_S = 10, 180         # Yahoo's Asian bars vanished ~16:30-16:40 NY (Nov 3-4), back by 16:50
 LOG_HEADER = ["Date", "Overnight P&L $", "ADR P&L $", "Day P&L $", "Day %", "Equity $", "Overnight longs",
               "Overnight shorts", "Overnight gross $", "ADR names", "Capital $"]
 HOLD_HEADER = ["Symbol", "Shares", "Entry (official close)", "Position $"]
@@ -106,7 +106,7 @@ def day_inputs(cfg, tickers: list[str], signs: dict, day: pd.Timestamp) -> dict:
         try:
             moves = pd.DataFrame()
             for attempt in range(ADR_TRIES):        # Yahoo sometimes serves the Asian daily bars late
-                moves = home_moves(day, adr_names)  # (2026-11-03: none at 21:31 UTC, 24 at 21:50)
+                moves = home_moves(day, adr_names)  # (none at 16:31-16:38 NY on Nov 3-4, all back by 16:50)
                 LOG.info("ADR book: %d ADRs with a home session today (try %d)", len(moves), attempt + 1)
                 if len(moves) or day.weekday() >= 5:
                     break
@@ -252,11 +252,11 @@ def main(argv=None):
     ap.add_argument("--tickers", default="data/auction_tickers.json")
     ap.add_argument("--signs", default="data/auction_signs.json")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--force", action="store_true", help="run outside 16:20-24:00 New York")
+    ap.add_argument("--force", action="store_true", help="run outside 16:50-24:00 New York")
     args = ap.parse_args(argv)
     setup_logging()
     now = pd.Timestamp.now(tz=NY)
-    if not args.force and not (now.weekday() < 5 and 16 * 60 + 20 <= now.hour * 60 + now.minute < 24 * 60):
+    if not args.force and not (now.weekday() < 5 and 16 * 60 + 50 <= now.hour * 60 + now.minute < 24 * 60):
         print({"skipped": f"outside the window ({now:%H:%M} NY)"})
         return
     sleeve = book_split().get("auction", 0.0)

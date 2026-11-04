@@ -125,6 +125,11 @@ def home_moves(today: pd.Timestamp, tickers: list[str] | None = None) -> pd.Data
         f = f[f.index.normalize() < day]                   # FX up to yesterday only
         rows.append({"adr": t, "market": mkt, "home_ret": float(np.log(c.iloc[-1] / c.iloc[-2])),
                      "fx_ret_prev": float(f.iloc[-1]) if len(f) else np.nan})
+    if not rows:                                           # say why, so an empty ADR book is never a mystery
+        sample = [h for h in homes if h in md.close][:4]
+        LOG.warning("ADR book: no home session dated %s; index ends %s; last bars %s", day.date(),
+                    [str(d.date()) for d in md.close.index[-3:]],
+                    {h: [str(d.date()) for d in md.close[h].dropna().index[-2:]] for h in sample})
     return pd.DataFrame(rows)
 
 

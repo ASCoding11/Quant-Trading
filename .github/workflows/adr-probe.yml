@@ -1,0 +1,49 @@
+name: adr-probe
+
+# One-off diagnosis: run the auction sleeve's own day_inputs (as the 16:30 run does) and see the ADR part.
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [".github/workflows/adr-probe.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: |
+          git fetch -q --depth 1 origin results && mkdir -p data
+          git show origin/results:intraday/latest/model.json > data/auction_tickers.json
+          git show origin/results:intraday/edge/signs.json > data/auction_signs.json
+      - name: Probe
+        run: |
+          python - 2>&1 <<'PY' | grep -v -i "warning\|inplace\|whatsnew\|sort_index\|set_index\|rename" | tail -40
+          import pandas as pd
+          from qtrade.config import Config
+          from qtrade.utils import setup_logging
+          from qtrade.intraday import auction_sheet as A, adr_book as B
+          from qtrade.intraday.auction_live import load_inputs
+          setup_logging()
+          A.ADR_TRIES = 1
+          cfg = Config.load("config/auction_paper.yaml")
+          tickers, signs = load_inputs("data/auction_tickers.json", "data/auction_signs.json")
+          day = pd.Timestamp.now(tz="America/New_York").tz_localize(None).normalize()
+          print("day", day)
+          print("standalone home_moves:", len(B.home_moves(day, [t for t, (_, _, m) in B.ADRS.items() if m in cfg.auction.adr_markets])))
+          out = A.day_inputs(cfg, tickers, signs, day)
+          print("day_inputs adr weights:", len(out["adr_weights"]))
+          PY

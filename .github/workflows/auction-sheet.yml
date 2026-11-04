@@ -5,7 +5,8 @@ name: auction-sheet
 # closed at today's official open, today's ADR book is settled open -> close, and tonight's
 # book is opened at today's official close - all in the sheet's "Auction book" and
 # "Auction trades" tabs. Nothing is sent to Alpaca. The two crons cover ~16:25 New York in
-# summer and winter time; the script itself only runs between 16:20 and midnight New York, once a day.
+# summer and winter time; the script itself only runs between 16:50 and midnight New York (Yahoo's Asian bars, needed by
+# the ADR book, are missing around 16:30-16:45), once a day.
 
 on:
   schedule:
@@ -14,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "run now even outside 16:20-24:00 New York"
+        description: "run now even outside 16:50-24:00 New York"
         default: "false"
 
 permissions:
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   sleeve:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 75
     env:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}            # market data only
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}

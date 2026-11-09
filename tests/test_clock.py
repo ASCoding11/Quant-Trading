@@ -32,3 +32,9 @@ def test_run_fires_each_slot_once(monkeypatch):
     monkeypatch.setattr(C.time, "sleep", lambda s: clock.__setitem__("t", clock["t"] + 1800))
     fired = C.run(1.0, "o/r", "main", dry_run=True)       # polls at 0 s and 1800 s, both within the 17:15 slot
     assert sum("foreign-sheet.yml" in f for f in fired) == 1
+
+
+def test_hft_shadow_is_re_dispatched_every_hour_of_the_session():
+    j = _job("hft-shadow.yml")
+    keys = [k for h in range(14, 22) for k in C.due(j, pd.Timestamp(f"2026-11-09 {h}:30", tz="UTC"))]
+    assert len(keys) == 7 and keys[0].endswith("09:26") and keys[-1].endswith("15:26")

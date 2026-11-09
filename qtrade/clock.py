@@ -34,7 +34,9 @@ class Job:
 JOBS = [
     Job("data-hoard.yml", "UTC", tuple(f"{h:02d}:{m:02d}" for h in range(24) for m in (7, 37)), weekdays=False,
         window_min=20),
-    Job("hft-shadow.yml", NY, ("09:26",), window_min=300),         # its own chain then runs the session
+    # its own chain runs the session; the hourly re-dispatch restarts it if a link fails (2026-11-09: a run that
+    # never started stopped it at 13:10) and otherwise only queues behind the running one
+    Job("hft-shadow.yml", NY, tuple(f"{h:02d}:26" for h in range(9, 16)), window_min=50),
     Job("flip-sleeve.yml", NY, ("15:45",), window_min=400),
     Job("auction-sheet.yml", NY, ("16:55",), window_min=400),     # after Yahoo's ~16:30-16:45 refresh of Asian bars
     Job("hoard-archive.yml", NY, ("16:45",), inputs=(("job", "eod"),), window_min=400),

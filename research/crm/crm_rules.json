@@ -5,8 +5,8 @@
   "instrument": "HG=F",
   "direction": 1,
   "sharpe_train": 0.198,
-  "sharpe_test": -0.637,
-  "t_test": -1.221
+  "sharpe_test": -0.636,
+  "t_test": -1.219
  },
  {
   "source": "MODIS",
@@ -23,8 +23,8 @@
   "instrument": "PA=F",
   "direction": 1,
   "sharpe_train": 0.265,
-  "sharpe_test": -0.352,
-  "t_test": -0.787
+  "sharpe_test": -0.354,
+  "t_test": -0.791
  },
  {
   "source": "MODIS",
@@ -33,7 +33,7 @@
   "direction": -1,
   "sharpe_train": 0.595,
   "sharpe_test": 0.74,
-  "t_test": -1.031
+  "t_test": -1.033
  },
  {
   "source": "MODIS",
@@ -42,7 +42,7 @@
   "direction": -1,
   "sharpe_train": 0.264,
   "sharpe_test": 0.856,
-  "t_test": -1.723
+  "t_test": -1.722
  },
  {
   "source": "MODIS",
@@ -58,8 +58,8 @@
   "commodity": "copper",
   "instrument": "HG=F",
   "direction": 1,
-  "sharpe_train": 0.234,
-  "sharpe_test": -0.349,
+  "sharpe_train": 0.048,
+  "sharpe_test": -0.351,
   "t_test": -0.5
  },
  {
@@ -67,7 +67,7 @@
   "commodity": "nickel",
   "instrument": "PICK",
   "direction": -1,
-  "sharpe_train": 0.181,
+  "sharpe_train": 0.185,
   "sharpe_test": -0.108,
   "t_test": 0.804
  },
@@ -76,7 +76,7 @@
   "commodity": "pgm_palladium",
   "instrument": "PA=F",
   "direction": 1,
-  "sharpe_train": 0.108,
+  "sharpe_train": 0.006,
   "sharpe_test": -0.384,
   "t_test": 0.002
  },
@@ -85,9 +85,9 @@
   "commodity": "pgm_platinum",
   "instrument": "PL=F",
   "direction": 1,
-  "sharpe_train": 0.623,
-  "sharpe_test": 0.444,
-  "t_test": 1.079
+  "sharpe_train": 0.646,
+  "sharpe_test": 0.442,
+  "t_test": 1.076
  },
  {
   "source": "SO2",
@@ -95,15 +95,15 @@
   "instrument": "ALI=F",
   "direction": 1,
   "sharpe_train": 0.575,
-  "sharpe_test": -0.179,
-  "t_test": -1.626
+  "sharpe_test": -0.181,
+  "t_test": -1.63
  },
  {
   "source": "SO2",
   "commodity": "rare_earths",
   "instrument": "REMX",
   "direction": 1,
-  "sharpe_train": 1.111,
+  "sharpe_train": 1.162,
   "sharpe_test": -1.174,
   "t_test": 0.06
  }

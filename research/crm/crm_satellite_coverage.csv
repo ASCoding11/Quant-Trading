@@ -24,28 +24,28 @@ MODIS,pgm_palladium,Norilsk Nickel plant (Russia),5252,838.0,0.15955826351865957
 MODIS,pgm_platinum,Polokwane smelter (S. Africa),5260,129.0,0.02452471482889734,4.013707224334601,,
 MODIS,pgm_platinum,Rustenburg / Waterval smelters (S. Africa),5260,1578.0,0.3,10.06671102661597,,
 MODIS,rare_earths,Baotou rare earth / steel (China),5258,2594.0,0.49334347660707495,69.91196272346899,,
-SO2,aluminium,EGA Jebel Ali (UAE),2836,,,,3056.0,0.05868653293260129
-SO2,aluminium,Hongqiao Zouping (China),2379,,,,3561.0,0.028381556115032583
-SO2,aluminium,Krasnoyarsk aluminium (Russia),1815,,,,6650.0,-0.02742738245002376
-SO2,aluminium,Xinfa Chiping (China),2332,,,,3493.0,-0.0010798786912701518
-SO2,copper,Altonorte smelter (Chile),2856,,,,3134.0,0.032567827353145604
-SO2,copper,Caletones smelter (Chile),2378,,,,3456.0,0.11728750121813916
-SO2,copper,Chuquicamata smelter (Chile),2857,,,,3061.0,0.05703124734115999
-SO2,copper,Guixi smelter (China),1776,,,,3161.0,0.048707991387407154
-SO2,copper,Kolwezi copper-cobalt (DRC),2574,,,,2878.0,0.014466186802895178
-SO2,copper,Mount Isa smelter (Australia),2704,,,,2987.0,0.3903059689095721
-SO2,copper,Olympic Dam (Australia),2700,,,,3410.0,0.05895480004325851
-SO2,copper,Potrerillos smelter (Chile),2829,,,,3226.0,0.019733602908844062
-SO2,copper,Tongling copper (China),1909,,,,3318.0,0.01609454914623759
-SO2,nickel,IMIP Morowali (Indonesia),2341,,,,2857.0,0.27023679183651683
-SO2,nickel,IWIP Weda Bay (Indonesia),2390,,,,2883.0,0.060277671375334144
-SO2,nickel,Kalgoorlie nickel smelter (Australia),2667,,,,3286.0,0.04878749567544334
-SO2,nickel,Konawe / Morosi (Indonesia),2379,,,,2834.0,0.01871204826305906
-SO2,nickel,Obi Island (Indonesia),2387,,,,2870.0,-0.05825626186573116
-SO2,nickel,Sorowako (Indonesia),2343,,,,2845.0,0.04571168825606052
-SO2,nickel,Sudbury Copper Cliff (Canada),1895,,,,4256.0,0.05651661516152084
-SO2,pgm_palladium,Norilsk Nadezhda (Russia),1435,,,,17083.0,0.82653822625304
-SO2,pgm_palladium,Norilsk Nickel plant (Russia),1450,,,,17024.0,0.8496723922507597
-SO2,pgm_platinum,Polokwane smelter (S. Africa),2587,,,,3229.0,-0.06258358257322491
-SO2,pgm_platinum,Rustenburg / Waterval smelters (S. Africa),2621,,,,3059.0,0.058883492428492654
-SO2,rare_earths,Baotou rare earth / steel (China),2560,,,,3782.0,0.1425008580205786
+SO2,aluminium,EGA Jebel Ali (UAE),2858,,,,3080.0,0.058278742755360054
+SO2,aluminium,Hongqiao Zouping (China),2403,,,,3597.0,0.027215005225524103
+SO2,aluminium,Krasnoyarsk aluminium (Russia),1834,,,,6729.0,-0.027092884461923653
+SO2,aluminium,Xinfa Chiping (China),2357,,,,3529.0,-0.0012192173648404453
+SO2,copper,Altonorte smelter (Chile),2872,,,,3154.0,0.03254199516292083
+SO2,copper,Caletones smelter (Chile),2387,,,,3477.0,0.1185947191261679
+SO2,copper,Chuquicamata smelter (Chile),2871,,,,3078.0,0.05825961155189398
+SO2,copper,Guixi smelter (China),1789,,,,3194.0,0.04878793130066601
+SO2,copper,Kolwezi copper-cobalt (DRC),2599,,,,2903.0,0.014396197538935444
+SO2,copper,Mount Isa smelter (Australia),2733,,,,3017.0,0.3938032711717805
+SO2,copper,Olympic Dam (Australia),2727,,,,3444.0,0.06072183643904109
+SO2,copper,Potrerillos smelter (Chile),2844,,,,3246.0,0.019352033969374544
+SO2,copper,Tongling copper (China),1925,,,,3351.0,0.016561077216228088
+SO2,nickel,IMIP Morowali (Indonesia),2360,,,,2886.0,0.26824689787073447
+SO2,nickel,IWIP Weda Bay (Indonesia),2410,,,,2912.0,0.059043584147722324
+SO2,nickel,Kalgoorlie nickel smelter (Australia),2690,,,,3316.0,0.04911241515671125
+SO2,nickel,Konawe / Morosi (Indonesia),2397,,,,2863.0,0.01825619294031365
+SO2,nickel,Obi Island (Indonesia),2410,,,,2899.0,-0.059035161599505385
+SO2,nickel,Sorowako (Indonesia),2368,,,,2874.0,0.04538126285031962
+SO2,nickel,Sudbury Copper Cliff (Canada),1904,,,,4276.0,0.05654994811385936
+SO2,pgm_palladium,Norilsk Nadezhda (Russia),1459,,,,17278.0,0.8243894651221626
+SO2,pgm_palladium,Norilsk Nickel plant (Russia),1474,,,,17217.0,0.8465421945164812
+SO2,pgm_platinum,Polokwane smelter (S. Africa),2612,,,,3257.0,-0.06171757136910201
+SO2,pgm_platinum,Rustenburg / Waterval smelters (S. Africa),2645,,,,3085.0,0.05755690781941363
+SO2,rare_earths,Baotou rare earth / steel (China),2585,,,,3820.0,0.1416897365613822

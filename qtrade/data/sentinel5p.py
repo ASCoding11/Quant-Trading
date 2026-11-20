@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing as mp
 import time
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing.connection import wait as mp_wait
 from pathlib import Path
 
 import numpy as np
@@ -166,6 +167,67 @@ def read_item(s, item: dict, sites: list[Site]) -> list[dict]:
     return rows
 
 
+ITEM_TIMEOUT_S = 600             # a read still running after this is killed (h5py can hang on a bad file)
+
+
+def _read_child(conn, it: dict, ss: list[Site]) -> None:
+    """Runs in a forked process: read one orbit file (3 tries) and send back its rows or the error."""
+    last = None
+    for attempt in range(3):
+        try:
+            conn.send(("ok", read_item(_session(), it, ss)))
+            conn.close()
+            return
+        except Exception as exc:
+            last = exc
+            time.sleep(2 * (attempt + 1))
+    conn.send(("err", str(last)))
+    conn.close()
+
+
+def run_isolated(jobs: list[tuple[dict, list[Site]]], workers: int, timeout_s: float = ITEM_TIMEOUT_S,
+                 target=_read_child):
+    """Yield each job's rows, reading every file in its own forked process.
+
+    h5py serialises all reads behind one global lock, so in a thread pool a single read that hangs
+    (a damaged file, a dead connection) stalls every other thread - the 2021 run sat idle for five
+    hours that way. A separate process per file can be killed when it overruns ``timeout_s``.
+    """
+    ctx = mp.get_context("fork")
+    todo = list(jobs)
+    running: dict = {}                      # parent conn -> (process, item id, start time)
+    while todo or running:
+        while todo and len(running) < workers:
+            it, ss = todo.pop(0)
+            recv, send = ctx.Pipe(duplex=False)
+            p = ctx.Process(target=target, args=(send, it, ss), daemon=True)
+            p.start()
+            send.close()
+            running[recv] = (p, it["id"], time.time())
+        for conn in mp_wait(list(running), timeout=5):
+            p, iid, _ = running.pop(conn)
+            try:
+                status, val = conn.recv()
+            except (EOFError, OSError):
+                status, val = "err", f"worker exited with code {p.exitcode}"
+            conn.close()
+            p.join(10)
+            if status == "ok":
+                yield val
+            else:
+                LOG.warning("s5p item %s failed: %s", iid, val)
+                yield []
+        now = time.time()
+        for conn, (p, iid, t0) in list(running.items()):
+            if now - t0 > timeout_s:
+                p.kill()
+                p.join(10)
+                conn.close()
+                del running[conn]
+                LOG.warning("s5p item %s killed after %.0f s", iid, now - t0)
+                yield []
+
+
 def collect(start: str, end: str, sites: list[Site] | None = None, workers: int = 24) -> pd.DataFrame:
     """Per site and overpass, between ``start`` and ``end``."""
     sites = sites or SITES
@@ -185,24 +247,11 @@ def collect(start: str, end: str, sites: list[Site] | None = None, workers: int 
     jobs = [v for k, v in items.items() if k in keep]
     LOG.info("s5p: %d orbit files for %d sites, %s to %s", len(jobs), len(sites), start, end)
 
-    def job(pair):
-        it, ss = pair
-        last = None
-        for attempt in range(3):
-            try:
-                return read_item(_session(), it, ss)
-            except Exception as exc:
-                last = exc
-                time.sleep(2 * (attempt + 1))
-        LOG.warning("s5p item %s failed: %s", it["id"], last)
-        return []
-
     rows, t = [], time.time()
-    with ThreadPoolExecutor(workers) as ex:
-        for k, r in enumerate(ex.map(job, jobs), 1):
-            rows += r
-            if k % 500 == 0:
-                LOG.info("s5p: %d / %d files (%.0f s)", k, len(jobs), time.time() - t)
+    for done, r in enumerate(run_isolated(jobs, workers), 1):
+        rows += r
+        if done % 500 == 0:
+            LOG.info("s5p: %d / %d files (%.0f s)", done, len(jobs), time.time() - t)
     df = pd.DataFrame(rows, columns=COLS)
     df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
     return df.sort_values(["date", "site", "time"]).reset_index(drop=True)

@@ -88,3 +88,27 @@ def test_due_rebalance():
     assert T.due_rebalance(pd.Timestamp("2026-11-20"), some, "2026-11-13")          # Friday
     assert not T.due_rebalance(pd.Timestamp("2026-11-18"), some, "2026-11-13")      # Wednesday, 5 days on
     assert T.due_rebalance(pd.Timestamp("2026-11-23"), some, "2026-11-13")          # Friday was a holiday
+
+
+def _fake_child(conn, it, ss):
+    import time as _t
+    if it["id"] == "hang":
+        _t.sleep(60)
+    elif it["id"] == "bad":
+        conn.send(("err", "filter returned failure"))
+    else:
+        conn.send(("ok", [(it["id"], 1)]))
+    conn.close()
+
+
+def test_run_isolated_kills_hung_reads():
+    import time as _t
+
+    from qtrade.data import sentinel5p as S5
+
+    jobs = [({"id": i}, []) for i in ("a", "hang", "bad", "b")]
+    t = _t.time()
+    out = list(S5.run_isolated(jobs, workers=4, timeout_s=2, target=_fake_child))
+    assert _t.time() - t < 20
+    assert len(out) == 4
+    assert sorted(r for rows in out for r in rows) == [("a", 1), ("b", 1)]

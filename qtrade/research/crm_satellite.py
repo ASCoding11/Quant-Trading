@@ -155,6 +155,9 @@ def run(sat_cache: Path, out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     md = download_prices(list(INSTRUMENT.values()), start="2011-01-01")
     prices = md.close
+    missing = [i for i in INSTRUMENT.values() if i not in prices.columns or prices[i].notna().sum() < 200]
+    if missing:
+        LOG.warning("no usable prices for %s (columns: %s)", missing, list(prices.columns))
     tabs, latest, cover = [], {}, []
 
     files = sorted(Path(sat_cache).glob("modis_*.parquet"))

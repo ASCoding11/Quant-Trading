@@ -1,0 +1,92 @@
+[
+ {
+  "source": "MODIS",
+  "commodity": "copper",
+  "instrument": "HG=F",
+  "direction": 1,
+  "sharpe_train": 0.198,
+  "sharpe_test": -0.636,
+  "t_test": -1.219
+ },
+ {
+  "source": "MODIS",
+  "commodity": "pgm_palladium",
+  "instrument": "PA=F",
+  "direction": 1,
+  "sharpe_train": 0.265,
+  "sharpe_test": -0.357,
+  "t_test": -0.802
+ },
+ {
+  "source": "MODIS",
+  "commodity": "pgm_platinum",
+  "instrument": "PL=F",
+  "direction": -1,
+  "sharpe_train": 0.595,
+  "sharpe_test": 0.74,
+  "t_test": -1.033
+ },
+ {
+  "source": "MODIS",
+  "commodity": "aluminium",
+  "instrument": "ALI=F",
+  "direction": -1,
+  "sharpe_train": 0.264,
+  "sharpe_test": 0.856,
+  "t_test": -1.729
+ },
+ {
+  "source": "MODIS",
+  "commodity": "rare_earths",
+  "instrument": "REMX",
+  "direction": 1,
+  "sharpe_train": 0.337,
+  "sharpe_test": 0.117,
+  "t_test": -0.58
+ },
+ {
+  "source": "SO2",
+  "commodity": "copper",
+  "instrument": "HG=F",
+  "direction": 1,
+  "sharpe_train": 0.806,
+  "sharpe_test": -0.351,
+  "t_test": -0.511
+ },
+ {
+  "source": "SO2",
+  "commodity": "pgm_palladium",
+  "instrument": "PA=F",
+  "direction": 1,
+  "sharpe_train": 0.032,
+  "sharpe_test": -0.384,
+  "t_test": 0.002
+ },
+ {
+  "source": "SO2",
+  "commodity": "pgm_platinum",
+  "instrument": "PL=F",
+  "direction": 1,
+  "sharpe_train": 0.923,
+  "sharpe_test": 0.442,
+  "t_test": 1.067
+ },
+ {
+  "source": "SO2",
+  "commodity": "aluminium",
+  "instrument": "ALI=F",
+  "direction": 1,
+  "sharpe_train": 0.068,
+  "sharpe_test": -0.169,
+  "t_test": -1.597
+ },
+ {
+  "source": "SO2",
+  "commodity": "rare_earths",
+  "instrument": "REMX",
+  "direction": 1,
+  "sharpe_train": 0.938,
+  "sharpe_test": -1.174,
+  "t_test": 0.047
+ }
+]

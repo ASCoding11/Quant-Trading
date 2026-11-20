@@ -1,26 +1,51 @@
-commodity,site,days,days_with_fire,share_days_with_fire,mean_frp_mw
-aluminium,EGA Jebel Ali (UAE),5234,21,0.004012227741688957,0.24163163928162018
-aluminium,Hongqiao Zouping (China),5234,37,0.007069163163928162,0.14982804738249905
-aluminium,Krasnoyarsk aluminium (Russia),5242,82,0.01564288439526898,0.5093285005723006
-aluminium,Xinfa Chiping (China),5234,135,0.025792892625143293,1.0623996943064578
-copper,Altonorte smelter (Chile),5220,1026,0.19655172413793104,3.0878160919540227
-copper,Caletones smelter (Chile),5228,2645,0.50592960979342,25.44663351185922
-copper,Chuquicamata smelter (Chile),5220,1930,0.36973180076628354,21.168544061302683
-copper,Guixi smelter (China),5242,183,0.034910339565051504,1.5828500572300648
-copper,Kolwezi copper-cobalt (DRC),5228,946,0.1809487375669472,45.15510711553175
-copper,Mount Isa smelter (Australia),5242,2512,0.4792064097672644,22.681171308660815
-copper,Olympic Dam (Australia),5242,137,0.026135062953071348,0.31411674933231587
-copper,Potrerillos smelter (Chile),5220,760,0.14559386973180077,7.353946360153256
-copper,Tongling copper (China),5242,124,0.023655093475772607,0.5161198016024419
-nickel,IMIP Morowali (Indonesia),5234,532,0.10164310278945357,4.878658769583493
-nickel,IWIP Weda Bay (Indonesia),5242,372,0.07096528042731781,2.7399656619610835
-nickel,Kalgoorlie nickel smelter (Australia),5234,2058,0.39319831868551774,28.407164692395874
-nickel,Konawe / Morosi (Indonesia),5234,787,0.1503630110813909,7.801604891096675
-nickel,Obi Island (Indonesia),5234,714,0.13641574321742453,4.790332441727168
-nickel,Sorowako (Indonesia),5234,2781,0.5313335880779518,216.39713412304167
-nickel,Sudbury Copper Cliff (Canada),5228,21,0.004016832440703902,0.7513389441469013
-pgm_palladium,Norilsk Nadezhda (Russia),5228,767,0.14671002295332825,26.053098699311402
-pgm_palladium,Norilsk Nickel plant (Russia),5228,838,0.16029074215761285,27.412012241775056
-pgm_platinum,Polokwane smelter (S. Africa),5228,128,0.02448355011476664,4.035367253251721
-pgm_platinum,Rustenburg / Waterval smelters (S. Africa),5228,1577,0.3016449885233359,10.124407039020658
-rare_earths,Baotou rare earth / steel (China),5234,2591,0.4950324799388613,70.10082155139473
+source,commodity,site,days,days_with_fire,share_days_with_fire,mean_frp_mw,overpasses,mean_enh_du
+MODIS,aluminium,EGA Jebel Ali (UAE),5258,21.0,0.00399391403575504,0.2405287181437809,,
+MODIS,aluminium,Hongqiao Zouping (China),5266,37.0,0.007026205848841625,0.14891758450436765,,
+MODIS,aluminium,Krasnoyarsk aluminium (Russia),5258,82.0,0.015595283377710156,0.5077786230505896,,
+MODIS,aluminium,Xinfa Chiping (China),5266,135.0,0.025636156475503227,1.0559437903532094,,
+MODIS,copper,Altonorte smelter (Chile),5252,1026.0,0.19535415079969534,3.0690022848438687,,
+MODIS,copper,Caletones smelter (Chile),5252,2652.0,0.504950495049505,25.436367098248283,,
+MODIS,copper,Chuquicamata smelter (Chile),5252,1939.0,0.36919268849961917,21.089699162223916,,
+MODIS,copper,Guixi smelter (China),5266,183.0,0.03475123433345993,1.575636156475503,,
+MODIS,copper,Kolwezi copper-cobalt (DRC),5260,946.0,0.17984790874524714,44.88039923954373,,
+MODIS,copper,Mount Isa smelter (Australia),5274,2515.0,0.47686765263557074,22.5674630261661,,
+MODIS,copper,Olympic Dam (Australia),5266,137.0,0.026015951386251426,0.3126851500189897,,
+MODIS,copper,Potrerillos smelter (Chile),5252,760.0,0.1447067783701447,7.309139375476009,,
+MODIS,copper,Tongling copper (China),5266,124.0,0.023547284466388152,0.5137675655146221,,
+MODIS,nickel,IMIP Morowali (Indonesia),5266,538.0,0.10216483099126472,4.879737941511584,,
+MODIS,nickel,IWIP Weda Bay (Indonesia),5266,385.0,0.07311052031902772,2.7706798328902393,,
+MODIS,nickel,Kalgoorlie nickel smelter (Australia),5258,2058.0,0.3914035755039939,28.277500950931913,,
+MODIS,nickel,Konawe / Morosi (Indonesia),5266,800.0,0.1519179642992784,7.928484618306115,,
+MODIS,nickel,Obi Island (Indonesia),5266,731.0,0.13881503987846563,4.923946069122674,,
+MODIS,nickel,Sorowako (Indonesia),5266,2803.0,0.5322825674135967,216.5147170527915,,
+MODIS,nickel,Sudbury Copper Cliff (Canada),5260,21.0,0.0039923954372623575,0.7467680608365019,,
+MODIS,pgm_palladium,Norilsk Nadezhda (Russia),5252,767.0,0.14603960396039603,25.934044173648136,,
+MODIS,pgm_palladium,Norilsk Nickel plant (Russia),5252,838.0,0.15955826351865957,27.286747905559785,,
+MODIS,pgm_platinum,Polokwane smelter (S. Africa),5260,129.0,0.02452471482889734,4.013707224334601,,
+MODIS,pgm_platinum,Rustenburg / Waterval smelters (S. Africa),5260,1578.0,0.3,10.06671102661597,,
+MODIS,rare_earths,Baotou rare earth / steel (China),5258,2594.0,0.49334347660707495,69.91196272346899,,
+SO2,aluminium,EGA Jebel Ali (UAE),2632,,,,2839.0,0.0544303409944795
+SO2,aluminium,Hongqiao Zouping (China),2221,,,,3305.0,0.027511251447914026
+SO2,aluminium,Krasnoyarsk aluminium (Russia),1687,,,,6151.0,-0.0288748544925207
+SO2,aluminium,Xinfa Chiping (China),2185,,,,3240.0,-0.001579103467791189
+SO2,copper,Altonorte smelter (Chile),2644,,,,2896.0,0.03154330513930519
+SO2,copper,Caletones smelter (Chile),2186,,,,3194.0,0.12343909794665543
+SO2,copper,Chuquicamata smelter (Chile),2642,,,,2834.0,0.05821717146419659
+SO2,copper,Guixi smelter (China),1633,,,,2932.0,0.049613208070756844
+SO2,copper,Kolwezi copper-cobalt (DRC),2387,,,,2674.0,0.015111914613952162
+SO2,copper,Mount Isa smelter (Australia),2508,,,,2770.0,0.38827794608661537
+SO2,copper,Olympic Dam (Australia),2508,,,,3167.0,0.05443943767966
+SO2,copper,Potrerillos smelter (Chile),2621,,,,2988.0,0.02130550304808705
+SO2,copper,Tongling copper (China),1763,,,,3088.0,0.01910924991030778
+SO2,nickel,IMIP Morowali (Indonesia),2192,,,,2662.0,0.2757168899147783
+SO2,nickel,IWIP Weda Bay (Indonesia),2233,,,,2679.0,0.06714084523786824
+SO2,nickel,Kalgoorlie nickel smelter (Australia),2482,,,,3044.0,0.04959774844076029
+SO2,nickel,Konawe / Morosi (Indonesia),2236,,,,2643.0,0.017657511655231346
+SO2,nickel,Obi Island (Indonesia),2231,,,,2666.0,-0.05742374645121071
+SO2,nickel,Sorowako (Indonesia),2192,,,,2643.0,0.04888149218567064
+SO2,nickel,Sudbury Copper Cliff (Canada),1745,,,,3940.0,0.05354593030263024
+SO2,pgm_palladium,Norilsk Nadezhda (Russia),1351,,,,15851.0,0.8294481716965271
+SO2,pgm_palladium,Norilsk Nickel plant (Russia),1366,,,,15792.0,0.8481963093982025
+SO2,pgm_platinum,Polokwane smelter (S. Africa),2405,,,,2998.0,-0.06126368934168299
+SO2,pgm_platinum,Rustenburg / Waterval smelters (S. Africa),2435,,,,2843.0,0.06307862646659115
+SO2,rare_earths,Baotou rare earth / steel (China),2379,,,,3514.0,0.14590890050953267

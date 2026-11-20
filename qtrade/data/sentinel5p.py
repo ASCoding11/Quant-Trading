@@ -91,11 +91,19 @@ def best_items(items: list[dict]) -> list[dict]:
 _SAS: dict[str, tuple[str, float]] = {}
 
 
+def nc_href(item: dict) -> str:
+    return next(a["href"] for a in item["assets"].values() if a["href"].endswith(".nc"))
+
+
 def _signed(s, href: str) -> str:
     container = "/".join(href.split("/")[:4])
     tok = _SAS.get(container)
     if tok is None or time.time() - tok[1] > 1800:
-        r = s.get(SIGN, params={"href": href}, timeout=60)
+        for attempt in range(6):
+            r = s.get(SIGN, params={"href": href}, timeout=60)
+            if r.status_code != 429:
+                break
+            time.sleep(min(60.0, float(r.headers.get("Retry-After") or 5 * 2 ** attempt)))
         r.raise_for_status()
         tok = (r.json()["href"].split("?", 1)[1], time.time())
         _SAS[container] = tok
@@ -132,8 +140,7 @@ def read_item(s, item: dict, sites: list[Site]) -> list[dict]:
     import h5py
 
     props = item["properties"]
-    asset = next(a for a in item["assets"].values() if a["href"].endswith(".nc"))
-    url = _signed(s, asset["href"])
+    url = _signed(s, nc_href(item))
     rows = []
     import aiohttp
 
@@ -167,6 +174,7 @@ def read_item(s, item: dict, sites: list[Site]) -> list[dict]:
     return rows
 
 
+MAX_FAILED_SHARE = 0.10          # a month with more failed files than this is not cached
 ITEM_TIMEOUT_S = 600             # a read still running after this is killed (h5py can hang on a bad file)
 
 
@@ -186,19 +194,31 @@ def _read_child(conn, it: dict, ss: list[Site]) -> None:
 
 
 def run_isolated(jobs: list[tuple[dict, list[Site]]], workers: int, timeout_s: float = ITEM_TIMEOUT_S,
-                 target=_read_child):
+                 target=_read_child, before_fork=None, stats: dict | None = None):
     """Yield each job's rows, reading every file in its own forked process.
 
     h5py serialises all reads behind one global lock, so in a thread pool a single read that hangs
     (a damaged file, a dead connection) stalls every other thread - the 2021 run sat idle for five
     hours that way. A separate process per file can be killed when it overruns ``timeout_s``.
+    ``before_fork(item)`` runs in the parent first (it fetches the storage token there, so the children
+    inherit it instead of each asking the signing service). ``stats["failed"]`` counts failed files.
     """
+    stats = stats if stats is not None else {}
+    stats.setdefault("failed", 0)
     ctx = mp.get_context("fork")
     todo = list(jobs)
     running: dict = {}                      # parent conn -> (process, item id, start time)
     while todo or running:
         while todo and len(running) < workers:
             it, ss = todo.pop(0)
+            if before_fork is not None:
+                try:
+                    before_fork(it)
+                except Exception as exc:
+                    LOG.warning("s5p item %s: %s", it["id"], exc)
+                    stats["failed"] += 1
+                    yield []
+                    continue
             recv, send = ctx.Pipe(duplex=False)
             p = ctx.Process(target=target, args=(send, it, ss), daemon=True)
             p.start()
@@ -216,6 +236,7 @@ def run_isolated(jobs: list[tuple[dict, list[Site]]], workers: int, timeout_s: f
                 yield val
             else:
                 LOG.warning("s5p item %s failed: %s", iid, val)
+                stats["failed"] += 1
                 yield []
         now = time.time()
         for conn, (p, iid, t0) in list(running.items()):
@@ -225,6 +246,7 @@ def run_isolated(jobs: list[tuple[dict, list[Site]]], workers: int, timeout_s: f
                 conn.close()
                 del running[conn]
                 LOG.warning("s5p item %s killed after %.0f s", iid, now - t0)
+                stats["failed"] += 1
                 yield []
 
 
@@ -247,14 +269,17 @@ def collect(start: str, end: str, sites: list[Site] | None = None, workers: int 
     jobs = [v for k, v in items.items() if k in keep]
     LOG.info("s5p: %d orbit files for %d sites, %s to %s", len(jobs), len(sites), start, end)
 
-    rows, t = [], time.time()
-    for done, r in enumerate(run_isolated(jobs, workers), 1):
+    rows, t, stats = [], time.time(), {}
+    for done, r in enumerate(run_isolated(jobs, workers, before_fork=lambda it: _signed(s, nc_href(it)),
+                                          stats=stats), 1):
         rows += r
         if done % 500 == 0:
             LOG.info("s5p: %d / %d files (%.0f s)", done, len(jobs), time.time() - t)
     df = pd.DataFrame(rows, columns=COLS)
     df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
-    return df.sort_values(["date", "site", "time"]).reset_index(drop=True)
+    df = df.sort_values(["date", "site", "time"]).reset_index(drop=True)
+    df.attrs["failed_share"] = stats["failed"] / len(jobs) if jobs else 0.0
+    return df
 
 
 def daily_by_site(raw: pd.DataFrame) -> pd.DataFrame:
@@ -283,7 +308,10 @@ def collect_cached(start: str, end: str, cache: Path, refresh_days: int = 45) ->
             continue
         a, b = max(a0, m.start_time), min(pd.Timestamp(end), m_end)
         df = collect(f"{a:%Y-%m-%d}", f"{b:%Y-%m-%d}")
-        if len(df) or not f.exists():
+        bad = df.attrs.get("failed_share", 0.0)
+        if bad > MAX_FAILED_SHARE:
+            LOG.warning("s5p %s: %.0f%% of files failed - not cached, the next run fetches it again", m, 100 * bad)
+        elif len(df) or not f.exists():
             df.to_parquet(f)
         frames.append(df if len(df) else pd.read_parquet(f))
         LOG.info("s5p %s: %d rows", m, len(df))

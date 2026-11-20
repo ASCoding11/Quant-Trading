@@ -108,7 +108,27 @@ def test_run_isolated_kills_hung_reads():
 
     jobs = [({"id": i}, []) for i in ("a", "hang", "bad", "b")]
     t = _t.time()
-    out = list(S5.run_isolated(jobs, workers=4, timeout_s=2, target=_fake_child))
+    seen, stats = [], {}
+    out = list(S5.run_isolated(jobs, workers=4, timeout_s=2, target=_fake_child,
+                               before_fork=lambda it: seen.append(it["id"]), stats=stats))
     assert _t.time() - t < 20
     assert len(out) == 4
     assert sorted(r for rows in out for r in rows) == [("a", 1), ("b", 1)]
+    assert seen == ["a", "hang", "bad", "b"] and stats["failed"] == 2
+
+
+def test_month_with_many_failures_is_not_cached(tmp_path, monkeypatch):
+    import pandas as pd
+
+    from qtrade.data import sentinel5p as S5
+
+    def fake_collect(a, b):
+        df = pd.DataFrame([[pd.Timestamp(a)] + [None] * (len(S5.COLS) - 1)], columns=S5.COLS)
+        df.attrs["failed_share"] = 0.6 if a.startswith("2021-05") else 0.0
+        return df
+
+    monkeypatch.setattr(S5, "collect", fake_collect)
+    out = S5.collect_cached("2021-05-01", "2021-06-30", tmp_path)
+    assert len(out) == 2
+    assert not (tmp_path / "s5p_2021-05.parquet").exists()
+    assert (tmp_path / "s5p_2021-06.parquet").exists()

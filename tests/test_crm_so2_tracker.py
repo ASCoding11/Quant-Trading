@@ -94,6 +94,8 @@ def _fake_child(conn, it, ss):
     import time as _t
     if it["id"] == "hang":
         _t.sleep(60)
+    elif it["id"] == "damaged":
+        conn.send(("err", "Can't synchronously read data (wrong B-tree signature)"))
     elif it["id"] == "bad":
         conn.send(("err", "filter returned failure"))
     else:
@@ -106,15 +108,16 @@ def test_run_isolated_kills_hung_reads():
 
     from qtrade.data import sentinel5p as S5
 
-    jobs = [({"id": i}, []) for i in ("a", "hang", "bad", "b")]
+    jobs = [({"id": i}, []) for i in ("a", "hang", "bad", "b", "damaged")]
     t = _t.time()
     seen, stats = [], {}
     out = list(S5.run_isolated(jobs, workers=4, timeout_s=2, target=_fake_child,
                                before_fork=lambda it: seen.append(it["id"]), stats=stats))
     assert _t.time() - t < 20
-    assert len(out) == 4
+    assert len(out) == 5
     assert sorted(r for rows in out for r in rows) == [("a", 1), ("b", 1)]
-    assert seen == ["a", "hang", "bad", "b"] and stats["failed"] == 2
+    assert seen == ["a", "hang", "bad", "b", "damaged"]
+    assert stats["failed"] == 2 and stats["damaged"] == 1
 
 
 def test_month_with_many_failures_is_not_cached(tmp_path, monkeypatch):

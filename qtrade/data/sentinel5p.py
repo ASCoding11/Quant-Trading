@@ -201,10 +201,13 @@ def run_isolated(jobs: list[tuple[dict, list[Site]]], workers: int, timeout_s: f
     (a damaged file, a dead connection) stalls every other thread - the 2021 run sat idle for five
     hours that way. A separate process per file can be killed when it overruns ``timeout_s``.
     ``before_fork(item)`` runs in the parent first (it fetches the storage token there, so the children
-    inherit it instead of each asking the signing service). ``stats["failed"]`` counts failed files.
+    inherit it instead of each asking the signing service). ``stats["failed"]`` counts files that failed
+    for a reason a later run may not hit (network, rate limit, timeout); ``stats["damaged"]`` counts
+    files whose HDF5 data could not be decoded.
     """
     stats = stats if stats is not None else {}
     stats.setdefault("failed", 0)
+    stats.setdefault("damaged", 0)
     ctx = mp.get_context("fork")
     todo = list(jobs)
     running: dict = {}                      # parent conn -> (process, item id, start time)
@@ -236,7 +239,8 @@ def run_isolated(jobs: list[tuple[dict, list[Site]]], workers: int, timeout_s: f
                 yield val
             else:
                 LOG.warning("s5p item %s failed: %s", iid, val)
-                stats["failed"] += 1
+                # a damaged file in the archive fails the same way every time - no point refetching for it
+                stats["damaged" if "synchronously read" in str(val) else "failed"] += 1
                 yield []
         now = time.time()
         for conn, (p, iid, t0) in list(running.items()):

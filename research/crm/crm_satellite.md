@@ -6,30 +6,30 @@ Weekly futures returns, Friday close to Friday close. Nickel is tested on the PI
 
 | source   | signal                                     | commodity     | instrument   | direction       |   weeks_train |   weeks_test |   corr_train |   t_train |   sharpe_train |   hit_train |   corr_test |   t_test |   sharpe_test |   hit_test |
 |:---------|:-------------------------------------------|:--------------|:-------------|:----------------|--------------:|-------------:|-------------:|----------:|---------------:|------------:|------------:|---------:|--------------:|-----------:|
-| MODIS    | level (28d FRP vs its trailing year)       | copper        | HG=F         | follow activity |           360 |          359 |       -0.021 |    -0.39  |          0.198 |       0.511 |      -0.065 |   -1.225 |        -0.64  |      0.479 |
+| MODIS    | level (28d FRP vs its trailing year)       | copper        | HG=F         | follow activity |           360 |          359 |       -0.021 |    -0.39  |          0.198 |       0.511 |      -0.065 |   -1.223 |        -0.639 |      0.479 |
 | MODIS    | level (28d FRP vs its trailing year)       | nickel        | PICK         | fade activity   |           360 |          359 |       -0.035 |    -0.655 |          0.842 |       0.561 |      -0.068 |   -1.293 |         0.76  |      0.543 |
-| MODIS    | level (28d FRP vs its trailing year)       | pgm_palladium | PA=F         | follow activity |           360 |          359 |        0.008 |     0.159 |          0.265 |       0.425 |      -0.042 |   -0.787 |        -0.352 |      0.387 |
-| MODIS    | level (28d FRP vs its trailing year)       | pgm_platinum  | PL=F         | fade activity   |           360 |          359 |       -0.034 |    -0.646 |          0.595 |       0.542 |      -0.055 |   -1.035 |         0.741 |      0.487 |
-| MODIS    | level (28d FRP vs its trailing year)       | aluminium     | ALI=F        | fade activity   |           295 |          359 |       -0.005 |    -0.081 |          0.264 |       0.305 |      -0.091 |   -1.724 |         0.856 |      0.465 |
+| MODIS    | level (28d FRP vs its trailing year)       | pgm_palladium | PA=F         | follow activity |           360 |          359 |        0.008 |     0.159 |          0.265 |       0.425 |      -0.041 |   -0.783 |        -0.351 |      0.387 |
+| MODIS    | level (28d FRP vs its trailing year)       | pgm_platinum  | PL=F         | fade activity   |           360 |          359 |       -0.034 |    -0.646 |          0.595 |       0.542 |      -0.055 |   -1.032 |         0.74  |      0.487 |
+| MODIS    | level (28d FRP vs its trailing year)       | aluminium     | ALI=F        | fade activity   |           295 |          359 |       -0.005 |    -0.081 |          0.264 |       0.305 |      -0.091 |   -1.723 |         0.856 |      0.465 |
 | MODIS    | level (28d FRP vs its trailing year)       | rare_earths   | REMX         | follow activity |           360 |          359 |       -0.01  |    -0.182 |          0.337 |       0.503 |      -0.031 |   -0.58  |         0.117 |      0.485 |
-| MODIS    | 4-week change of the level                 | copper        | HG=F         | fade activity   |           356 |          359 |       -0.064 |    -1.205 |          0.319 |       0.525 |      -0.003 |   -0.05  |         0.654 |      0.538 |
+| MODIS    | 4-week change of the level                 | copper        | HG=F         | fade activity   |           356 |          359 |       -0.064 |    -1.205 |          0.319 |       0.525 |      -0.003 |   -0.048 |         0.653 |      0.538 |
 | MODIS    | 4-week change of the level                 | nickel        | PICK         | fade activity   |           356 |          359 |       -0.031 |    -0.591 |          0.165 |       0.534 |      -0.016 |   -0.298 |         0.243 |      0.482 |
-| MODIS    | 4-week change of the level                 | pgm_palladium | PA=F         | follow activity |           356 |          359 |        0.018 |     0.333 |          0.126 |       0.32  |      -0.008 |   -0.155 |        -0.146 |      0.292 |
-| MODIS    | 4-week change of the level                 | pgm_platinum  | PL=F         | fade activity   |           356 |          359 |       -0.021 |    -0.401 |          0.151 |       0.5   |       0.026 |    0.496 |        -0.206 |      0.448 |
+| MODIS    | 4-week change of the level                 | pgm_palladium | PA=F         | follow activity |           356 |          359 |        0.018 |     0.333 |          0.126 |       0.32  |      -0.008 |   -0.157 |        -0.148 |      0.292 |
+| MODIS    | 4-week change of the level                 | pgm_platinum  | PL=F         | fade activity   |           356 |          359 |       -0.021 |    -0.401 |          0.151 |       0.5   |       0.026 |    0.495 |        -0.205 |      0.448 |
 | MODIS    | 4-week change of the level                 | aluminium     | ALI=F        | fade activity   |           295 |          359 |       -0.086 |    -1.483 |          0.282 |       0.359 |      -0.017 |   -0.33  |         0.157 |      0.407 |
 | MODIS    | 4-week change of the level                 | rare_earths   | REMX         | follow activity |           356 |          359 |        0.058 |     1.089 |          0.023 |       0.497 |      -0.049 |   -0.918 |        -0.218 |      0.462 |
-| SO2      | level (28d SO2 plume vs its trailing year) | copper        | HG=F         | follow activity |           131 |          195 |        0.022 |     0.252 |          0.806 |       0.496 |      -0.037 |   -0.512 |        -0.346 |      0.467 |
-| SO2      | level (28d SO2 plume vs its trailing year) | nickel        | PICK         | follow activity |           131 |          195 |        0.047 |     0.533 |          0.414 |       0.511 |       0.058 |    0.805 |         0.108 |      0.487 |
-| SO2      | level (28d SO2 plume vs its trailing year) | pgm_palladium | PA=F         | follow activity |            73 |           87 |       -0.029 |    -0.248 |          0.032 |       0.548 |       0     |    0.002 |        -0.384 |      0.506 |
-| SO2      | level (28d SO2 plume vs its trailing year) | pgm_platinum  | PL=F         | follow activity |           131 |          194 |        0.106 |     1.211 |          0.923 |       0.527 |       0.077 |    1.065 |         0.441 |      0.5   |
-| SO2      | level (28d SO2 plume vs its trailing year) | aluminium     | ALI=F        | follow activity |           131 |          195 |        0.037 |     0.419 |          0.068 |       0.427 |      -0.115 |   -1.615 |        -0.177 |      0.467 |
-| SO2      | level (28d SO2 plume vs its trailing year) | rare_earths   | REMX         | follow activity |           131 |          192 |        0.191 |     2.212 |          0.938 |       0.565 |       0.003 |    0.047 |        -1.174 |      0.38  |
-| SO2      | 4-week change of the SO2 level             | copper        | HG=F         | fade activity   |           123 |          188 |       -0.052 |    -0.568 |          0.213 |       0.52  |      -0.017 |   -0.229 |        -0.254 |      0.505 |
-| SO2      | 4-week change of the SO2 level             | nickel        | PICK         | follow activity |           123 |          188 |        0.003 |     0.032 |          0.444 |       0.512 |       0.037 |    0.501 |         0.279 |      0.495 |
-| SO2      | 4-week change of the SO2 level             | pgm_palladium | PA=F         | follow activity |            57 |           67 |        0.199 |     1.508 |          0.74  |       0.544 |       0.043 |    0.35  |        -0.788 |      0.448 |
-| SO2      | 4-week change of the SO2 level             | pgm_platinum  | PL=F         | follow activity |           123 |          186 |        0.083 |     0.916 |          0.576 |       0.48  |       0.035 |    0.481 |         0.257 |      0.5   |
-| SO2      | 4-week change of the SO2 level             | aluminium     | ALI=F        | follow activity |           123 |          188 |       -0.035 |    -0.383 |          0.112 |       0.488 |      -0.011 |   -0.147 |         0.059 |      0.489 |
-| SO2      | 4-week change of the SO2 level             | rare_earths   | REMX         | follow activity |           123 |          184 |        0.236 |     2.675 |          1.359 |       0.569 |       0.015 |    0.203 |        -0.446 |      0.478 |
+| SO2      | level (28d SO2 plume vs its trailing year) | copper        | HG=F         | follow activity |           177 |          195 |       -0.01  |    -0.126 |          0.165 |       0.469 |      -0.03  |   -0.413 |        -0.347 |      0.467 |
+| SO2      | level (28d SO2 plume vs its trailing year) | nickel        | PICK         | fade activity   |           169 |          195 |       -0.04  |    -0.517 |          0.226 |       0.533 |       0.095 |    1.331 |        -0.108 |      0.508 |
+| SO2      | level (28d SO2 plume vs its trailing year) | pgm_palladium | PA=F         | follow activity |            74 |           87 |       -0.028 |    -0.241 |          0.039 |       0.554 |       0     |    0.002 |        -0.384 |      0.506 |
+| SO2      | level (28d SO2 plume vs its trailing year) | pgm_platinum  | PL=F         | follow activity |           131 |          191 |        0.106 |     1.211 |          0.923 |       0.527 |       0.097 |    1.346 |         0.698 |      0.513 |
+| SO2      | level (28d SO2 plume vs its trailing year) | aluminium     | ALI=F        | fade activity   |           156 |          195 |        0.002 |     0.021 |          0.107 |       0.551 |      -0.138 |   -1.935 |         0.179 |      0.533 |
+| SO2      | level (28d SO2 plume vs its trailing year) | rare_earths   | REMX         | follow activity |           131 |          189 |        0.188 |     2.176 |          0.884 |       0.557 |       0.003 |    0.043 |        -1.077 |      0.386 |
+| SO2      | 4-week change of the SO2 level             | copper        | HG=F         | follow activity |           166 |          188 |        0.062 |     0.793 |          0.434 |       0.512 |      -0.017 |   -0.232 |         0.274 |      0.5   |
+| SO2      | 4-week change of the SO2 level             | nickel        | PICK         | follow activity |           155 |          188 |       -0.069 |    -0.854 |          0.015 |       0.503 |       0.07  |    0.957 |         0.5   |      0.5   |
+| SO2      | 4-week change of the SO2 level             | pgm_palladium | PA=F         | follow activity |            58 |           67 |        0.203 |     1.552 |          0.86  |       0.569 |       0.043 |    0.35  |        -0.788 |      0.448 |
+| SO2      | 4-week change of the SO2 level             | pgm_platinum  | PL=F         | follow activity |           123 |          183 |        0.083 |     0.916 |          0.576 |       0.48  |       0.048 |    0.649 |         0.402 |      0.508 |
+| SO2      | 4-week change of the SO2 level             | aluminium     | ALI=F        | fade activity   |           145 |          188 |       -0.121 |    -1.456 |          0.191 |       0.531 |      -0.029 |   -0.401 |        -0.056 |      0.511 |
+| SO2      | 4-week change of the SO2 level             | rare_earths   | REMX         | follow activity |           123 |          181 |        0.235 |     2.661 |          1.359 |       0.569 |       0.016 |    0.208 |        -0.537 |      0.475 |
 
 ### Coverage by site
 
@@ -60,31 +60,31 @@ Weekly futures returns, Friday close to Friday close. Nickel is tested on the PI
 | MODIS    | pgm_platinum  | Polokwane smelter (S. Africa)              |   5260 |              129 |                  0.025 |         4.014 |          nan |       nan     |
 | MODIS    | pgm_platinum  | Rustenburg / Waterval smelters (S. Africa) |   5260 |             1578 |                  0.3   |        10.067 |          nan |       nan     |
 | MODIS    | rare_earths   | Baotou rare earth / steel (China)          |   5258 |             2594 |                  0.493 |        69.912 |          nan |       nan     |
-| SO2      | aluminium     | EGA Jebel Ali (UAE)                        |   2632 |              nan |                nan     |       nan     |         2839 |         0.054 |
-| SO2      | aluminium     | Hongqiao Zouping (China)                   |   2221 |              nan |                nan     |       nan     |         3305 |         0.028 |
-| SO2      | aluminium     | Krasnoyarsk aluminium (Russia)             |   1687 |              nan |                nan     |       nan     |         6151 |        -0.029 |
-| SO2      | aluminium     | Xinfa Chiping (China)                      |   2185 |              nan |                nan     |       nan     |         3240 |        -0.002 |
-| SO2      | copper        | Altonorte smelter (Chile)                  |   2644 |              nan |                nan     |       nan     |         2896 |         0.032 |
-| SO2      | copper        | Caletones smelter (Chile)                  |   2186 |              nan |                nan     |       nan     |         3194 |         0.123 |
-| SO2      | copper        | Chuquicamata smelter (Chile)               |   2642 |              nan |                nan     |       nan     |         2834 |         0.058 |
-| SO2      | copper        | Guixi smelter (China)                      |   1633 |              nan |                nan     |       nan     |         2932 |         0.05  |
-| SO2      | copper        | Kolwezi copper-cobalt (DRC)                |   2387 |              nan |                nan     |       nan     |         2674 |         0.015 |
-| SO2      | copper        | Mount Isa smelter (Australia)              |   2508 |              nan |                nan     |       nan     |         2770 |         0.388 |
-| SO2      | copper        | Olympic Dam (Australia)                    |   2508 |              nan |                nan     |       nan     |         3167 |         0.054 |
-| SO2      | copper        | Potrerillos smelter (Chile)                |   2621 |              nan |                nan     |       nan     |         2988 |         0.021 |
-| SO2      | copper        | Tongling copper (China)                    |   1763 |              nan |                nan     |       nan     |         3088 |         0.019 |
-| SO2      | nickel        | IMIP Morowali (Indonesia)                  |   2192 |              nan |                nan     |       nan     |         2662 |         0.276 |
-| SO2      | nickel        | IWIP Weda Bay (Indonesia)                  |   2233 |              nan |                nan     |       nan     |         2679 |         0.067 |
-| SO2      | nickel        | Kalgoorlie nickel smelter (Australia)      |   2482 |              nan |                nan     |       nan     |         3044 |         0.05  |
-| SO2      | nickel        | Konawe / Morosi (Indonesia)                |   2236 |              nan |                nan     |       nan     |         2643 |         0.018 |
-| SO2      | nickel        | Obi Island (Indonesia)                     |   2231 |              nan |                nan     |       nan     |         2666 |        -0.057 |
-| SO2      | nickel        | Sorowako (Indonesia)                       |   2192 |              nan |                nan     |       nan     |         2643 |         0.049 |
-| SO2      | nickel        | Sudbury Copper Cliff (Canada)              |   1745 |              nan |                nan     |       nan     |         3940 |         0.054 |
-| SO2      | pgm_palladium | Norilsk Nadezhda (Russia)                  |   1351 |              nan |                nan     |       nan     |        15851 |         0.829 |
-| SO2      | pgm_palladium | Norilsk Nickel plant (Russia)              |   1366 |              nan |                nan     |       nan     |        15792 |         0.848 |
-| SO2      | pgm_platinum  | Polokwane smelter (S. Africa)              |   2405 |              nan |                nan     |       nan     |         2998 |        -0.061 |
-| SO2      | pgm_platinum  | Rustenburg / Waterval smelters (S. Africa) |   2435 |              nan |                nan     |       nan     |         2843 |         0.063 |
-| SO2      | rare_earths   | Baotou rare earth / steel (China)          |   2379 |              nan |                nan     |       nan     |         3514 |         0.146 |
+| SO2      | aluminium     | EGA Jebel Ali (UAE)                        |   2603 |              nan |                nan     |       nan     |         2807 |         0.053 |
+| SO2      | aluminium     | Hongqiao Zouping (China)                   |   2194 |              nan |                nan     |       nan     |         3264 |         0.028 |
+| SO2      | aluminium     | Krasnoyarsk aluminium (Russia)             |   1695 |              nan |                nan     |       nan     |         6135 |        -0.028 |
+| SO2      | aluminium     | Xinfa Chiping (China)                      |   2158 |              nan |                nan     |       nan     |         3199 |        -0.002 |
+| SO2      | copper        | Altonorte smelter (Chile)                  |   2674 |              nan |                nan     |       nan     |         2922 |         0.027 |
+| SO2      | copper        | Caletones smelter (Chile)                  |   2206 |              nan |                nan     |       nan     |         3209 |         0.118 |
+| SO2      | copper        | Chuquicamata smelter (Chile)               |   2671 |              nan |                nan     |       nan     |         2862 |         0.06  |
+| SO2      | copper        | Guixi smelter (China)                      |   1611 |              nan |                nan     |       nan     |         2895 |         0.048 |
+| SO2      | copper        | Kolwezi copper-cobalt (DRC)                |   2354 |              nan |                nan     |       nan     |         2630 |         0.015 |
+| SO2      | copper        | Mount Isa smelter (Australia)              |   2476 |              nan |                nan     |       nan     |         2730 |         0.392 |
+| SO2      | copper        | Olympic Dam (Australia)                    |   2480 |              nan |                nan     |       nan     |         3124 |         0.055 |
+| SO2      | copper        | Potrerillos smelter (Chile)                |   2651 |              nan |                nan     |       nan     |         3014 |         0.022 |
+| SO2      | copper        | Tongling copper (China)                    |   1747 |              nan |                nan     |       nan     |         3050 |         0.019 |
+| SO2      | nickel        | IMIP Morowali (Indonesia)                  |   2156 |              nan |                nan     |       nan     |         2630 |         0.27  |
+| SO2      | nickel        | IWIP Weda Bay (Indonesia)                  |   2197 |              nan |                nan     |       nan     |         2647 |         0.066 |
+| SO2      | nickel        | Kalgoorlie nickel smelter (Australia)      |   2460 |              nan |                nan     |       nan     |         3013 |         0.049 |
+| SO2      | nickel        | Konawe / Morosi (Indonesia)                |   2199 |              nan |                nan     |       nan     |         2611 |         0.017 |
+| SO2      | nickel        | Obi Island (Indonesia)                     |   2200 |              nan |                nan     |       nan     |         2633 |        -0.058 |
+| SO2      | nickel        | Sorowako (Indonesia)                       |   2156 |              nan |                nan     |       nan     |         2612 |         0.048 |
+| SO2      | nickel        | Sudbury Copper Cliff (Canada)              |   1782 |              nan |                nan     |       nan     |         3991 |         0.053 |
+| SO2      | pgm_palladium | Norilsk Nadezhda (Russia)                  |   1371 |              nan |                nan     |       nan     |        15779 |         0.833 |
+| SO2      | pgm_palladium | Norilsk Nickel plant (Russia)              |   1387 |              nan |                nan     |       nan     |        15722 |         0.855 |
+| SO2      | pgm_platinum  | Polokwane smelter (S. Africa)              |   2367 |              nan |                nan     |       nan     |         2949 |        -0.061 |
+| SO2      | pgm_platinum  | Rustenburg / Waterval smelters (S. Africa) |   2398 |              nan |                nan     |       nan     |         2799 |         0.062 |
+| SO2      | rare_earths   | Baotou rare earth / steel (China)          |   2355 |              nan |                nan     |       nan     |         3475 |         0.144 |
 
 ### Latest readings
 
@@ -107,20 +107,20 @@ Weekly futures returns, Friday close to Friday close. Nickel is tested on the PI
   "rare_earths": -0.002
  },
  "SO2 level (28d SO2 plume vs its trailing year)": {
-  "aluminium": 0.107,
-  "copper": 0.034,
-  "nickel": 0.021,
+  "aluminium": NaN,
+  "copper": 0.01,
+  "nickel": -0.09,
   "pgm_palladium": NaN,
-  "pgm_platinum": 0.017,
-  "rare_earths": -0.021
+  "pgm_platinum": NaN,
+  "rare_earths": NaN
  },
  "SO2 4-week change of the SO2 level": {
-  "aluminium": 0.091,
-  "copper": -0.046,
-  "nickel": 0.068,
+  "aluminium": NaN,
+  "copper": -0.079,
+  "nickel": 0.071,
   "pgm_palladium": NaN,
-  "pgm_platinum": -0.03,
-  "rare_earths": -0.031
+  "pgm_platinum": NaN,
+  "rare_earths": NaN
  }
 }
 ```

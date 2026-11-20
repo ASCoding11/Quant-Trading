@@ -5,8 +5,17 @@
   "instrument": "HG=F",
   "direction": 1,
   "sharpe_train": 0.198,
-  "sharpe_test": -0.636,
-  "t_test": -1.219
+  "sharpe_test": -0.64,
+  "t_test": -1.225
+ },
+ {
+  "source": "MODIS",
+  "commodity": "nickel",
+  "instrument": "PICK",
+  "direction": -1,
+  "sharpe_train": 0.842,
+  "sharpe_test": 0.76,
+  "t_test": -1.293
  },
  {
   "source": "MODIS",
@@ -14,8 +23,8 @@
   "instrument": "PA=F",
   "direction": 1,
   "sharpe_train": 0.265,
-  "sharpe_test": -0.357,
-  "t_test": -0.802
+  "sharpe_test": -0.352,
+  "t_test": -0.787
  },
  {
   "source": "MODIS",
@@ -23,8 +32,8 @@
   "instrument": "PL=F",
   "direction": -1,
   "sharpe_train": 0.595,
-  "sharpe_test": 0.74,
-  "t_test": -1.033
+  "sharpe_test": 0.741,
+  "t_test": -1.035
  },
  {
   "source": "MODIS",
@@ -33,7 +42,7 @@
   "direction": -1,
   "sharpe_train": 0.264,
   "sharpe_test": 0.856,
-  "t_test": -1.729
+  "t_test": -1.724
  },
  {
   "source": "MODIS",
@@ -50,8 +59,17 @@
   "instrument": "HG=F",
   "direction": 1,
   "sharpe_train": 0.806,
-  "sharpe_test": -0.351,
-  "t_test": -0.511
+  "sharpe_test": -0.346,
+  "t_test": -0.512
+ },
+ {
+  "source": "SO2",
+  "commodity": "nickel",
+  "instrument": "PICK",
+  "direction": 1,
+  "sharpe_train": 0.414,
+  "sharpe_test": 0.108,
+  "t_test": 0.805
  },
  {
   "source": "SO2",
@@ -68,8 +86,8 @@
   "instrument": "PL=F",
   "direction": 1,
   "sharpe_train": 0.923,
-  "sharpe_test": 0.442,
-  "t_test": 1.067
+  "sharpe_test": 0.441,
+  "t_test": 1.065
  },
  {
   "source": "SO2",
@@ -77,8 +95,8 @@
   "instrument": "ALI=F",
   "direction": 1,
   "sharpe_train": 0.068,
-  "sharpe_test": -0.169,
-  "t_test": -1.597
+  "sharpe_test": -0.177,
+  "t_test": -1.615
  },
  {
   "source": "SO2",

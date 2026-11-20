@@ -14,6 +14,9 @@ on:
       start:
         description: "first day of satellite data"
         default: "2012-01-01"
+      refetch:
+        description: "SO2 months to collect again although cached, space-separated (e.g. 2021-05 2021-06)"
+        default: ""
 
 permissions:
   contents: write
@@ -54,6 +57,9 @@ jobs:
         run: |
           mkdir -p data/satellite
           gh release download satellite-s5p -p "s5p_${{ matrix.year }}-*.parquet" -D data/satellite || true
+          for m in $REFETCH; do rm -f "data/satellite/s5p_$m.parquet"; done
+        env:
+          REFETCH: ${{ inputs.refetch }}
       - name: Collect SO2 over the plants
         run: |
           END="${{ matrix.year }}-12-31"; TODAY=$(date -u +%F); [[ "$END" > "$TODAY" ]] && END=$TODAY

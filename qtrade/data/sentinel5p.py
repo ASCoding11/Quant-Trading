@@ -134,7 +134,11 @@ def read_item(s, item: dict, sites: list[Site]) -> list[dict]:
     asset = next(a for a in item["assets"].values() if a["href"].endswith(".nc"))
     url = _signed(s, asset["href"])
     rows = []
-    with fsspec.open(url, block_size=4 * 2**20).open() as f, h5py.File(f, "r") as h:
+    import aiohttp
+
+    # a stalled read must not hang the whole collection (2021-05 sat for 4 hours on one): time out and retry
+    timeout = aiohttp.ClientTimeout(total=240, sock_connect=30, sock_read=60)
+    with fsspec.open(url, block_size=4 * 2**20, client_kwargs={"timeout": timeout}).open() as f, h5py.File(f, "r") as h:
         lat, lon = h["PRODUCT/latitude"][0], h["PRODUCT/longitude"][0]
         reach = RING_KM[1] + 10.0
         boxes = []

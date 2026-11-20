@@ -41,6 +41,7 @@ JOBS = [
     Job("auction-sheet.yml", NY, ("16:55",), window_min=400),     # after Yahoo's ~16:30-16:45 refresh of Asian bars
     Job("hoard-archive.yml", NY, ("16:45",), inputs=(("job", "eod"),), window_min=400),
     Job("foreign-sheet.yml", "UTC", ("17:15", "23:30"), window_min=200),   # 23:30: Asian bars Yahoo posted late
+    Job("crm-sheet.yml", NY, ("17:20",), window_min=300),       # $0 CRM satellite tracker (marks at the close)
     Job("hoard-archive.yml", "UTC", ("07:15",), weekdays=False, inputs=(("job", "archive"),), window_min=300),
 ]
 

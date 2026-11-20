@@ -1,0 +1,70 @@
+name: crm-sheet
+
+# The $0 CRM satellite tracker (qtrade/intraday/crm_sheet.py) - NOT part of the $10,000 book: every weekday
+# after the close it marks its copper / nickel / PGM / aluminium / rare-earth legs to the day's close in the
+# sheet's "CRM tracker" tab; on Fridays it first refreshes the satellite data (MODIS heat and Sentinel-5P
+# SO2 over the smelters) and rebalances from the latest readings, with the directions from the
+# crm_satellite study (research/crm/crm_rules.json on the results branch).
+
+on:
+  schedule:
+    - cron: "40 22,23 * * 1-5"     # backup for the clock's 17:20 New York run; a marked day is skipped
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: "refresh the satellite data even if it isn't Friday (true/false)"
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crm-sheet
+  cancel-in-progress: false
+
+jobs:
+  tracker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      HFT_SHEET_ID: ${{ secrets.HFT_SHEET_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt rasterio h5py fsspec aiohttp
+      - name: The study's directions
+        run: |
+          git fetch -q --depth 1 origin results
+          mkdir -p data
+          git show origin/results:research/crm/crm_rules.json > data/crm_rules.json || { echo "no study yet"; rm -f data/crm_rules.json; }
+      - name: Satellite data
+        run: |
+          mkdir -p data/satellite
+          gh release download satellite-modis -p "modis_*.parquet" -D data/satellite || true
+          gh release download satellite-s5p -p "s5p_*.parquet" -D data/satellite || true
+      - name: Refresh the satellite data (Fridays)
+        id: refresh
+        if: hashFiles('data/crm_rules.json') != ''
+        run: |
+          if [ "$(TZ=America/New_York date +%u)" != "5" ] && [ "${{ inputs.refresh }}" != "true" ]; then echo "not Friday"; exit 0; fi
+          Y=$(date -u +%Y)
+          timeout 30m python -m qtrade.data.satellite --start "$Y-01-01" --end "$(date -u +%F)" --cache data/satellite || true
+          timeout 40m python -m qtrade.data.sentinel5p --start "$(date -u -d '70 days ago' +%F)" --end "$(date -u +%F)" --cache data/satellite || true
+          echo "done=1" >> "$GITHUB_OUTPUT"
+      - name: Tracker
+        if: hashFiles('data/crm_rules.json') != ''
+        run: python -m qtrade.intraday.crm_sheet --rules data/crm_rules.json --sat-cache data/satellite
+      - name: Keep the refreshed satellite data
+        if: steps.refresh.outputs.done == '1'
+        run: |
+          Y=$(date -u +%Y)
+          gh release upload satellite-modis data/satellite/modis_$Y.parquet --clobber || true
+          for f in data/satellite/s5p_*.parquet; do
+            m=$(basename "$f" .parquet); m=${m#s5p_}
+            [[ "$m" > "$(date -u -d '75 days ago' +%Y-%m)" ]] && gh release upload satellite-s5p "$f" --clobber || true
+          done

@@ -3,8 +3,10 @@ name: crm-research
 # Critical raw materials vs satellite data (qtrade/data/satellite.py, qtrade/research/crm_satellite.py):
 # MODIS daily thermal anomalies at ~25 smelters / refineries from Microsoft's Planetary Computer (no key),
 # 2012 to today, cached per year; then whether the plants' activity predicts copper, platinum, palladium,
-# aluminium futures (and the nickel / rare-earth ETFs). The satellite data (NASA, public domain) is kept
-# as assets of the "satellite-modis" release; the report goes to research/crm/ on the results branch.
+# aluminium futures (and the nickel / rare-earth ETFs). Since May 2018 also the Sentinel-5P SO2 plume over
+# the same plants (qtrade/data/sentinel5p.py), collected one year per parallel job. The satellite data
+# (NASA / ESA Copernicus, free) is kept as assets of the "satellite-modis" and "satellite-s5p" releases; the
+# report and crm_rules.json (the $0 CRM tracker's directions) go to research/crm/ on the results branch.
 
 on:
   workflow_dispatch:
@@ -21,7 +23,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  s5p-release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          gh release view satellite-s5p >/dev/null 2>&1 || gh release create satellite-s5p --title "Satellite: Sentinel-5P SO2 at CRM plants" \
+            --notes "Per overpass: TROPOMI SO2 column (1 km plume product) over critical-raw-material smelters minus a 60-120 km background ring, one parquet per month (qtrade/data/sentinel5p.py). ESA Copernicus Sentinel data, free and open; source: Microsoft Planetary Computer, sentinel-5p-l2-netcdf."
+
+  s5p:
+    needs: s5p-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        year: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt h5py fsspec aiohttp
+      - name: Months already collected
+        run: |
+          mkdir -p data/satellite
+          gh release download satellite-s5p -p "s5p_${{ matrix.year }}-*.parquet" -D data/satellite || true
+      - name: Collect SO2 over the plants
+        run: |
+          END="${{ matrix.year }}-12-31"; TODAY=$(date -u +%F); [[ "$END" > "$TODAY" ]] && END=$TODAY
+          timeout 320m python -m qtrade.data.sentinel5p --start "${{ matrix.year }}-01-01" --end "$END" --cache data/satellite
+      - name: Keep the months in the release
+        if: always()
+        run: |
+          ls data/satellite/s5p_*.parquet >/dev/null 2>&1 || exit 0
+          gh release upload satellite-s5p data/satellite/s5p_*.parquet --clobber
+
   study:
+    needs: s5p
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 340
     env:
@@ -32,13 +77,18 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt rasterio
+      - run: pip install -r requirements.txt rasterio h5py fsspec aiohttp
       - name: Satellite cache
         uses: actions/cache/restore@v4
         with:
           path: data/satellite
           key: satellite-${{ github.run_id }}
           restore-keys: satellite-
+      - name: Satellite data from the releases
+        run: |
+          mkdir -p data/satellite
+          ls data/satellite/modis_*.parquet >/dev/null 2>&1 || gh release download satellite-modis -p "modis_*.parquet" -D data/satellite || true
+          gh release download satellite-s5p -p "s5p_*.parquet" -D data/satellite --clobber || true
       - name: Collect MODIS thermal anomalies
         run: timeout 300m python -m qtrade.data.satellite --start "${{ inputs.start || '2012-01-01' }}" --end "$(date -u +%F)" --cache data/satellite
       - name: Save the cache (also after a timeout)
@@ -50,10 +100,10 @@ jobs:
       - name: Keep the satellite data in a release
         if: always()
         run: |
-          ls data/satellite/*.parquet >/dev/null 2>&1 || exit 0
+          ls data/satellite/modis_*.parquet >/dev/null 2>&1 || exit 0
           gh release view satellite-modis >/dev/null 2>&1 || gh release create satellite-modis --title "Satellite: MODIS thermal anomalies at CRM plants" \
             --notes "Daily MODIS (Terra + Aqua) fire pixels and fire radiative power around critical-raw-material smelters and refineries (qtrade/data/satellite.py). NASA data, public domain; source: Microsoft Planetary Computer, modis-14A1-061."
-          gh release upload satellite-modis data/satellite/*.parquet --clobber
+          gh release upload satellite-modis data/satellite/modis_*.parquet --clobber
       - name: Study
         run: python -m qtrade.research.crm_satellite --sat-cache data/satellite --out reports/crm
       - name: Store the report

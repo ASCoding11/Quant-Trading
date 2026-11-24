@@ -135,3 +135,14 @@ def test_month_with_many_failures_is_not_cached(tmp_path, monkeypatch):
     assert len(out) == 2
     assert not (tmp_path / "s5p_2021-05.parquet").exists()
     assert (tmp_path / "s5p_2021-06.parquet").exists()
+
+
+def test_tracker_does_not_mark_before_the_close(monkeypatch):
+    import pandas as pd
+
+    from qtrade.intraday import crm_sheet as T
+
+    monkeypatch.setattr(T.pd.Timestamp, "now", classmethod(
+        lambda cls, tz=None: pd.Timestamp("2026-11-24 01:25", tz="America/New_York")))
+    out = T.run([], T.Path("."), dry_run=True)
+    assert "before" in out["skipped"]

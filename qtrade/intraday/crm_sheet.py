@@ -30,6 +30,7 @@ from ..utils import LOG
 
 TAB = "CRM tracker"
 BOOK_USD = 10_000.0
+MARK_AFTER_MIN = 17 * 60          # mark only after 17:00 New York (metal futures settle 13:30-14:00, REMX/PICK at 16:00)
 LOG_HEADER = ["Date", "Day P&L $", "Day %", "Equity $", "Legs open", "Rebalanced", "Note"]
 POS_HEADER = ["Source", "Commodity", "Instrument", "Signal", "Position", "Notional $", "Entry date", "Entry price",
               "Last mark", "Mark price", "Open P&L $"]
@@ -152,6 +153,9 @@ def run(rules: list[dict], sat_cache: Path, dry_run: bool = False) -> dict:
     now = pd.Timestamp.now(tz="America/New_York")
     today = now.tz_localize(None).normalize()
     day = f"{today:%Y-%m-%d}"
+    if now.hour * 60 + now.minute < MARK_AFTER_MIN:
+        # futures trade overnight, so before the close Yahoo already has a partial bar for today
+        return {"skipped": f"{now:%H:%M} New York is before the {MARK_AFTER_MIN // 60}:{MARK_AFTER_MIN % 60:02d} mark"}
     sheet = None if dry_run else CrmSheet(os.environ["HFT_SHEET_ID"], os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
     log, positions = sheet.state() if sheet else ([], pd.DataFrame(columns=POS_HEADER))
     if log and str(log[-1][0])[:10] == day:

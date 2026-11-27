@@ -164,7 +164,8 @@ def run(rules: list[dict], sat_cache: Path, dry_run: bool = False) -> dict:
     px = px[px.index <= today]
     if px.empty or px.index[-1] < today:
         return {"skipped": f"no closes for {day} yet (market holiday or data late)"}
-    close = px.iloc[-1]
+    # an instrument without a bar today (Yahoo skipped PL=F on the Nov 27 half day) keeps its last close
+    close = px.ffill(limit=3).iloc[-1]
     equity0 = float(log[-1][3]) if log else BOOK_USD
     positions, pnl = mark(positions, close)
     equity = equity0 + pnl

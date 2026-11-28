@@ -2,10 +2,10 @@
   "timeframe": "1Min",
   "symbols": 200,
   "symbols_requested": 200,
-  "total_rows": 204764711,
+  "total_rows": 205043919,
   "first": "2016-01-04 09:30:00-05:00",
-  "last": "2026-11-20 15:59:00-05:00",
-  "updated": "2026-11-21T17:17:27.539329+00:00",
+  "last": "2026-11-27 15:59:00-05:00",
+  "updated": "2026-11-28T18:07:04.300667+00:00",
   "complete": true,
   "api_calls": 200,
   "start_requested": "2016-01-01"

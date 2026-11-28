@@ -1,7 +1,8 @@
 {
-  "_comment": "The simulated $10,000 Google Sheet book, split between sleeves (dollars of capital). momentum_flip = Nico's momentum flip (qtrade/intraday/flip_sleeve.py); auction = the US auction strategies (qtrade/intraday/auction_sheet.py); foreign = overnight persistence on Asian exchanges (qtrade/intraday/foreign_sheet.py); hft = the shadow HFT (off). History: $5,000 HFT / $5,000 flip on 2026-10-22; the HFT lost $273.73 and was switched off; the remaining $9,726.27 split flip / auction on 2026-10-23, then three ways with the foreign sleeve.",
+  "_comment": "The simulated $10,000 Google Sheet book, split between sleeves (dollars of capital). momentum_flip = Nico's momentum flip (qtrade/intraday/flip_sleeve.py); auction = the US auction strategies (qtrade/intraday/auction_sheet.py); foreign = overnight persistence on Asian exchanges (qtrade/intraday/foreign_sheet.py); hft = the shadow HFT (off). History: $5,000 HFT / $5,000 flip on 2026-10-22; the HFT lost $273.73 and was switched off; the remaining $9,726.27 split flip / auction on 2026-10-23, then three ways with the foreign sleeve. 2026-11-28: the US overnight auction book was cut (auction_overnight_weight 0) after it lost $100 in 26 days (Sharpe -1.9); the auction sleeve's capital stays with the ADR book. The weekly review (qtrade/intraday/weekly_review.py) proposes later changes.",
   "hft": 0,
   "momentum_flip": 3242.09,
   "auction": 3242.09,
-  "foreign": 3242.09
+  "foreign": 3242.09,
+  "auction_overnight_weight": 0.0
 }

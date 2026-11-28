@@ -1,0 +1,12 @@
+{
+  "_comment": "The weekly review's fixed rule (qtrade/intraday/weekly_review.py). Backtest Sharpes are annualised, 0 bp fees like the sheet, from the most recent test period of each rule's study (results branch): momentum_flip = flip_check.md gross 2021-26 (0.33); auction_overnight = intraday_strategies.csv, second half, last30 fade (+1.74) and overnight persistence (+0.59) blended (~1.2); adr = asia_adr_strategy.csv, FX lagged a day, 0 bp, 2015-26 (2.91); foreign = foreign_strategies.csv, overnight persistence 2021-26 across the 8 markets, conservatively 1.5. A null backtest Sharpe marks a $0 tracker (information only). Change the rule only before a review, never because of one.",
+  "rule": {"min_days": 40, "cut_z": -2.0, "halve_z": -1.0},
+  "backtest_sharpe": {
+    "momentum_flip": 0.33,
+    "auction_overnight": 1.2,
+    "adr": 2.91,
+    "foreign": 1.5,
+    "foreign_hft_tracker": null,
+    "crm_tracker": null
+  }
+}

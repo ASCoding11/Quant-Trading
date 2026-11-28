@@ -207,7 +207,8 @@ def settle_day(day: str, inputs: dict, prev_hold: pd.DataFrame, equity: float, d
             "adr_names": len(adr)}
 
 
-def run(sleeve_usd: float, cfg, tickers: list[str], signs: dict, dry_run: bool = False) -> dict:
+def run(sleeve_usd: float, cfg, tickers: list[str], signs: dict, dry_run: bool = False,
+        overnight_weight: float = 1.0) -> dict:
     now = pd.Timestamp.now(tz=NY)
     day = now.tz_localize(None).normalize()
     sheet = None if dry_run else AuctionSheet(os.environ["HFT_SHEET_ID"], os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
@@ -217,6 +218,9 @@ def run(sleeve_usd: float, cfg, tickers: list[str], signs: dict, dry_run: bool =
     inputs = day_inputs(cfg, tickers, signs, day)
     if len(inputs["close"]) < 0.5 * len(tickers):
         return {"skipped": f"only {len(inputs['close'])} official closes today - market closed or data late"}
+    # the weekly review can scale the overnight book down (config/sheet_book.json "auction_overnight_weight");
+    # last night's book still settles at today's open, only tonight's is scaled
+    inputs["weights"] = {t: w * overnight_weight for t, w in inputs["weights"].items() if w * overnight_weight}
     if len(log):
         hold.attrs["date"] = str(log["Date"].iloc[-1])
     equity = float(pd.to_numeric(log["Equity $"], errors="coerce").dropna().iloc[-1]) if len(log) else 0.0
@@ -232,7 +236,9 @@ def run(sleeve_usd: float, cfg, tickers: list[str], signs: dict, dry_run: bool =
     status = (f"Updated {now:%Y-%m-%d %H:%M} New York - capital ${sleeve_usd:,.2f} -> equity ${res['equity']:,.2f} "
               f"(P&L ${total:+,.2f}). Today: overnight book ${res['pnl_overnight']:+,.2f}, ADR book "
               f"${res['pnl_adr']:+,.2f}. Tonight: {row[6]} long / {row[7]} short, ${row[8]:,.0f} gross "
-              f"(strategies: {', '.join(inputs['strategies']) or 'none'}).")
+              + (f"(strategies: {', '.join(inputs['strategies']) or 'none'})." if overnight_weight > 0 else
+                 "(overnight book off since the 2026-11-28 review; the ADR book trades on).")
+              + (f" Overnight book at {overnight_weight:.0%} weight." if 0 < overnight_weight < 1 else ""))
     if sheet:
         sheet.write(status, row, len(log), h, res["trades"])
     LOG.info("auction sleeve: %s", status)
@@ -265,7 +271,8 @@ def main(argv=None):
         return
     cfg = Config.load(args.config)
     tickers, signs = load_inputs(args.tickers, args.signs if Path(args.signs).exists() else None)
-    print(run(sleeve, cfg, tickers, signs, dry_run=args.dry_run))
+    print(run(sleeve, cfg, tickers, signs, dry_run=args.dry_run,
+              overnight_weight=book_split().get("auction_overnight_weight", 1.0)))
 
 
 if __name__ == "__main__":
